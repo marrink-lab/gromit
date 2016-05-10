@@ -11,6 +11,7 @@ The Netherlands"
 
 CMD="$0 $@"
 
+
 DESCRIPTION=$(cat << __DESCRIPTION__
 This is a convenience script to set up, equilibrate and run coarse 
 grained (and multiscaled) systems, using the Martini force field. 
@@ -25,8 +26,15 @@ __DESCRIPTION__
 )
 
 
-# These will be looked for before running
-DEPENDENCIES=(insane.py martinize.py)
+# These will be looked for before running, and can be set from the cmdline, e.g.:
+#    -gmxrc /usr/local/gromacs-5.1/bin/GMXRC
+# If not set, the default name will be searched for in
+#    1. the environment (if PROGEVAR is given)
+#    2. the directory where this calling script (martinate) is located
+#    3. the PATH 
+DEPENDENCIES=( dssp  gmxrc  martinize     insane   )
+PROGEXEC=(     dssp  GMXRC  martinize.py  insane.py)
+PROGEVAR=(     DSSP  GMXRC)
 
 
 # The Gromacs RC file for use on the WeNMR GRID
@@ -46,13 +54,13 @@ STOP=PRODUCTION
 RED='\x1b[1;31m'
 YEL='\x1b[1;33m'
 OFF='\x1b[0m'
-SHOUT() { [[ $STEP == $NOW ]] && echo && sed -e 's/^/ /;s/$/ /;h;s/./-/g;p;x;p;x;' <<< "$@" | sed 's/^/#/'; }
-WARN()  { [[ $STEP == $NOW ]] && echo -e "$RED" && sed -e 's/^/ /;s/$/ /;h;s/./-/g;p;x;p;x;' <<< "$@" | sed 's/^/# WARNING: /' && echo -e "$OFF"; }
-NOTE()  { [[ $STEP == $NOW ]] && echo -e "$YEL" && sed -e 's/^/ /;s/$/ /;h;s/./-/g;p;x;p;x;' <<< "$@" | sed 's/^/# NOTE: /' && echo -e "$OFF"; }
+LINES() { sed -e 's/^/ /;s/$/ /;h;s/./-/g;p;x;p;x;' <<< "$@"; }
+SHOUT() { [[ $STEP == $NOW ]] && echo && LINES "$@" | sed 's/^/#/'; }
+WARN()  { [[ $STEP == $NOW ]] && echo -e "$RED" && LINES "$@" | sed 's/^/# WARNING: /' && echo -e "$OFF"; }
+FATAL() { [[ $STEP == $NOW ]] && echo -e "$RED" && LINES "$@" | sed 's/^/# FATAL: /' && echo -e "$OFF"; exit 1; }
+NOTE()  { [[ $STEP == $NOW ]] && echo -e "$YEL" && LINES "$@" | sed 's/^/# NOTE: /' && echo -e "$OFF"; }
 LINE()  { [[ $STEP == $NOW ]] && echo && sed -e 's/^/ /;s/$/ /p;s/./-/g;' <<< "$@" | sed 's/^/#/'; }
 ECHO()  { [[ $STEP == $NOW ]] && echo "$@"; }
-
-
 
 
 # MARTINI Force field parameters
@@ -79,7 +87,7 @@ INSANE=()
 
 # - martinizing
 MARTINIZE=()
-DSSP=
+
 
 # This program:
 
@@ -109,7 +117,6 @@ RC=1.4
 
 # - other
 DIR=.
-GMXRC=
 NP=1
 FORCE=false
 MAXH=-1       # Maximum duration of run
@@ -214,6 +221,22 @@ function readOptList() { sed "s/\\\,/##/g;s/,/ /g;s/##/,/g;s/--[^{]\+{\(.*\)}/\1
 
 
 while [ -n "$1" ]; do
+
+  # Check for program option
+  NDEP=${#DEPENDENCIES[@]}
+  for ((i=0; i<$NDEP; i++))
+  do
+      echo ${DEPENDENCIES[$i]} $1
+      if [[ $1 == "-${DEPENDENCIES[$i]}" ]]
+      then
+          PROGEXEC[$i]=$2
+          shift 2
+      fi
+  done
+  # If we just 'used up' the variables, skip to the next cycle
+  [[ -n $1 ]] || continue
+
+  # Check for other options
   case $1 in
          -h)       USAGE                             ; exit 0 ;;
      # File options
@@ -240,8 +263,8 @@ while [ -n "$1" ]; do
         -at)                    AT=$2                ; shift 2; continue ;;
         -em)               EMSTEPS=$2                ; shift 2; continue ;;
        -dir)                   DIR=$2                ; shift 2; continue ;;
-     -gmxrc)                 GMXRC=$2                ; shift 2; continue ;;
-      -dssp)                  DSSP=$2                ; shift 2; continue ;;
+#     -gmxrc)                 GMXRC=$2                ; shift 2; continue ;;
+#      -dssp)                  DSSP=$2                ; shift 2; continue ;;
       -step)                  STEP=$2                ; shift 2; continue ;;
       -stop)                  STOP=$2                ; shift 2; continue ;;
         -np)                    NP=$2                ; shift 2; continue ;;
@@ -270,7 +293,7 @@ while [ -n "$1" ]; do
     --*)   PROGOPTS[${#PROGOPTS[@]}]=$1              ; shift 1; continue ;;
 
     # All options should be covered above. Anything else raises an error here.
-      *)         BAD_OPTION $1;;
+      *)         BAD_OPTION "$1";;
 
   esac
 done
@@ -298,17 +321,39 @@ NOW=$STEP
 #--------------------------------------------------------------------
 
 
+## 0. Finding programs
+
+dependency_not_found_error()
+{
+    FATAL The required dependency $@ was not found.
+}
+
+NDEP=${#DEPENDENCIES[@]}
+FINDPROGRAM()
+{
+    for ((i=0; i<$NDEP; i++)); do
+        if [[ ${DEPENDENCIES[$i]} == "$1" ]] 
+        then
+            progr=${PROGEXEC[$i]}
+            envvar=${PROGEVAR[$i]}
+        fi
+    done
+
+    # Check if the program is in the environment
+    [[ -n $envvar ]] && [[ -f ${!envvar} ]] && echo ${!envvar} && return 0
+
+    # Check if the program is in the directory of this script
+    [[ -f $SDIR/$progr ]] && echo $SDIR/$progr && return 0
+
+    # Check if the program is in the PATH
+    which $progr 2>/dev/null && return 0 || return 1
+}
+
+
 ##  1. GROMACS  ##
 
 # Check and set the gromacs related stuff  
-if [[ -n $GMXRC && ! -f $GMXRC ]]
-then
-    echo GMXRC file specified, but not found \($GMXRC\)
-    exit
-elif [[ -z $GMXRC ]]
-then
-    [[ -f $SDIR/GMXRC ]] && GMXRC=$SDIR/GMXRC || GMXRC=`which GMXRC`
-fi
+GMXRC=$(FINDPROGRAM gmxrc)
 echo Gromacs RC file: $GMXRC
 
 # Source the gromacs RC file if one was found
@@ -344,10 +389,9 @@ export GMXLIB=${GMXDATA}/gromacs/top
 [[ -d $GMXLIB ]] || export GMXLIB=${GMXDATA%/gromacs*}/gromacs/top
 echo Gromacs data directory: $GMXLIB
 
-# Check whether grompp and mdrun are executable (Grid enabling)
-# If they are not, attempt to make them so
-[[ -x ${GMX}grompp ]] || chmod +x ${GMX}grompp
-[[ -x ${GMX}mdrun  ]] || chmod +x ${GMX}mdrun
+# Now finally, test a command and see if it works
+# otherwise raise a fatal error.
+${GMX}grompp -h >/dev/null 2>&1 || executable_not_found_error "GROMACS (GMXRC)"
 
 
 ## 2. DSSP ##
@@ -355,15 +399,14 @@ echo Gromacs data directory: $GMXLIB
 # Search the DSSP binary, from environment, from path, or guess
 # Only required if we have an input file
 echo -n 'Checking DSSP binary (for martinizing proteins)... '
-DSSP=${DSSP:-`which dssp || echo $BIN/dssp`}
-if [[ -f $DSSP ]]
+DSSP=$(FINDPROGRAM dssp)
+if [[ $? == 1 ]]
 then
-    echo $DSSP
-    MARTINIZE+=(-dssp=$DSSP)
-else
-    echo
     WARN "DSSP binary not found - Will martinize without secondary structure :S"
-fi 
+else
+    echo "# DSSP executable: $DSSP"
+    MARTINIZE+=(-dssp=$DSSP)
+fi
 
 
 ## 3. PATH ##
@@ -391,8 +434,14 @@ fi
 
 
 ## 5. Command lines for downstream programs (martinize/insane) ## 
-MARTINIZE="$SDIR/martinize.py $(expandOptList ${MARTINIZE[@]})"
-INSANE="$SDIR/insane.py       $(expandOptList ${INSANE[@]})"
+
+# The presence of these dependencies should only be checked
+# if the corresponding steps are actually run.
+
+MART=$(FINDPROGRAM martinize)
+MARTINIZE="$MART $(expandOptList ${MARTINIZE[@]})"
+INSA=$(FINDPROGRAM insane)
+INSANE="$INSA $(expandOptList ${INSANE[@]})"
 if [[ "$INSANE" =~ " -l " ]]
 then
     echo "# Calling with insane -l, indicating a membrane is included."
@@ -578,10 +627,10 @@ then
 
             # Try fetching it from the PDB    
             pdb=$(tr [A-Z] [a-z] <<< ${PDB%.pdb})
-            RCSB=www.rcsb.org/pdb/files/${pdb%%.*}.pdb.gz
+            RCSB="http://files.rcsb.org/download/${pdb%%.*}.pdb.gz"
             echo "# Input file not found, but will try fetching it from the PDB ($RCSB)"
             # Use wget or curl; one of them should work
-            wget $RCSB || curl -O $RCSB 
+            wget $RCSB 2>/dev/null || curl -O "$RCSB" 
 	    gunzip $pdb.pdb.gz
             [[ -n $SCRATCH ]] && cp $pdb.pdb $DIR
 	    PDB=$pdb
@@ -673,15 +722,6 @@ then
 else
     PBC="-pbc $PBC"
 fi
-
-
-## DEPENDENCIES ##
-
-
-for i in ${DEPENDENCIES[@]}
-do
-    which $i || (echo Dependency $i not found)
-done
 
 
 echo Done checking
