@@ -120,8 +120,9 @@ export LFC_HOST=lfcserver.cnaf.infn.it
 GRID_SE=se-enmr.cerm.unifi.it
 
 # Structure databases
-RCSB="http://www.rcsb.org/pdb/files/ .gz"
-BIO="http://www.rcsb.org/pdb/files/ .gz"
+RCSB=(http://files.rcsb.org/download/ pdb.gz)
+BIO=(http://www.rcsb.org/pdb/files/ pdb1.gz)
+OPM=(http://opm.phar.umich.edu/pdb/ pdb)
 
 
 #--------------------------------------------------------------------
@@ -1638,21 +1639,48 @@ then
     fi
     PDB=$dirn/$pdb
 
-
     if [[ -f $PDB ]]
     then
         [[ -n $SCRATCH ]] && cp $PDB .
     elif [[ -n $FETCH ]]
     then
-        # Try fetching it from the PDB    
-	RCSB=www.rcsb.org/pdb/files/${pdb%%.*}.pdb.gz
-	echo "# Input file not found, but will try fetching it from the PDB ($RCSB)"
+        # Try fetching it from the repository
+        # Biological units use MODEL/ENDMDL statements to separate chains
+        # These need to be removed.
+        case $FETCH in
+            pdb  | PDB)  
+                GET=${RCSB[0]}${pdb%%.*}.${RCSB[1]}
+                RMMOD=false 
+                ;;
+            bio* | BIO*)
+                # Check if a number is given for selecting the BIO assembly
+                [[ $FETCH =~ : ]] && BIO[1]=pdb${FETCH##*:} 
+                GET=${BIO[0]}${pdb%%.*}.${BIO[1]}
+                RMMOD=true  
+                ;;
+            opm  | OPM)  
+                GET=${OPM[0]}${pdb%%.*}.${OPM[1]}
+                RMMOD=false
+                ;;
+        esac
+
+	echo "# Input file not found, but will try fetching it ($GET)"
         # Use wget or curl; one of them should work
-	wget $RCSB || curl -O $RCSB 
-	pdb=${pdb%%.*}.pdb.gz
+	wget $GET 2>/dev/null || curl -O $GET
+        # Remove the URL part of what we just got
+        pdb=${GET##*/}
+        [[ $GET =~ \.gz$ ]] && gunzip $pdb && pdb=${pdb%.gz} 
+        # With biological units, Gromacs chokes on the pdb1 extension
+        [[ $pdb =~ \.pdb1$ ]] && mv $pdb ${pdb%1} && pdb=${pdb%1}
         PDB=$pdb
+
+        if $RMMOD
+        then
+            # Removing the MODEL records and replacing ENDMDL by TER
+            sed -i '' -e /^MODEL/d -e s/ENDMDL/TER/ $PDB
+        fi
+
 	[[ -n $SCRATCH ]] && cp $pdb $DIR
-	ext=gz
     else
 	echo "# Input file $dirn/$pdb specified, but not found."
 	echo "# For automated download of a PDB file, add -fetch to the command line."
