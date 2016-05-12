@@ -401,7 +401,6 @@ while [ -n "$1" ]; do
     NDEP=${#DEPENDENCIES[@]}
     for ((i=0; i<$NDEP; i++))
     do
-	echo ${DEPENDENCIES[$i]} $1
 	if [[ $1 == "-${DEPENDENCIES[$i]}" ]]
 	then
             PROGEXEC[$i]=$2
@@ -605,6 +604,15 @@ echo Gromacs data directory: $GMXLIB
 # Now finally, test a command and see if it works
 # otherwise raise a fatal error.
 ${GMX}grompp -h >/dev/null 2>&1 || executable_not_found_error "GROMACS (GMXRC)"
+
+# Check if Gromacs can handle RTC (if so needed)
+echo "comm_mode = RTC" > gromacs_rtc_test.mdp
+if ${GMX}grompp -f gromacs_rtc_test.mdp 2>&1 | grep -q "Invalid enum 'RTC'"
+then
+    rm gromacs_rtc_test.mdp
+    FATAL "Roto-translational constraints requested (comm_mode = RTC), but not supported by ${GMX}grompp"
+fi
+rm gromacs_rtc_test.mdp mdout.mdp
 
 
 # 2. SQUEEZE/NDLP for minimal-volume simulation.
