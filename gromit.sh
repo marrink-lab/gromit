@@ -1,7 +1,7 @@
 #!/bin/bash
 
 PROGRAM=${0##*/}
-VERSION=2.3      # 20160405.2230
+VERSION=2.4      # 20160512.0830
 GMXVERSION=5.x.y # But 4.x.y is supported
 HISTORY="\
 "
@@ -126,8 +126,19 @@ OPM=(http://opm.phar.umich.edu/pdb/ pdb)
 
 
 #--------------------------------------------------------------------
-#---PARSING COMMAND LINE ARGUMENTS--
+#---PARSING COMMAND LINE ARGUMENTS AND DEPENDENCIES--
 #--------------------------------------------------------------------
+
+
+# These will be looked for before running, and can be set from the cmdline, e.g.:
+#    -gmxrc /usr/local/gromacs-5.1/bin/GMXRC
+# If not set, the default name will be searched for in
+#    1. the environment (if PROGEVAR is given)
+#    2. the directory where this calling script (martinate) is located
+#    3. the PATH 
+DEPENDENCIES=( gmxrc squeeze)
+PROGEXEC=(     GMXRC squeeze)
+PROGEVAR=(     GMXRC)
 
 
 # Run control and files
@@ -385,6 +396,21 @@ fi
 
 
 while [ -n "$1" ]; do
+
+    # Check for program option
+    NDEP=${#DEPENDENCIES[@]}
+    for ((i=0; i<$NDEP; i++))
+    do
+	echo ${DEPENDENCIES[$i]} $1
+	if [[ $1 == "-${DEPENDENCIES[$i]}" ]]
+	then
+            PROGEXEC[$i]=$2
+            shift 2
+	fi
+    done
+    # If we just 'used up' the argument, skip to the next cycle
+    [[ -n $1 ]] || continue
+
     case $1 in
 	-h)        USAGE                                ; exit 0 ;;
         # File options
@@ -399,7 +425,6 @@ while [ -n "$1" ]; do
         -keep)     KEEP=true                            ; shift  ; continue ;;
 	-rtc)      RotationalConstraints=rtc            ; shift  ; continue ;;
 	-ndlp)     NDLP=true; RotationalConstraints=rtc ; shift  ; continue ;;
-        -squeeze)  SQUEEZE=$2                           ; shift 2; continue ;;
 	-step)     STEP=$2                              ; shift 2; continue ;;
 	-stop)     STOP=$2                              ; shift 2; continue ;;
         -bt)       BOXTYPE=$2                           ; shift 2; continue ;;
@@ -429,7 +454,6 @@ while [ -n "$1" ]; do
         -noexec)   EXEC=echo                            ; shift  ; continue ;;
 	-fetch)    FETCH=$2                             ; shift 2; continue ;;
         -rmhet)    HETATM=false                         ; shift  ; continue ;;
-	-gmxrc)    GMXRC=$2                             ; shift 2; continue ;;
 	-lie)      LIE=true                             ; shift  ; continue ;;
 	-l)        LIGANDS+=($2)                        ; shift 2; continue ;;
         -analysis) ANALYSIS+=($2)                       ; shift 2; continue ;;
@@ -437,10 +461,6 @@ while [ -n "$1" ]; do
 	-ctime)    CHECKTIME=$2                         ; shift 2; continue ;;
         --mdp-*)   MDPOPTS+=(${1#--mdp-})               ; shift  ; continue ;;
 	--*)       PROGOPTS+=($1)                       ; shift  ; continue ;;
-	#-l)        LIGANDS[${#LIGANDS[@]}]=$2           ; shift 2; continue ;;
-        #-analysis) ANALYSIS[${#ANALYSIS[@]}]=$2         ; shift 2; continue ;;
-        #--mdp-*)   MDPOPTS[${#MDPOPTS[@]}]=${1#--mdp-}  ; shift  ; continue ;;
-	#--*)       PROGOPTS[${#PROGOPTS[@]}]=$1         ; shift  ; continue ;;
 	*)        
 	    USAGE
 
@@ -514,31 +534,44 @@ SED=$(which gsed || which sed)
 #---GROMACS STUFF
 #--------------------------------------------------------------------
 
+## 0. Finding programs
 
-# Check whether GMXRC file was specified and valid
-if [[ -n $GMXRC && ! -f $GMXRC ]]
-then
-    echo GMXRC file specified, but not found \($GMXRC\)
-    exit 1
-fi
+dependency_not_found_error()
+{
+    FATAL The required dependency $@ was not found.
+}
+
+NDEP=${#DEPENDENCIES[@]}
+FINDPROGRAM()
+{
+    for ((i=0; i<$NDEP; i++)); do
+        if [[ ${DEPENDENCIES[$i]} == "$1" ]] 
+        then
+            progr=${PROGEXEC[$i]}
+            envvar=${PROGEVAR[$i]}
+        fi
+    done
+
+    # Check if the program is in the environment
+    [[ -n $envvar ]] && [[ -f ${!envvar} ]] && echo ${!envvar} && return 0
+
+    # Check if the program is in the directory of this script
+    [[ -f $SDIR/$progr ]] && echo $SDIR/$progr && return 0
+
+    # Check if the program is in the PATH
+    which $progr 2>/dev/null && return 0 || return 1
+}
 
 
-# Check if we are running on the GRID
-[[ -z $GMXRC && -f $GRIDRC ]] && GMXRC=$GRIDRC
+##  1. GROMACS  ##
 
-
-# Check if there is a GMXRC file in SCRIPTDIR
-# (In that case the script is bound to that version)
-[[ -z $GMXRC && -f $SCRIPTDIR/GMXRC ]] && GMXRC=$SCRIPTDIR/GMXRC 
-
-
-# If we still have no GMXRC file, check the path
-[[ -z $GMXRC ]] && GMXRC=$(which GMXRC)
-
+# Check and set the gromacs related stuff  
+GMXRC=$(FINDPROGRAM gmxrc)
+echo Gromacs RC file: $GMXRC
 
 # Source the gromacs RC file if one was found
-[[ -n $GMXRC ]] && source $GMXRC 
-
+# Otherwise the script will rely on the active gromacs commands 
+[[ $GMXRC ]] && source $GMXRC 
 
 # Find out which Gromacs version this is
 GMXVERSION=$(mdrun -h 2>&1 | sed -n '/^.*VERSION \([^ ]*\).*$/{s//\1/p;q;}')
@@ -547,7 +580,6 @@ GMXVERSION=$(mdrun -h 2>&1 | sed -n '/^.*VERSION \([^ ]*\).*$/{s//\1/p;q;}')
 [[ -z $GMXVERSION ]] && GMXVERSION=$(gmx -h 2>&1 | sed -n '/^.*VERSION \([^ ]*\).*$/{s//\1/p;q;}')
 ifs=$IFS; IFS="."; GMXVERSION=($GMXVERSION); IFS=$ifs
 
-
 # Set the directory for binaries
 [[ $GMXVERSION -gt 4 ]] && GMXBIN=$(which gmx) || GMXBIN=$(which mdrun)
 # Extract the directory
@@ -555,49 +587,37 @@ GMXBIN=${GMXBIN%/*}
 # Set the directory to SCRIPTDIR if GMXBIN is empty 
 GMXBIN=${GMXBIN:-$SCRIPTDIR}
 
-
-# Check whether grompp and mdrun are executable
-# If they are not, attempt to make them so
+# Make binaries executable if they are not
 # (This may be required for Grid processing)
 [[ -f $GMXBIN/grompp && ! -x $GMXBIN/grompp ]] && chmod +x $GMXBIN/grompp
 [[ -f $GMXBIN/mdrun  && ! -x $GMXBIN/mdrun  ]] && chmod +x $GMXBIN/mdrun
 [[ -f $GMXBIN/gmx    && ! -x $GMXBIN/gmx    ]] && chmod +x $GMXBIN/gmx
 
-
 # Set the command prefix
 [[ $GMXVERSION -gt 4 ]] && GMX="$GMXBIN/gmx " || GMX=$GMXBIN/
 
-
 # Set the GMXLIB variable to point to the force field data and such
 # In some cases, 'gromacs' is part of $GMXDATA
-# With Gromacs version > 5.1 having both GMXDATA and GMXLIB set 
-# will cause the force field directories to be listed twice,
-# giving an error.
-if [[ $GMXVERSION -lt 5 ]]
-then
-    export GMXLIB=${GMXDATA}/gromacs/top
-    [[ -d $GMXLIB ]] || export GMXLIB=${GMXDATA%/gromacs*}/gromacs/top
-fi
+export GMXLIB=${GMXDATA}/gromacs/top
+[[ -d $GMXLIB ]] || export GMXLIB=${GMXDATA%/gromacs*}/gromacs/top
+echo Gromacs data directory: $GMXLIB
 
-# SQUEEZE/NDLP for minimal-volume simulation.
+# Now finally, test a command and see if it works
+# otherwise raise a fatal error.
+${GMX}grompp -h >/dev/null 2>&1 || executable_not_found_error "GROMACS (GMXRC)"
+
+
+# 2. SQUEEZE/NDLP for minimal-volume simulation.
 # - Requires Gromacs with RTC support
 # - Requires SQUEEZE executable:
 if $NDLP
 then
-    if [[ ! -f $SQUEEZE ]]
+    SQUEEZE=$(FINDPROGRAM squeeze)
+    if [[ $? != 0 ]]
     then
-        if [[ -f $GMXBIN/squeeze ]]
-        then
-            SQUEEZE=$GMXBIN/squeeze
-        else
-            SQUEEZE=$(which squeeze)
-        fi
+        FATAL "NDLP SETUP REQUESTED, BUT SQUEEZE EXECUTABLE NOT FOUND"	
     fi
-
-    if [[ ! -f $SQUEEZE ]]
-    then
-        FATAL "NDLP SETUP REQUESTED, BUT SQUEEZE EXECUTABLE NOT FOUND"
-    elif ! $SQUEEZE -h # >/dev/null 2>&1
+    if ! $SQUEEZE -h # >/dev/null 2>&1
     then
         FATAL "NDLP SETUP REQUESTED, BUT SQUEEZE EXECUTABLE FAILED" 
     fi
