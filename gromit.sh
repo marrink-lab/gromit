@@ -398,17 +398,19 @@ fi
 while [ -n "$1" ]; do
 
     # Check for program option
+    depset=false
     NDEP=${#DEPENDENCIES[@]}
     for ((i=0; i<$NDEP; i++))
     do
 	if [[ $1 == "-${DEPENDENCIES[$i]}" ]]
 	then
             PROGEXEC[$i]=$2
+            depset=true
             shift 2
 	fi
     done
     # If we just 'used up' the argument, skip to the next cycle
-    [[ -n $1 ]] || continue
+    $depset && continue
 
     case $1 in
 	-h)        USAGE                                ; exit 0 ;;
