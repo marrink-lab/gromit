@@ -223,18 +223,19 @@ function readOptList() { sed "s/\\\,/##/g;s/,/ /g;s/##/,/g;s/--[^{]\+{\(.*\)}/\1
 while [ -n "$1" ]; do
 
   # Check for program option
+  depset=false
   NDEP=${#DEPENDENCIES[@]}
   for ((i=0; i<$NDEP; i++))
   do
-      echo ${DEPENDENCIES[$i]} $1
       if [[ $1 == "-${DEPENDENCIES[$i]}" ]]
       then
           PROGEXEC[$i]=$2
           shift 2
+          depset=true
       fi
   done
-  # If we just 'used up' the variables, skip to the next cycle
-  [[ -n $1 ]] || continue
+  # If we set a dependency, skip to the next cycle
+  $depset && continue
 
   # Check for other options
   case $1 in
