@@ -608,14 +608,21 @@ GMXBIN=${GMXBIN:-$SCRIPTDIR}
 [[ -f $GMXBIN/mdrun  && ! -x $GMXBIN/mdrun  ]] && chmod +x $GMXBIN/mdrun
 [[ -f $GMXBIN/gmx    && ! -x $GMXBIN/gmx    ]] && chmod +x $GMXBIN/gmx
 
-# Set the command prefix
-[[ $GMXVERSION -gt 4 ]] && GMX="$GMXBIN/gmx " || GMX=$GMXBIN/
+[[ $GMXVERSION -gt 4 ]] && 
 
-# Set the GMXLIB variable to point to the force field data and such
+# Set the command prefix and set the GMXLIB variable to point to 
+# the force field data and such.
 # In some cases, 'gromacs' is part of $GMXDATA
-export GMXLIB=${GMXDATA}/gromacs/top
-[[ -d $GMXLIB ]] || export GMXLIB=${GMXDATA%/gromacs*}/gromacs/top
-echo Gromacs data directory: $GMXLIB
+if [[ $GMXVERSION -gt 4 ]]
+then
+    GMX="$GMXBIN/gmx " 
+    GMXLIB=
+else
+    GMX=$GMXBIN/
+    export GMXLIB=${GMXDATA}/gromacs/top
+    [[ -d $GMXLIB ]] || export GMXLIB=${GMXDATA%/gromacs*}/gromacs/top
+    echo Gromacs data directory: $GMXLIB
+fi
 
 # Now finally, test a command and see if it works
 # otherwise raise a fatal error.
