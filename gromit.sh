@@ -189,6 +189,8 @@ STOP=PRODUCTION
 # Macros to echo stuff only if the step is to be executed -- more about steps further down
 RED='\x1b[1;31m'
 YEL='\x1b[1;33m'
+GRN='\x1b[1;32m'
+CYA='\x1b[1;36m'
 OFF='\x1b[0m'
 LINES() { sed -e 's/^/ /;s/$/ /;h;s/./-/g;p;x;p;x;' <<< "$@"; }
 SHOUT() { [[ $STEP == $NOW ]] && echo && LINES "$@" | sed 's/^/#/'; }
@@ -395,6 +397,17 @@ if [[ -z "$1" ]]; then
 fi
 
 
+# Collect errors, warnings and notes to (re)present to user at the end
+# Spaces are replaced by the unlikely combination QQQ to keep the 
+# messages together.
+errors_array=()
+error_function() { a="$@"; errors_array+=(${x// /QQQ}); FATAL "$@"; }
+warnings_array=()
+warning_function() { a=$@; warnings_array+=(${x// /QQQ}); WARN "$@"; }
+notes_array=()
+note_function() { a=$@; notes_array+=(${x// /QQQ}); NOTE "$@"; }
+
+
 while [ -n "$1" ]; do
 
     # Check for program option
@@ -483,6 +496,7 @@ exec 3>&1 4>&2
 [[ -n $MSGFILE ]] && exec 1>$MSGFILE
 [[ -n $ERRFILE ]] && exec 2>$ERRFILE
 
+
 # Time. To keep track of the remaining run time
 START=$(date +%s)
 
@@ -543,7 +557,7 @@ dependency_not_found_error()
 }
 
 NDEP=${#DEPENDENCIES[@]}
-FINDPROGRAM()
+find_program_function()
 {
     for ((i=0; i<$NDEP; i++)); do
         if [[ ${DEPENDENCIES[$i]} == "$1" ]] 
@@ -567,7 +581,7 @@ FINDPROGRAM()
 ##  1. GROMACS  ##
 
 # Check and set the gromacs related stuff  
-GMXRC=$(FINDPROGRAM gmxrc)
+GMXRC=$(find_program_function gmxrc)
 echo Gromacs RC file: $GMXRC
 
 # Source the gromacs RC file if one was found
@@ -608,27 +622,31 @@ echo Gromacs data directory: $GMXLIB
 ${GMX}grompp -h >/dev/null 2>&1 || executable_not_found_error "GROMACS (GMXRC)"
 
 # Check if Gromacs can handle RTC (if so needed)
-echo "comm_mode = RTC" > gromacs_rtc_test.mdp
-if ${GMX}grompp -f gromacs_rtc_test.mdp 2>&1 | grep -q "Invalid enum 'RTC'"
+if [[ $RTC == "rtc" ]]
 then
-    rm gromacs_rtc_test.mdp
-    FATAL "Roto-translational constraints requested (comm_mode = RTC), but not supported by ${GMX}grompp"
+    echo "comm_mode = RTC" > gromacs_rtc_test.mdp
+    if ${GMX}grompp -f gromacs_rtc_test.mdp 2>&1 | grep -q "Invalid enum 'RTC'"
+    then
+	rm gromacs_rtc_test.mdp
+	FATAL "Roto-translational constraints requested (comm_mode = RTC), but not supported by ${GMX}grompp"
+    fi
+    rm gromacs_rtc_test.mdp mdout.mdp
 fi
-rm gromacs_rtc_test.mdp mdout.mdp
-
 
 # 2. SQUEEZE/NDLP for minimal-volume simulation.
 # - Requires Gromacs with RTC support
 # - Requires SQUEEZE executable:
 if $NDLP
 then
-    SQUEEZE=$(FINDPROGRAM squeeze)
+    SQUEEZE=$(find_program_function squeeze)
     if [[ $? != 0 ]]
     then
         FATAL "NDLP SETUP REQUESTED, BUT SQUEEZE EXECUTABLE NOT FOUND"	
     fi
-    if ! $SQUEEZE -h # >/dev/null 2>&1
+    if ! $SQUEEZE -h >/dev/null 2>&1
     then
+        echo 
+	echo "Squeeze was probably compiled for a different version of Gromacs."
         FATAL "NDLP SETUP REQUESTED, BUT SQUEEZE EXECUTABLE FAILED" 
     fi
 fi
@@ -1113,6 +1131,18 @@ function writeToLog()
 }
 
 
+function print_messages() 
+{
+    [[ -z $3 ]] && return 0
+    N=$#
+    echo -e $1 There were $((N-2)) $2:
+    for ((i=2; i<=$N; i++))
+    do 
+        echo [$i] ${!i//QQQ/ }
+    done
+}
+
+
 function uploadToSE() 
 {
     # Upload results to a storage element
@@ -1183,13 +1213,13 @@ function exit_clean()
 
 function exit_error()
 {
-
+  touch ERROR
+ 
   # Give error message
   writeToLog "$PROGRAM STEP $STEP ${STEPS[$STEP]} : $@" ERROR
 
   # Set flags
   [[ -f RUNNING ]] && rm -f RUNNING
-  touch ERROR
  
   [[ -n $SCRATCH ]] && cp * $DIR && cd $DIR # && rm -rf $SCRATCH
 
@@ -1201,8 +1231,12 @@ function exit_error()
 
   [[ -n $MSGFILE ]] && exec 1>&3
   [[ -n $ERRFILE ]] && exec 2>&4
-  
-  exit 1
+
+  print_messages $CYA NOTES    ${notes_array[@]}
+  print_messages $YEL WARNINGS ${warnings_array[@]}
+  print_messages $RED ERRORS   ${errors_array[@]}
+
+  FATAL "$@"
 }
 
 
