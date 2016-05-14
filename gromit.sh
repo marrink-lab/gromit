@@ -629,8 +629,10 @@ fi
 ${GMX}grompp -h >/dev/null 2>&1 || executable_not_found_error "GROMACS (GMXRC)"
 
 # Check if Gromacs can handle RTC (if so needed)
-if [[ $RTC == "rtc" ]]
+# This only works for GMX <5
+if [[ $RotationalConstraints == "rtc" ]]
 then
+    echo Testing rotational constraints
     echo "comm_mode = RTC" > gromacs_rtc_test.mdp
     if ${GMX}grompp -f gromacs_rtc_test.mdp 2>&1 | grep -q "Invalid enum 'RTC'"
     then

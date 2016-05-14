@@ -48,6 +48,7 @@ GRID=false
 
 # Starting step 
 STEPS=(AA CG SOLVENT EM NVT-PR NPT PREPRODUCTION TPR PRODUCTION ANALYSIS END)
+get_step_fun() { for ((i=0; i<${#STEPS[@]}; i++)) do [[ ${STEPS[$i]} =~ ^$1 ]] && return $i; done; }
 STEP=AA
 STOP=PRODUCTION
 # Macros to echo stuff only if the step is to be executed -- more about steps further down
@@ -220,6 +221,17 @@ function condenseOptList() { echo $(sed 's/,/\,/g;s/  */,/g;' <<< $@); }
 function readOptList() { sed "s/\\\,/##/g;s/,/ /g;s/##/,/g;s/--[^{]\+{\(.*\)}/\1/;" <<< $1; }
 
 
+# Collect errors, warnings and notes to (re)present to user at the end
+# Spaces are replaced by the unlikely combination QQQ to keep the 
+# messages together.
+errors_array=()
+store_error_fun() { a="$@"; errors_array+=(${x// /QQQ}); FATAL "$@"; }
+warnings_array=()
+store_warning_fun() { a=$@; warnings_array+=(${x// /QQQ}); WARN "$@"; }
+notes_array=()
+store_note_fun() { a=$@; notes_array+=(${x// /QQQ}); NOTE "$@"; }
+
+
 while [ -n "$1" ]; do
 
   # Check for program option
@@ -330,7 +342,7 @@ dependency_not_found_error()
 }
 
 NDEP=${#DEPENDENCIES[@]}
-FINDPROGRAM()
+find_program_fun()
 {
     for ((i=0; i<$NDEP; i++)); do
         if [[ ${DEPENDENCIES[$i]} == "$1" ]] 
@@ -354,7 +366,7 @@ FINDPROGRAM()
 ##  1. GROMACS  ##
 
 # Check and set the gromacs related stuff  
-GMXRC=$(FINDPROGRAM gmxrc)
+GMXRC=$(find_program_fun gmxrc)
 echo Gromacs RC file: $GMXRC
 
 # Source the gromacs RC file if one was found
@@ -400,12 +412,14 @@ ${GMX}grompp -h >/dev/null 2>&1 || executable_not_found_error "GROMACS (GMXRC)"
 # Search the DSSP binary, from environment, from path, or guess
 # Only required if we have an input file
 echo -n 'Checking DSSP binary (for martinizing proteins)... '
-DSSP=$(FINDPROGRAM dssp)
+DSSP=$(find_program_fun dssp)
 if [[ $? == 1 ]]
 then
-    WARN "DSSP binary not found - Will martinize without secondary structure :S"
+    warn="DSSP binary not found - Will martinize without secondary structure :S"
+    store_warn_fun "$warn"
+    WARN "$warn"
 else
-    echo "# DSSP executable: $DSSP"
+    echo "$DSSP"
     MARTINIZE+=(-dssp=$DSSP)
 fi
 
@@ -434,31 +448,19 @@ then
 fi
 
 
-## 5. Command lines for downstream programs (martinize/insane) ## 
+## 5. Locate insane if STEP lies before SOLVENT and STOP lies after.
 
-# The presence of these dependencies should only be checked
-# if the corresponding steps are actually run.
-
-MART=$(FINDPROGRAM martinize)
-MARTINIZE="$MART $(expandOptList ${MARTINIZE[@]})"
-INSA=$(FINDPROGRAM insane)
-INSANE="$INSA $(expandOptList ${INSANE[@]})"
-if [[ "$INSANE" =~ " -l " ]]
+SOLSTEP=$(get_step_fun SOLVENT)
+if [[ $STEP -le $SOLSTEP && $STOP -ge $SOLSTEP ]]
 then
-    echo "# Calling with insane -l, indicating a membrane is included."
-    MEMBRANE=true
-else
-    MEMBRANE=false
+    INSA=$(find_program_fun insane)
+    if [[ $? != 0 ]]
+    then
+	FATAL "Dependency (insane) required for building solvent/membrane, but not found."
+    fi
 fi
 
-if [[ -n $SOL && ! "$INSANE" =~ " -sol " ]]
-then
-    NOTE No solvent included in insane statement... Adding \"-sol $SOL\"
-    INSANE="$INSANE -sol $SOL"
-fi
-
-
-## 6. Set the correct sed version for multi-platform use
+## 5. Set the correct sed version for multi-platform use
 # Also try to avoid GNU specific sed statements for the
 # poor bastards that are stuck with one of those Mac things
 SED=$(which gsed || which sed)
@@ -524,7 +526,7 @@ fmt=" %5d %5d %5d %5d %5d %5d %5d %5d %5d %5d %5d %5d %5d %5d %5d"
 
 ## 2. WORKING DIRECTORY AND SOURCE DIRECTORY ##
 SRCDIR=$(pwd)
-[[ ! -d $DIR ]] && mkdir -p $DIR; pushd $DIR
+[[ ! -d $DIR ]] && mkdir -p $DIR; pushd $DIR >/dev/null
 
 
 ## 3. START/STOP FLOW CONTROL ##
@@ -580,8 +582,8 @@ then
 	# then we end up here, setting the script to martini22p.py
 	FFMARTINIPY=$SDIR/${MARTINI}.py
     else
-	echo Forcefield script $FFMARTINIPY does not exist, nor does $SDIR/${MARTINI}.py
-	exit
+	# Unclear dependency, but shipped with the scripts...
+	FATAL Forcefield script $FFMARTINIPY does not exist, nor does $SDIR/${MARTINI}.py
     fi
 fi
 
@@ -668,9 +670,6 @@ then
 
     if [[ -z $TOP && $ext == "pdb" ]]
     then
-        # Add martinize.py to the dependencies
-	DEPENDENCIES=(${DEPENDENCIES[@]} martinize.py)
-
 	if $NOHETATM -a $(grep -q HETATM $PDB)
 	then
 	    NOTE Removing HETATM entries from PDB file
@@ -1622,7 +1621,12 @@ then
     if [[ -n $pdb ]]
     then
         # Convert structure to coarse grained and build topology using martinize.py
-	
+	MART=$(find_program_fun martinize)
+	if [[ $? != 0 ]]
+	then
+	    FATAL "Coarse graining PDB file ($pdb), but martinize was not found."
+	fi
+	MARTINIZE="$MART $(expandOptList ${MARTINIZE[@]})"
 	MARTINIZE="$MARTINIZE -f $pdb -o $TOP -x $base-mart.pdb -n $base-mart.ndx -ff $MARTINI $M_MULTI"
 	echo $MARTINIZE
     fi
@@ -1824,6 +1828,28 @@ fi
 
 if [[ $STEP == $NOW ]]
 then 
+
+    if [[ -z $INSA ]]
+    then
+	FATAL "Dependency not found: insane (building membrane/solvent)."
+    fi
+    INSANE="$INSA $(expandOptList ${INSANE[@]})"
+    if [[ "$INSANE" =~ " -l " ]]
+    then
+	echo "# Calling with insane -l, indicating a membrane is included."
+	MEMBRANE=true
+    else
+	MEMBRANE=false
+    fi
+
+    if [[ -n $SOL && ! "$INSANE" =~ " -sol " ]]
+    then
+	note_msg="No solvent included in insane statement... Adding \"-sol $SOL\""
+	store_note_fun "$note"
+	NOTE "$note"
+	INSANE="$INSANE -sol $SOL"
+    fi
+
     [[ -n $pdb ]] && INSANE="$INSANE -o $OUT -f $base-mart-EM.gro" || INSANE="$INSANE -o $OUT -p $TOP"
     
     echo "$INSANE"
