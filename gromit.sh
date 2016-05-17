@@ -1693,7 +1693,7 @@ if [[ $STEP == $NOW && -n $TOP && -n $fnIN ]]
 then
     echo "# Topology file ${TOP##*/} provided for structure ${fnIN##*/}. Skipping step 1A."
     # If the accompanying GRO file does not exist, convert the PDB file
-    [[ -e $base.gro ]] || editconf -f $fnIN -o $base.gro &>/dev/null
+    [[ -e $base.gro ]] || ${GMX}editconf -f $fnIN -o $base.gro &>/dev/null
     : $(( STEP++ ))
 fi
 
@@ -2106,7 +2106,7 @@ then
 	if [[ ${struc%.gro} == $struc ]]
 	then	    
 	    s=${struc##*/}.gro
-	    [[ ! -e $s ]] && editconf -f $struc -o $s
+	    [[ ! -e $s ]] && ${GMX}editconf -f $struc -o $s
 	    struc=$s
 	    trash $s
 	fi
