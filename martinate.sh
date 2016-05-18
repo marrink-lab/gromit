@@ -834,33 +834,27 @@ fi
 # Coupling - depending on presence of protein/membrane
 # Pressure coupling semiisotropic for membranes,
 # set to isotropic if no membrane is present
-__mdp_cg__pcoupl=no # Overridden at step NpT
-__mdp_cg__pcoupltype=Semiisotropic
-__mdp_cg__tau_p=3.0,3.0 # Overridden at step NpT with GMX5
-__mdp_cg__ref_p=$Pressure,$Pressure
-__mdp_cg__compressibility=3e-4,3e-4
-__mdp_cg__nstpcouple=$__mdp_cg__nstlist
 __mdp_cg__tcoupl=v-rescale
-if $MEMBRANE && [[ -n $PDB ]]
-then
-    __mdp_cg__tc_grps=Solute,Membrane,Solvent
-    __mdp_cg__tau_t=1.0,1.0,1.0
-    __mdp_cg__ref_t=$Temperature,$Temperature,$Temperature
-else
-    if [[ -n $PDB ]]
-    then
-	__mdp_cg__tc_grps=Solute,Solvent
-	__mdp_cg__pcoupltype=Isotropic
-	__mdp_cg__tau_p=3.0
-	__mdp_cg__ref_p=$Pressure
-	__mdp_cg__compressibility=3e-4
-    else
-	__mdp_cg__tc_grps=Membrane,Solvent
-    fi
-    __mdp_cg__tau_t=1.0,1.0
-    __mdp_cg__ref_t=$Temperature,$Temperature
-fi
 __mdp_cg__nsttcouple=$__mdp_cg__nstlist
+
+__mdp_cg__pcoupl=no # Overridden at step NpT
+__mdp_cg__nstpcouple=$__mdp_cg__nstlist
+
+__mdp_cg__pcoupltype=Isotropic
+__mdp_cg__compressibility=3e-4
+__mdp_cg__tau_p=3.0 
+__mdp_cg__ref_p=$Pressure
+
+__mdp_mem__pcoupltype=Semiisotropic
+__mdp_mem__compressibility=3e-4,3e-4
+__mdp_mem__tau_p=3.0,3.0 # Overridden at step NpT with GMX5
+__mdp_mem__ref_p=$Pressure,$Pressure
+
+# Gromacs can handle empty groups, so this is fine
+# These are set based on groups in the index file 
+#__mdp_cg__tc_grps=Solute,Membrane,Solvent
+#__mdp_cg__tau_t=1.0,1.0,1.0
+#__mdp_cg__ref_t=$Temperature,$Temperature,$Temperature
 
 # Other
 __mdp_cg__constraints=none
@@ -915,8 +909,7 @@ __mdp_equil__lincs_order=6
 __mdp_equil__lincs_iter=8
 __mdp_equil__lincs_warnangle=90
 
-$MEMBRANE && __mdp_equil__tau_p=10,10 || __mdp_equil__tau_p=10
-
+__mdp_equil__tau_p=10
 
 #--------------------------------------------------------------------
 # User specified parameters
@@ -1702,8 +1695,6 @@ fi
 
 if [[ $STEP == $NOW ]]
 then
-    $MEMBRANE || EXCL=-1
-	
     NPROT=0
 
     # If a protein is given, build the martinize command line and echo it
@@ -1923,13 +1914,11 @@ then
     then
 	FATAL "Dependency not found: insane (building membrane/solvent)."
     fi
+
     INSANE="$INSA $(expandOptList ${INSANE[@]})"
     if [[ "$INSANE" =~ " -l " ]]
     then
 	echo "# Calling with insane -l, indicating a membrane is included."
-	MEMBRANE=true
-    else
-	MEMBRANE=false
     fi
 
     if [[ -n $SOL && ! "$INSANE" =~ " -sol " ]]
@@ -1955,7 +1944,7 @@ then
     # Sugar hack
     if true
     then
-        # Uncomment the include topology for sugarss
+        # Uncomment the include topology for sugars
 	cp $SDIR/martini_v2.0_sugars.itp ./
 	grep -q sugars.itp $TOP && CARBFIX='/sugars.itp/s/^; //' || CARBFIX='/\[ *system *\]/{s/^/#include "martini_v2.0_sugars.itp"'"$N$N"'/;}'
 	SED -i"" -e "$CARBFIX" $TOP
@@ -1993,6 +1982,7 @@ NTOT=$(awk '{getline; print; exit}' $GRO)
 NSOL=$(grep "^..... *${SOLNAMES[$SID]} " $GRO | wc -l)
 NION=$(grep '^..... *\(NA[+]* \+\|CL[-]* \+\)' $GRO | wc -l)
 NMEM=$((NTOT-NSOL-NION-NPROT)) 
+[[ $NMEM -gt 0 ]] && MEMBRANE=true || MEMBRANE=false
 
 echo $GRO: NTOT=$NTOT NPROT=$NPROT NSOL=$NSOL NMEM=$NMEM NION=$NION
 
@@ -2181,7 +2171,9 @@ fi
 
 
 # Base MDP options for all cycles
-OPT=(cg $MDPMS equil npt)
+$MEMBRANE && OPT=(cg mem $MDPMS equil npt) || OPT=(cg $MDPMS equil npt)
+# Isotropic pressure coupling for membranes:
+$MEMBRANE && __mdp_equil__tau_p=$__mdp_equil__tau_p,$__mdp_equil__tau_p
 for __mdp_equil__dt in ${DT[@]}
 do
     LOG=04-PR-NPT-$__mdp_equil__dt.log
@@ -2202,7 +2194,7 @@ done
 SHOUT "---STEP 5: UNRESTRAINED NpT"
 #--------------------------------------------------------------------
 
-OPT=(cg $MDPMS equil usr)
+$MEMBRANE && OPT=(cg mem $MDPMS equil usr) || OPT=(cg $MDPMS equil usr)
 GRO=$OUT
 OUT=$GRO
 LOG=05-NPT.log
@@ -2249,7 +2241,7 @@ done
 SHOUT "---STEP 6: PRODUCTION RUN"
 #--------------------------------------------------------------------
 
-OPT=(cg $MDPMS usr)
+$MEMBRANE && OPT=(cg mem $MDPMS usr) || OPT=(cg $MDPMS usr)
 GRO=$OUT
 OUT=$base-MD.gro
 LOG=06-MD.log
@@ -2267,7 +2259,8 @@ fi
 if [[ $GMXVERSION -gt 4 ]]
 then
     __mdp_cg__pcoupl=Parrinello-Rahman
-    __mdp_cg__tau_p=12.0,12.0
+    __mdp_cg__tau_p=12.0
+    __mdp_mem__tau_p=12.0,12.0
 fi
 
 echo ${STEPS[$STEP]} ${STEPS[$STOP]} ${STEPS[$NOW]}
