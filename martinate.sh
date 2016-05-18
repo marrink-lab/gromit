@@ -37,6 +37,21 @@ PROGEXEC=(     dssp  GMXRC  martinize.py  insane.py)
 PROGEVAR=(     DSSP  GMXRC)
 
 
+# Residue groups used for classifying atoms in the structure file.
+# Ions are typically considered positioned after solvent.
+# Membrane is the complementary group to the rest.
+# The structure file is assumed to have the following composition:
+#  - Protein
+#  - Nucleic acids
+#  - Membrane
+#  - Solvent
+#  - Ions
+# All groups are optional (as long as there are some)
+amino_acids=(ALA CYS ASP GLU PHE GLY HIS HIH ILE LYS LEU MET ASN PRO HYP GLN ARG SER THR VAL TRP TYR)
+nucleic_acids=(DG DA DC DT)
+solvent_names=(W WF PW BMW SOL)
+
+
 # The Gromacs RC file for use on the WeNMR GRID
 # The existence of this file is checked later to
 # to see if this is a GRID run.
@@ -1041,32 +1056,29 @@ program_options()
 }
 
 # Amino acids
-amino_acids=(ALA CYS ASP GLU PHE GLY HIS HIH ILE LYS LEU MET ASN PRO GLN ARG SER THR VAL TRP TYR)
 function sed_protein()
 {
     for a in ${amino_acids[@]}
     do 
-	echo '-e /'$a/$1
+	echo '-e /^.....\s*'$a/$1
     done
 }
 
 # Nucleic acids
-nucleic_acids=(DG DA DC DT)
 function sed_nucleic()
 {
     for a in ${nucleic_acids[@]}
     do 
-	echo '-e /'$a/$1
+	echo '-e /^.....\s*'$a/$1
     done
 }
 
 # Solvent
-solvent_names=(W\ \+W PW BMW SOL)
 function sed_solvent()
 {
     for a in ${solvent_names[@]}
     do 
-	echo '-e /'$a/$1
+	echo '-e /^.....\s*'$a/$1
     done
 }
 
@@ -1655,6 +1667,7 @@ then
     PDB=$OUT
 fi
 
+# Here we may have $OUT (if multiscaling)
 
 # END OF ATOMISTIC TOPOLOGY
 
@@ -1673,6 +1686,7 @@ then
     [[ -n $DAFT  ]] && : $((STEP++))
 fi
 
+NPROT=
 if [[ $STEP == $NOW ]]
 then
     # Output for this section:
@@ -1842,8 +1856,6 @@ then
 	trash residuetypes.dat elements.dat
 	${GMX}editconf -f $base-mart.pdb -o $base-mart.gro -d 100 -noc >/dev/null 2>&1
 
-	NPROT=$(awk '{getline;  print; exit}' $base-mart.gro)
-
         # Have to energy minimize output structure for stability
 	#__mdp_mart__pbc=no
 	MDP=em-mart.mdp
@@ -1860,9 +1872,12 @@ then
     fi
 fi
 
-
 # If $GRO is not set, we set it equal to $pdb
 [[ -z $GRO ]] && GRO=$pdb
+
+# NPROT may be set, but if we skipped this step it's not
+# If it is not set, then the input could be solute (prot/nucl) and/or membrane
+NPROT=$(SED -n '2{p;q;}' $GRO)
 
 
 # END OF COARSE GRAINING
@@ -1877,6 +1892,11 @@ SHOUT "---STEP 1C: SOLVATE"
 
 # At this point, we need to know how many atoms there are 
 # ...
+
+
+# If this step is skipped, the structure provided has 
+# membrane and/or solvent. Then an index file must be 
+# provided, which we parse for the groups.
 
 
 # Skip this step if we run DAFT
@@ -1934,6 +1954,8 @@ then
 
     if [[ -n $PDB ]]
     then
+	# Add a comment at the end of the TOP file to avoid adding stuff to existing lines 
+	echo ';' >> $TOP
 	$NOEXEC $INSANE 2>&1 | tee -a $TOP
     else
 	$NOEXEC $INSANE
@@ -1972,18 +1994,31 @@ then
     grep -q ions.itp $TOP && IONFIX='/ions.itp/s/^; //' || IONFIX='/\[ *system *\]/{s,^,#include "'$IONSITP'"'"$N$N"',;}'
     SED -i -e "$IONFIX" $TOP 
 
+    # We made a topology... extract groups
+    NSOL=($(grep '; NDX Solvent' $TOP))
+    NSOL=$(( NSOL[4]-NSOL[3]+1 ))
+    [[ $NSOL -lt 0 ]] && NSOL=0
+    NMEM=($(grep '; NDX Membrane' $TOP))
+    NMEM=$(( NMEM[4]-NMEM[3]+1 ))
+    [[ $NMEM -lt 0 ]] && NMEM=0
+    NPROT=($(grep '; NDX Solute' $TOP))
+    NPROT=$(( NPROT[4]-NPROT[3]+1 ))
+    [[ $NPROT -lt 0 ]] && NPROT=0
+
     GRO=$OUT
+else
+    # We did not make a topology, but there should be an index file.
+    NPROT=$(SED -n '/\[ *Solute/,/\[/{/\[/d;p;}' $NDX | wc -w)
+    NMEM=$(SED -n '/\[ *Membrane/,/\[/{/\[/d;p;}' $NDX | wc -w)
+    NSOL=$(SED -n '/\[ *Solvent/,/\[/{/\[/d;p;}' $NDX | wc -w)
 fi
 
-
-# Bookkeeping
-
-NTOT=$(awk '{getline; print; exit}' $GRO)                           
-NSOL=$(grep "^..... *${SOLNAMES[$SID]} " $GRO | wc -l)
-NION=$(grep '^..... *\(NA[+]* \+\|CL[-]* \+\)' $GRO | wc -l)
-NMEM=$((NTOT-NSOL-NION-NPROT)) 
 [[ $NMEM -gt 0 ]] && MEMBRANE=true || MEMBRANE=false
 
+NTOT=$(SED -n '2{p;q;}' $GRO)
+# Assuming that ions come after solvent
+NION=$(( NTOT - $(SED -n $(sed_solvent '{p;d;}') $GRO | wc -l) - NMEM - NPROT ))
+NSOL=$(( NSOL - NION ))
 echo $GRO: NTOT=$NTOT NPROT=$NPROT NSOL=$NSOL NMEM=$NMEM NION=$NION
 
 
