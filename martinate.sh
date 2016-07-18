@@ -10,7 +10,7 @@ University of Groningen
 The Netherlands"
 
 CMD="$0 $@"
-
+echo "$CMD"
 
 DESCRIPTION=$(cat << __DESCRIPTION__
 This is a convenience script to set up, equilibrate and run coarse 
@@ -32,8 +32,8 @@ __DESCRIPTION__
 #    1. the environment (if PROGEVAR is given)
 #    2. the directory where this calling script (martinate) is located
 #    3. the PATH 
-DEPENDENCIES=( dssp  gmxrc  martinize     insane   )
-PROGEXEC=(     dssp  GMXRC  martinize.py  insane.py)
+DEPENDENCIES=( dssp  gmxrc  martinize     insane     liptop    )
+PROGEXEC=(     dssp  GMXRC  martinize.py  insane.py  liptop.py )
 PROGEVAR=(     DSSP  GMXRC)
 
 
@@ -1958,8 +1958,41 @@ then
 	echo ';' >> $TOP
 	$NOEXEC $INSANE 2>&1 | tee -a $TOP
     else
-	$NOEXEC $INSANE
+	$NOEXEC $INSANE 2>insane.stderr
+	cat insane.stderr >> $TOP
     fi
+
+
+    # For each lipid built with insane (-al* options), make a topology:
+    LIPTOP=$(find_program_fun liptop)
+    [[ $? != 0 ]] && NOLIPTOP=true || NOLIPTOP=false
+    alhead=
+    allink=
+    altail=
+    alname=()
+    nlip=0
+    INS=($INSANE)
+    echo $INSANE
+    echo ${INS[@]}
+    for ((i=1; i<${#INS[@]}; i++))
+    do 
+	case ${INS[$i]} in
+	    -alhead)
+		$NOLIPTOP && FATAL "Dependency (liptop.py) required for building custom lipids, but not found."
+		[[ -n $alhead ]] && $LIPTOP -he $alhead -li $allink -ta $altail -name ${alname[$nlip]} -o $alname.itp
+		alhead=${INS[$((++i))]}
+		: $((nlip++))
+		continue
+		;;
+	    -allink) allink=${INS[$((++i))]}; continue;;
+	    -altail) altail=${INS[$((++i))]}; continue;;
+	    -alname) alname+=(${INS[$((++i))]}); continue;;
+	esac
+    done
+    [[ -n $alhead ]] && echo $LIPTOP -he $alhead -li $allink -ta $altail -name ${alname[$((nlip-1))]} -o $alname.itp
+    [[ -n $alhead ]] && $LIPTOP -he $alhead -li $allink -ta $altail -name ${alname[$((nlip-1))]} -o $alname.itp
+    echo "# There are $nlip user defined lipids"
+
 
     N='\'$'\n'
 
@@ -1976,6 +2009,16 @@ then
     then
         # Uncomment the include topology for lipids
 	cp $SDIR/martini_v2.0_lipids.itp ./
+	# Check which lipids are defined and which (custom) lipid topologies to add
+	lipids=($(sed -n '/^ *\[ *moleculetype/{n;/^ *;/n;p;}' martini_v2.0_lipids.itp))
+	for lip in ${alname[@]}
+	do
+	    isdefined=false
+	    for lip2 in ${lipids[@]}; do [[ $lip == $lip2 ]] && isdefined=true && break; done
+	    $isdefined && break
+	    echo >> martini_v2.0_lipids.itp
+	    cat $lip.itp >> martini_v2.0_lipids.itp
+	done
 	grep -q lipids.itp $TOP && LIPFIX='/lipids.itp/s/^; //' || LIPFIX='/\[ *system *\]/{s/^/#include "martini_v2.0_lipids.itp"'"$N$N"'/;}'
 	SED -i"" -e "$LIPFIX" $TOP
     else
