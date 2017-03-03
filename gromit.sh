@@ -2,7 +2,7 @@
 
 PROGRAM=${0##*/}
 VERSION=2.4      # 20160512.0830
-GMXVERSION=5.x.y # But 4.x.y is supported
+GMXVERSION=5.x.y # But 4.x.y and 2016 are supported
 HISTORY="\
 "
 
@@ -593,6 +593,8 @@ GMXVERSION=$(mdrun -h 2>&1 | sed -n '/^.*VERSION \([^ ]*\).*$/{s//\1/p;q;}')
 # From version 5.0.x on, the commands are gathered in one 'gmx' program
 # The original commands are aliased, but there is no guarantee they will always remain
 [[ -z $GMXVERSION ]] && GMXVERSION=$(gmx -h 2>&1 | sed -n '/^.*VERSION \([^ ]*\).*$/{s//\1/p;q;}')
+# Version 2016 uses lower case "version", which is potentially ambiguous, so match carefully
+[[ -z $GMXVERSION ]] && GMXVERSION=$(gmx -h 2>&1 | sed -n '/^GROMACS:.*gmx, version \([^ ]*\).*$/{s//\1/p;q;}')
 ifs=$IFS; IFS="."; GMXVERSION=($GMXVERSION); IFS=$ifs
 
 # Set the directory for binaries
