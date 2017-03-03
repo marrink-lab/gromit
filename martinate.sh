@@ -63,7 +63,7 @@ GRID=false
 
 # Starting step 
 STEPS=(AA CG SOLVENT EM NVT-PR NPT PREPRODUCTION TPR PRODUCTION ANALYSIS END)
-get_step_fun() { for ((i=0; i<${#STEPS[@]}; i++)) do [[ ${STEPS[$i]} =~ ^$1 ]] && return $i; done; }
+get_step_fun() { for ((i=0; i<${#STEPS[@]}; i++)) do [[ ${STEPS[$i]} =~ ^$1 ]] && echo $i; done; }
 STEP=AA
 STOP=PRODUCTION
 # Macros to echo stuff only if the step is to be executed -- more about steps further down
@@ -299,7 +299,7 @@ while [ -n "$1" ]; do
       -maxh)                  MAXH=$2                ; shift 2; continue ;;
      -vsite)                 VSITE=true              ; shift 1; continue ;;
      -force)                 FORCE=true              ; shift 1; continue ;;
-      -daft)                  DAFT=$2                ; shift 2; continue ;;
+      -daft)                  DAFT=$2; NDX=$2        ; shift 2; continue ;;
        -dry)                   DRY=$2                ; shift 2; continue ;;
       -keep)                  KEEP=true              ; shift 1; continue ;;
     -noexec)                NOEXEC=echo              ; shift 1; continue ;;
@@ -342,7 +342,11 @@ __RUNINFO__
 
 echo $CMD > cmd.log
 
-NOW=$STEP
+# START/STOP FLOW CONTROL
+for ((i=0; i<${#STEPS[@]}; i++)); do [[ ${STEPS[$i]} == ${STEP}* ]] && STEP=$i && break; done
+for ((i=0; i<${#STEPS[@]}; i++)); do [[ ${STEPS[$i]} == ${STOP}* ]] && STOP=$i && break; done
+
+#NOW=$STEP
 
 #--------------------------------------------------------------------
 #---GROMACS AND RELATED STUFF
@@ -426,15 +430,19 @@ ${GMX}grompp -h >/dev/null 2>&1 || executable_not_found_error "GROMACS (GMXRC)"
 
 # Search the DSSP binary, from environment, from path, or guess
 # Only required if we have an input file
-echo -n 'Checking DSSP binary (for martinizing proteins)... '
-DSSP=$(find_program_fun dssp)
-if [[ $? == 1 ]]
+SOLSTEP=$(get_step_fun CG)
+if [[ $STEP -le $SOLSTEP && $STOP -ge $SOLSTEP ]]
 then
-    warn="DSSP binary not found - Will martinize without secondary structure :S"
-    store_warning_fun "$warn"
-else
-    echo "$DSSP"
-    MARTINIZE+=(-dssp=$DSSP)
+    echo -n 'Checking DSSP binary (for martinizing proteins)... '
+    DSSP=$(find_program_fun dssp)
+    if [[ $? == 1 ]]
+    then
+	warn="DSSP binary not found - Will martinize without secondary structure :S"
+	store_warning_fun "$warn"
+    else
+	echo "$DSSP"
+	MARTINIZE+=(-dssp=$DSSP)
+    fi
 fi
 
 
@@ -544,8 +552,6 @@ SRCDIR=$(pwd)
 
 
 ## 3. START/STOP FLOW CONTROL ##
-for ((i=0; i<${#STEPS[@]}; i++)); do [[ ${STEPS[$i]} == ${STEP}* ]] && STEP=$i && break; done
-for ((i=0; i<${#STEPS[@]}; i++)); do [[ ${STEPS[$i]} == ${STOP}* ]] && STOP=$i && break; done
 NOW=$STEP
 echo Will run from step ${STEPS[$STEP]} until ${STEPS[$STOP]}
 
@@ -1879,7 +1885,6 @@ fi
 # If it is not set, then the input could be solute (prot/nucl) and/or membrane
 NPROT=$(SED -n '2{p;q;}' $GRO)
 
-
 # END OF COARSE GRAINING
 
 [[ $STOP ==   $NOW     ]] && exit_clean
@@ -1966,35 +1971,39 @@ then
     # For each lipid built with insane (-al* options), make a topology:
     LIPTOP=$(find_program_fun liptop)
     [[ $? != 0 ]] && NOLIPTOP=true || NOLIPTOP=false
-    alhead=
-    allink=
-    altail=
-    alname=()
-    nlip=0
     INS=($INSANE)
-    echo $INSANE
-    echo ${INS[@]}
+    USRDEF=()
+    USRLIP=()
     for ((i=1; i<${#INS[@]}; i++))
     do 
 	case ${INS[$i]} in
-	    -alhead)
-		$NOLIPTOP && FATAL "Dependency (liptop.py) required for building custom lipids, but not found."
-		[[ -n $alhead ]] && $LIPTOP -he $alhead -li $allink -ta $altail -name ${alname[$nlip]} -o $alname.itp
-		alhead=${INS[$((++i))]}
-		: $((nlip++))
-		continue
-		;;
-	    -allink) allink=${INS[$((++i))]}; continue;;
-	    -altail) altail=${INS[$((++i))]}; continue;;
-	    -alname) alname+=(${INS[$((++i))]}); continue;;
+	    -alhead) USRDEF+=(-he ${INS[$((++i))]}); continue;;
+	    -allink) USRDEF+=(-li ${INS[$((++i))]}); continue;;
+	    -altail) USRDEF+=(-ta ${INS[$((++i))]}); continue;;
+	    -alname) USRDEF+=(-name ${INS[$((++i))]} -o ${INS[$i]}.itp); USRLIP+=(${INS[$i]}); continue;;
 	esac
     done
-    [[ -n $alhead ]] && echo $LIPTOP -he $alhead -li $allink -ta $altail -name ${alname[$((nlip-1))]} -o $alname.itp
-    [[ -n $alhead ]] && $LIPTOP -he $alhead -li $allink -ta $altail -name ${alname[$((nlip-1))]} -o $alname.itp
-    echo "# There are $nlip user defined lipids"
-
+    echo ${USRDEF[@]}
+    for ((i=0; i<${#USRDEF[@]}; i+=10))
+    do
+	LIPDEF=${USRDEF[@]:$i:10}
+	echo $LIPTOP ${LIPDEF[@]}
+	$LIPTOP ${LIPDEF[@]}
+    done
+    echo "# There are ${#USRLIP[@]} user defined lipids: ${USRLIP[@]}" 
 
     N='\'$'\n'
+
+    # Add custom lipid topologies:
+    USRFIX=
+    for lip in ${USRLIP[@]}
+    do
+	USRFIX="${USRFIX}"'#include "'$lip'.itp"'"$N"
+    done
+    if [[ -n $USRFIX ]]
+    then
+	SED -i"" -e '/\[ *system *\]/{s/^/'"$USRFIX"'/;}' $TOP
+    fi
 
     # Sugar hack
     if true
