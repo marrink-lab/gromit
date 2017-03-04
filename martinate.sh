@@ -2250,8 +2250,11 @@ fi
 
 # Base MDP options for all cycles
 $MEMBRANE && OPT=(cg mem $MDPMS equil npt) || OPT=(cg $MDPMS equil npt)
-# Isotropic pressure coupling for membranes:
-$MEMBRANE && __mdp_equil__tau_p=$__mdp_equil__tau_p,$__mdp_equil__tau_p
+# Set pressure coupling to PR if running with GMX5
+if [[ $GMXVERSION -le 4 ]]
+then
+    $MEMBRANE && __mdp_equil__tau_p=$__mdp_equil__tau_p,$__mdp_equil__tau_p
+fi
 for __mdp_equil__dt in ${DT[@]}
 do
     LOG=04-PR-NPT-$__mdp_equil__dt.log
@@ -2338,7 +2341,8 @@ if [[ $GMXVERSION -gt 4 ]]
 then
     __mdp_cg__pcoupl=Parrinello-Rahman
     __mdp_cg__tau_p=12.0
-    __mdp_mem__tau_p=12.0,12.0
+    #__mdp_mem__tau_p=12.0,12.0
+    __mdp_mem__tau_p=12.0
 fi
 
 echo ${STEPS[$STEP]} ${STEPS[$STOP]} ${STEPS[$NOW]}
