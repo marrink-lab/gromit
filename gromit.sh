@@ -206,7 +206,10 @@ ForceFieldFamilies=(gromos  charmm  amber   opls )
 ForceFieldSolvents=(spc     tip3p   tip3p   tip4p)
 SolventFiles=(      spc216  spc216  spc216  tip4p)
 ForceField=gromos45a3
-SolModel=default
+WaterModel=
+SolModel=
+SolName=SOL
+SolFile=
 LIGANDS=()
 VirtualSites=false
 
@@ -461,8 +464,8 @@ while [ -n "$1" ]; do
 	-dir)      DIR=$2                               ; shift 2; continue ;;
 	-np)       NP=$2                                ; shift 2; continue ;;
         -maxh)     MAXH=$2                              ; shift 2; continue ;;
-	-solvent)  SolModel=$2                          ; shift 2; continue ;;
-	-solfile)  SolFile=$2                           ; shift 2; continue ;;
+	-solvent)  SolModel=$2                          ; shift 2; continue ;; # Solvent model name(s), can be itp file(s)
+	-solfile)  SolFile=$2                           ; shift 2; continue ;; # Solvent (configuration) file
 	-archive)  ARCHIVE=${2%.tgz}.tgz                ; shift 2; continue ;;
 	-force)    FORCE=true                           ; shift  ; continue ;;
         -noexec)   EXEC=echo                            ; shift  ; continue ;;
@@ -539,10 +542,22 @@ then
 fi
 
 
+#--------------------------------------------------------------------
+#---Sed and awk
+#--------------------------------------------------------------------
+
 # Set the correct sed version for multi-platform use
 # Also try to avoid GNU specific sed statements for the
 # poor bastards that are stuck with one of those Mac things
 SED=$(which gsed || which sed)
+
+
+# Awk expression for extracting moleculetype
+#    - at the line matching 'moleculetype' 
+#      read in the next line
+#      continue reading next lines until one is not beginning with ;
+#      print the first field
+AWK_MOLTYPE='/moleculetype/{getline; while ($0 ~ /^ *;/) getline; print $1}'
 
 
 #--------------------------------------------------------------------
@@ -869,17 +884,48 @@ esac
 
 
 # Set the solvent model
-if [[ $SolModel == default ]]
+if [[ -z $SolModel ]]
 then
     # Get the right solvent model for the force field selected
     for ((i=0; i<${#ForceFieldFamilies[@]}; i++))
     do
 	if [[ $ForceFieldFamily == ${ForceFieldFamilies[$i]} ]]
 	then
-	    SolModel=${ForceFieldSolvents[$i]}
-	    SolFile=${SolventFiles[$i]}
+	    WaterModel=${ForceFieldSolvents[$i]}
+	    SolModel=$WaterModel
+	    SolventTopology=$WaterModel.itp
+	    [[ -z $SolFile ]] && SolFile=${SolventFiles[$i]}
 	fi
     done
+else
+    # If the name is known (in the ForceFieldSolvents list)
+    # use the corresponding file
+    found=false
+    # Get the right solvent model for the force field selected
+    for ((i=0; i<${#ForceFieldFamilies[@]}; i++))
+    do
+	if [[ $SolModel == ${ForceFieldSolvents[$i]} ]]
+	then
+	    WaterModel=$SolModel
+	    SolventTopology=$WaterModel.itp
+	    [[ -z $SolFile ]] && SolFile=${SolventFiles[$i]}
+	    found=true
+	fi
+    done
+
+    if ! $found
+    then
+	# Solvent model was specified, but not found
+	if [[ -f $SolModel ]]
+	then
+	    SolName=$(awk "$AWK_MOLTYPE" $SolModel)
+	    SolventTopology=$SolModel
+	    NOTE Using solvent model $SolName from $SolModel with file $SolFile
+	else
+	    # Don't know what to do...
+	    FATAL The solvent model should be a registered name or provided as topology
+	fi
+    fi
 fi
 
 
@@ -914,7 +960,7 @@ echo "# Starting MD protocol for $fnIN"
 
 if [[ -z $TPR ]]
 then
-    echo "# Using $ForceFieldFamily force field $ForceField with $SolModel water model"
+    echo "# Using $ForceFieldFamily force field $ForceField with $WaterModel water model"
 
     [[ -n $Electrostatics ]] \
 	&& echo "# Using $Electrostatics for treatment of long range coulomb interactions" \
@@ -1357,7 +1403,7 @@ function INDEX()
     printf "$fmt\n" `SEQ 1 $N` | $SED 's/ 0//g'
   
     # Solvent atoms (including ions, etc, listed after 'SOL')
-    SOL=$(( $(sed -n '/SOL/{=;q;}' $1) - 2 ))
+    SOL=$(( $(sed -n '/'$SolName'/{=;q;}' $1) - 2 ))
     echo "[ Solvent ]"
     printf "$fmt\n" `SEQ $SOL $N` | $SED 's/ 0//g'
 
@@ -1654,14 +1700,6 @@ function DO() { [[ $STEP == $NOW ]] && echo "$@" && $@; }
 function LSED() { echo $SED "$@" 1>&2; $SED "$@"; }
 
 
-# Awk expression for extracting moleculetype
-#    - at the line matching 'moleculetype' 
-#      read in the next line
-#      continue reading next lines until one is not beginning with ;
-#      print the first field
-AWK_MOLTYPE='/moleculetype/{getline; while ($0 ~ /^ *;/) getline; print $1}'
-
-
 # Always ECHO the first line
 NOW=$STEP
 
@@ -1802,7 +1840,7 @@ OUTPUT=($base.top $base.gro)
 
 
 # 1. Basic stuff
-PDB2GMX="${GMX}pdb2gmx -v -f $dirn/$pdb -o $base.gro -p $base.top -ignh -ff $ForceField -water $SolModel"
+PDB2GMX="${GMX}pdb2gmx -v -f $dirn/$pdb -o $base.gro -p $base.top -ignh -ff $ForceField -water $WaterModel"
 
 
 # 2. Position restraints
@@ -2197,7 +2235,7 @@ then
     else
 	# We don't have a topology yet.
 	# Build one!
-	echo -e "#include \"$ForceField.ff/forcefield.itp\"\n#include \"$SolModel.itp\"" > $base-lig.top
+	echo -e "#include \"$ForceField.ff/forcefield.itp\"\n#include \"$SolventTopology\"" > $base-lig.top
     fi
 
     #     b. Add include statements for ligands. Only add each file once
@@ -2504,7 +2542,7 @@ then
 
     # f. Update topology: add the number of solvent molecules added
     cp $TOP $base-sol-b4ions.top
-    printf "SOL %17d ; B4IONS\n" $NSOL >> $base-sol-b4ions.top
+    printf "$SolName %17d ; B4IONS\n" $NSOL >> $base-sol-b4ions.top
 
     # g. Add solvent model include file if it is not present yet
     #    First check if there is a moleculetype named 'SOL'
@@ -2512,10 +2550,15 @@ then
     #    solvent other than water, but it is necessary to prevent 
     #    redefining the SOL moleculetype in certain (eTox) cases.
     MOLTYPES="$(awk "$AWK_MOLTYPE" $TOP)"
-    if [[ ! $MOLTYPES =~ SOL ]] 
+    if [[ ! $MOLTYPES =~ $SolName ]] 
     then
 	# check if a file is #included with the solvent model
-	grep -q '#include.*'$SolModel'.itp' $TOP || $SED -i.bck '/^\[ *system *\]/s,^,#include "'$ForceField.ff/${SolModel}.itp$'"\\\n\\\n,' $base-sol-b4ions.top
+	if ! grep -q '#include.*'$SolventTopology $TOP 
+	then
+	    # Check if the topology for the solvent is here or there
+	    [[ -f $SolventTopology ]] || SolventTopology=$ForceField.ff/$SolventTopology
+	    $SED -i.bck '/^\[ *system *\]/s,^,#include "'$SolventTopology$'"\\\n\\\n,' $base-sol-b4ions.top
+	fi
     fi
 
     # h. Make some more noise
@@ -2659,12 +2702,12 @@ then
     echo "# Replacing $(( U + V )) solvent molecules with $U $PNAM(+$m) and $V $NNAM($n) ions."
 
     # - Make an index file for the solvent added for genion
-    echo "[ SOL ]" > sol-b4ions.ndx
+    echo "[ $SolName ]" > sol-b4ions.ndx
 
     # Make a listing of the solvent added with respect to the output from EM
     N1=$(( $(awk '{getline; print; exit}' $GRO) + 1 ))
     N2=$(awk '{getline; print; exit}' $base-sol-b4ions.gro)
-    echo '[ SOL ]' > sol.ndx
+    echo "[ $SolName ]" > sol.ndx
     printf "%5d %5d %5d %5d %5d\n" $(SEQ $N1 $N2) | $SED 's/ 0//g' >> sol.ndx
     
     # Only call genionif ions should be added
@@ -2699,7 +2742,7 @@ then
 	    grep -q '#include.*ions.itp' $base-sol-b4ions.top || IONSITP=$'/^\[ *system *\]/s,^,#include "'$ForceField.ff/'ions.itp"'$N$N','
 	fi
         LSED -e "/B4IONS/d;$IONSITP;" $base-sol-b4ions.top > $base-sol.top
-        printf "SOL %17d\n$PNAM %17d\n$NNAM %17d" $(( NSOL - U - V )) $U $V >> $base-sol.top	
+        printf "$SolName %17d\n$PNAM %17d\n$NNAM %17d" $(( NSOL - U - V )) $U $V >> $base-sol.top	
     else
         LSED "s/B4IONS//" $base-sol-b4ions.top > $base-sol.top
         cp $base-sol-b4ions.gro $base-sol.gro
