@@ -1,17 +1,17 @@
 #!/bin/bash
 
 PROGRAM=${0##*/}
-VERSION=2.4      # 20160512.0830
+VERSION=2.5      # 20170706.1200
 GMXVERSION=5.x.y # But 4.x.y and 2016 are supported
 HISTORY="\
 "
 
 AUTHORS="Tsjerk A. Wassenaar, PhD"
-YEAR="2015"
+YEAR="2017"
 AFFILIATION="
-University of Amsterdam
-P.O. Box 94157 
-1090GD Amsterdam
+University of Groningen
+Nijenborgh 7
+9747AG Groningen
 The Netherlands"
 
 
@@ -109,7 +109,7 @@ __DESCRIPTION__
 
 
 #--------------------------------------------------------------------
-#---USER STUFF
+#---EXTERNAL/USER STUFF
 #--------------------------------------------------------------------
 
 # Some variables can be set here to provide defaults 
@@ -124,9 +124,19 @@ RCSB=(http://files.rcsb.org/download/ pdb.gz)
 BIO=(http://www.rcsb.org/pdb/files/ pdb1.gz)
 OPM=(http://opm.phar.umich.edu/pdb/ pdb)
 
+# Automated topology builder
+ATB=http://atb.uq.edu.au
+ATBSEARCHPDB="$ATB/search.py?"
+ATBSEARCHMOL="$ATB/search.py?"
+ATBGET="$ATB/download.py?outputType=top&ffVersion=54a7"
+ATBITP="$ATBGET&file=rtp_uniatom&molid"
+ATBPDB="$ATBGET&file=pdb_uniatom_optimised&molid"
+ATBPDBU="$ATBGET&file=pdb_uniatom_unoptimised&molid"
+ATBGROMOS=https://atb.uq.edu.au/forcefield_files/atb_gromacs/5/gromos54a7_atb.ff.tar.gz
+
 
 #--------------------------------------------------------------------
-#---PARSING COMMAND LINE ARGUMENTS AND DEPENDENCIES--
+#---Parsing COMMAND LINE ARGUMENTS AND DEPENDENCIES--
 #--------------------------------------------------------------------
 
 
@@ -1817,6 +1827,8 @@ then
         sed -i'.het' /^HETATM/d $pdb
     fi
 fi
+
+
 
 
 #---------------------------------------------------------------------
