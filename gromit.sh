@@ -596,8 +596,8 @@ find_program_function()
     [[ -n $envvar ]] && [[ -f ${!envvar} ]] && echo ${!envvar} && return 0
 
     # Check if the program is in the directory of this script
-    [[ -f $SDIR/$progr ]] && echo $SDIR/$progr && return 0
-
+    [[ -f $progr ]] && echo $progr && return 0
+    
     # Check if the program is in the PATH
     which $progr 2>/dev/null && return 0 || return 1
 }
