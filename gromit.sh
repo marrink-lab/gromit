@@ -441,53 +441,56 @@ while [ -n "$1" ]; do
     case $1 in
 	-h)        USAGE                                ; exit 0 ;;
         # File options
-	-f)        fnIN=$2                              ; shift 2; continue ;; # Input file (PDB)
-        -g)        MSGFILE=$2                           ; shift 2; continue ;; # Standard output log file
-        -e)        ERRFILE=$2                           ; shift 2; continue ;; # Standard error log file
-        -tpr)      TPR=$2                               ; shift 2; continue ;; # Run input file
-	-name)     NAME=$2                              ; shift 2; continue ;; # Name of project
-	-top)      TOP=$2                               ; shift 2; continue ;; # Topology file
-	-mdp)      MDP=$2                               ; shift 2; continue ;; # MDP (simulation parameter) file
-	-scratch)  SCRATCH=$2                           ; shift 2; continue ;; # Scratch directory to perform simulation
-        -keep)     KEEP=true                            ; shift  ; continue ;; # Whether or not to keep intermediate data
-	-rtc)      RotationalConstraints=rtc            ; shift  ; continue ;; # Whether or not to use rotational constraints
-	-ndlp)     NDLP=true; RotationalConstraints=rtc ; shift  ; continue ;; # Whether or not to use NDLP (molecular shaped) PBC
-	-step)     STEP=$2                              ; shift 2; continue ;; # Step to start protocol
-	-stop)     STOP=$2                              ; shift 2; continue ;; # Step to end protocol
-        -bt)       BOXTYPE=$2                           ; shift 2; continue ;; # Box type to use
-	-salt)     Salt=$2                              ; shift 2; continue ;; # Salt to use (NA,CL)
-	-conc)     Salinity=$2                          ; shift 2; continue ;; # Salt concentration
-	-sq)       SaltCharge=$2                        ; shift 2; continue ;; # Charge of ions from salt (1,-1)
-	-charge)   CHARGE=$2                            ; shift 2; continue ;; # 
-	-t)        Temperature=$2                       ; shift 2; continue ;; # Temperature
-	-ttau)     Tau_T=$2                             ; shift 2; continue ;; # Temperature coupling constant
-        -p)        Pressure=$2                          ; shift 2; continue ;; # Pressure
-	-ptau)     Tau_P=$2                             ; shift 2; continue ;; # Pressure coupling constant
-	-d)        PBCDIST=$2                           ; shift 2; continue ;; # Distance between images over PBC
-	-prfc)     PosreFC=$2                           ; shift 2; continue ;; # Position restraint force constant
-	-time)     TIME=$2                              ; shift 2; continue ;; # Time to run production simulation (ns)
-	-at)       AT=$2                                ; shift 2; continue ;; # Output resolution
-	-elec)     Electrostatics=$2                    ; shift 2; continue ;; # Electrostatics treatment (cutoff/RF/PME)
-	-ff)       ForceField=$2                        ; shift 2; continue ;; # Force field to use
-        -vsite)    VirtualSites=true                    ; shift  ; continue ;; # Whether or not to use virtual sites
-	-seed)     SEED=$2                              ; shift 2; continue ;; # Seed for random number generator
-	-dir)      DIR=$2                               ; shift 2; continue ;; # Directory where to perform simulation (make if required)
-	-np)       NP=$2                                ; shift 2; continue ;; # Number of processors/threads to use
-        -maxh)     MAXH=$2                              ; shift 2; continue ;; # Maximum time to run (in hours)
-	-solvent)  SolModel=$2                          ; shift 2; continue ;; # Solvent model name(s), can be itp file(s)
-	-solfile)  SolFile=$2                           ; shift 2; continue ;; # Solvent (configuration) file
-	-archive)  ARCHIVE=${2%.tgz}.tgz                ; shift 2; continue ;; # Archive file name to save data in
-	-force)    FORCE=true                           ; shift  ; continue ;; # Whether or not to force redoing parts already run
-        -noexec)   EXEC=echo                            ; shift  ; continue ;; # Whether or not to actually execute the commands
-	-fetch)    FETCH=$2                             ; shift 2; continue ;; # Database to fetch input structure from
-        -rmhet)    HETATM=false                         ; shift  ; continue ;; # Whether or not to remove HETATM records
-	-lie)      LIE=true                             ; shift  ; continue ;; # Whether or not to use LIE setup and analysis 
-	-l)        LIGANDS+=($2)                        ; shift 2; continue ;; # Ligands to include (topology or structure,topology)
-        -analysis) ANALYSIS+=($2)                       ; shift 2; continue ;; # Analysis protocols to run
-	-control)  CONTROL=$2                           ; shift 2; continue ;; # Simulation monitor script
-	-ctime)    CHECKTIME=$2                         ; shift 2; continue ;; # Time for running monitor
-        --mdp-*)   MDPOPTS+=(${1#--mdp-})               ; shift  ; continue ;; # Command-line specified simulation parameters
-	--*)       PROGOPTS+=($1)                       ; shift  ; continue ;; # Command-line specified program parameters
+	-f)        fnIN=$2                              ; shift 2; continue ;; #= Input file (PDB)
+        -g)        MSGFILE=$2                           ; shift 2; continue ;; #= Standard output log file
+        -e)        ERRFILE=$2                           ; shift 2; continue ;; #= Standard error log file
+        -tpr)      TPR=$2                               ; shift 2; continue ;; #= Run input file
+	-name)     NAME=$2                              ; shift 2; continue ;; #= Name of project
+	-top)      TOP=$2                               ; shift 2; continue ;; #= Topology file
+	-mdp)      MDP=$2                               ; shift 2; continue ;; #= MDP (simulation parameter) file
+	-scratch)  SCRATCH=$2                           ; shift 2; continue ;; #= Scratch directory to perform simulation
+        -keep)     KEEP=true                            ; shift  ; continue ;; #= Whether or not to keep intermediate data
+	-rtc)      RotationalConstraints=rtc            ; shift  ; continue ;; #= Whether or not to use rotational constraints
+	-ndlp)     NDLP=true; RotationalConstraints=rtc ; shift  ; continue ;; #= Whether or not to use NDLP (molecular shaped) PBC
+	-step)     STEP=$2                              ; shift 2; continue ;; #= Step to start protocol
+	-stop)     STOP=$2                              ; shift 2; continue ;; #= Step to end protocol
+        -bt)       BOXTYPE=$2                           ; shift 2; continue ;; #= Box type to use
+	-salt)     Salt=$2                              ; shift 2; continue ;; #= Salt to use (NA,CL)
+	-conc)     Salinity=$2                          ; shift 2; continue ;; #= Salt concentration
+	-sq)       SaltCharge=$2                        ; shift 2; continue ;; #= Charge of ions from salt (1,-1)
+	-charge)   CHARGE=$2                            ; shift 2; continue ;; #= 
+	-t)        Temperature=$2                       ; shift 2; continue ;; #= Temperature
+	-ttau)     Tau_T=$2                             ; shift 2; continue ;; #= Temperature coupling constant
+        -p)        Pressure=$2                          ; shift 2; continue ;; #= Pressure
+	-ptau)     Tau_P=$2                             ; shift 2; continue ;; #= Pressure coupling constant
+	-d)        PBCDIST=$2                           ; shift 2; continue ;; #= Distance between images over PBC
+	-prfc)     PosreFC=$2                           ; shift 2; continue ;; #= Position restraint force constant
+	-time)     TIME=$2                              ; shift 2; continue ;; #= Time to run production simulation (ns)
+	-at)       AT=$2                                ; shift 2; continue ;; #= Output resolution
+        -em)       EMSteps=$2                           ; shift 2; continue ;; #= Number of steps in EM
+        -equil)    EquilTime=$2                         ; shift 2; continue ;; #= Equilibration run time
+        -pre)      PreTime=$2                           ; shift 2; continue ;; #= Time for preproduction run
+	-elec)     Electrostatics=$2                    ; shift 2; continue ;; #= Electrostatics treatment (cutoff/RF/PME)
+	-ff)       ForceField=$2                        ; shift 2; continue ;; #= Force field to use
+        -vsite)    VirtualSites=true                    ; shift  ; continue ;; #= Whether or not to use virtual sites
+	-seed)     SEED=$2                              ; shift 2; continue ;; #= Seed for random number generator
+	-dir)      DIR=$2                               ; shift 2; continue ;; #= Directory where to perform simulation (make if required)
+	-np)       NP=$2                                ; shift 2; continue ;; #= Number of processors/threads to use
+        -maxh)     MAXH=$2                              ; shift 2; continue ;; #= Maximum time to run (in hours)
+	-solvent)  SolModel=$2                          ; shift 2; continue ;; #= Solvent model name(s), can be itp file(s)
+	-solfile)  SolFile=$2                           ; shift 2; continue ;; #= Solvent (configuration) file
+	-archive)  ARCHIVE=${2%.tgz}.tgz                ; shift 2; continue ;; #= Archive file name to save data in
+	-force)    FORCE=true                           ; shift  ; continue ;; #= Whether or not to force redoing parts already run
+        -noexec)   EXEC=echo                            ; shift  ; continue ;; #= Whether or not to actually execute the commands
+	-fetch)    FETCH=$2                             ; shift 2; continue ;; #= Database to fetch input structure from
+        -rmhet)    HETATM=false                         ; shift  ; continue ;; #= Whether or not to remove HETATM records
+	-lie)      LIE=true                             ; shift  ; continue ;; #= Whether or not to use LIE setup and analysis 
+	-l)        LIGANDS+=($2)                        ; shift 2; continue ;; #= Ligands to include (topology or structure,topology)
+        -analysis) ANALYSIS+=($2)                       ; shift 2; continue ;; #= Analysis protocols to run
+	-control)  CONTROL=$2                           ; shift 2; continue ;; #= Simulation monitor script
+	-ctime)    CHECKTIME=$2                         ; shift 2; continue ;; #= Time for running monitor
+        --mdp-*)   MDPOPTS+=(${1#--mdp-})               ; shift  ; continue ;; #= Command-line specified simulation parameters
+	--*)       PROGOPTS+=($1)                       ; shift  ; continue ;; #= Command-line specified program parameters
 	*)        
 	    USAGE
 
@@ -826,6 +829,7 @@ ext=${pdb##*.}                                   # Extension
 topdir=$(cd ${TOP%${TOP##*/}}./; pwd)            # Full path to directory of topology file
 [[ -n $TOP ]]  && TOP=$topdir/${TOP##*/}         # Topology file with full path
 
+
 # Set the name. If one is given, that one is used. Otherwise, 
 # if an input structure is given, the name is derived from it. 
 # If there is no input structure, but there is a ligand, then
@@ -893,7 +897,20 @@ case $ForceField in
 esac
 
 
-# Set the solvent model
+#--------------------------------------------------------------------
+#---SET THE SOLVENT MODEL
+#--------------------------------------------------------------------
+
+# If it is not specified, the solvent is the water model 
+# most appropriate for the force field. This can be overriden
+# by explicitly stating an alternative water model or by
+# providing a solvent model topology. 
+
+# The solvent model needs to be accompanied by a solvent
+# structure file, which is to be used for the solvation.
+# For the water models these files are available in the
+# distribution.
+
 if [[ -z $SolModel ]]
 then
     # Get the right solvent model for the force field selected
@@ -939,6 +956,10 @@ else
 fi
 
 
+#--------------------------------------------------------------------
+#---STEPPING STUFF
+#--------------------------------------------------------------------
+
 # Set the starting/stopping step
 # For LIE calculations also execute the analysis part
 $LIE && ANALYSIS+=(LIE)
@@ -966,6 +987,7 @@ echo "# Stopping at step $STOP:    ${STEPS[$STOP]}"
 #---INFORMATIVE OUTPUT--          
 #--------------------------------------------------------------------
 
+
 echo "# Starting MD protocol for $fnIN"
 
 if [[ -z $TPR ]]
@@ -992,7 +1014,7 @@ fi
 
 ## OT N ## For every parameter not defined the default is used
 ## NOTE ## This is probably fine for equilibration, but check the defaults to be sure
-## E OT ## The list as is was set up for gromacs 4.5
+## E OT ## The list as is was set up for gromacs 4.5 and 5.1
 
 # This function lists the mdp options requested based on a preceding tag
 function mdp_options ()
@@ -1119,7 +1141,7 @@ __mdp_opls__dt=0.001
 
 __mdp_em__define=-DFLEXIBLE
 __mdp_em__integrator=steep
-__mdp_em__nsteps=500
+__mdp_em__nsteps=$EMSteps
 __mdp_em__pbc=xyz
 __mdp_em__constraints=none
 
@@ -1127,8 +1149,9 @@ __mdp_em__constraints=none
 # Equilibration runs: position restraints, NVT, NPT
 
 # Position restraints are relieved at step 7
+TIME=$(python -c "print int(1000*$EquilTime/$__mdp_md__dt + 0.5 )")
 __mdp_equil__define=-DPOSRES
-__mdp_equil__nsteps=4000
+__mdp_equil__nsteps=$TIME
 __mdp_equil__nstlog=10
 __mdp_equil__nstenergy=10
 __mdp_equil__nstxtcout=0
@@ -1307,7 +1330,7 @@ function exit_error()
 }
 
 
-function terminate ()
+function terminate()
 {
     echo
     writeToLog "SIGNAL CAUGHT... "
@@ -1715,7 +1738,7 @@ NOW=$STEP
 
 
 #--------------------------------------------------------------------
-SHOUT "---= THIS IS WHERE WE START MD =---"
+SHOUT "---= THIS IS WHERE WE really START =---"
 #--------------------------------------------------------------------
 
 NOW=0
@@ -1829,6 +1852,35 @@ then
 fi
 
 
+#--------------------------------------------------------------------
+#---CHECK AND FIX THE INPUT STRUCTURE
+#--------------------------------------------------------------------
+
+## I. Protein
+
+# a. Sequence
+# b. Side chains
+# c. PTMs
+
+## II. Ligands and cofactors 
+
+# a. Ions
+# b. Ligands/Factors
+
+## III. Nucleic acids
+
+# a. DNA
+# b. RNA
+
+## IV. Lipids
+
+## V. Solvent
+
+
+if [[ $STEP == $NOW ]]
+then
+  :
+fi
 
 
 #---------------------------------------------------------------------
