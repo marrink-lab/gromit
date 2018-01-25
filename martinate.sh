@@ -480,6 +480,7 @@ then
     INSA=$(find_program_fun insane)
     if [[ $? != 0 ]]
     then
+	STEP=$NOW
 	FATAL "Dependency (insane) required for building solvent/membrane, but not found."
     fi
 fi
