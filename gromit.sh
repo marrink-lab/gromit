@@ -146,7 +146,7 @@ SDIR=$( [[ $0 != ${0%/*} ]] && cd ${0%/*}; pwd )
 #    -gmxrc /usr/local/gromacs-5.1/bin/GMXRC
 # If not set, the default name will be searched for in
 #    1. the environment (if PROGEVAR is given)
-#    2. the directory where this calling script (martinate) is located
+#    2. the directory where this calling script (gromit) is located
 #    3. the PATH 
 DEPENDENCIES=( gmxrc squeeze)
 PROGEXEC=(     GMXRC squeeze)
@@ -176,17 +176,9 @@ JUNK=()       # Garbage collection
 SCRATCH=      # Scratch directory
 KEEP=false    # Keep intermediate rubbish (except junk)
 HETATM=true   # Keep HETATM records in input PDB file
+GRID=false    # Whether this is a grid-enabled run
 CMD="$0 $@"   # The command as it was issued
 echo $CMD > CMD
-
-
-# The Gromacs RC file for use on the WeNMR GRID
-# The existence of this file is checked later to
-# to see if this is a GRID run.
-# Note that the GMXRC file can also be specified with -gmxrc
-# This is just a convenience hack.
-GRIDRC="${VO_ENMR_EU_SW_DIR}/BCBR/gromacs/4.5.3-rtc/bin/GMXRC.bash"
-GRID=false
 
 
 # Run control
@@ -451,6 +443,7 @@ while [ -n "$1" ]; do
 	-top)      TOP=$2                               ; shift 2; continue ;; #= Topology file
 	-mdp)      MDP=$2                               ; shift 2; continue ;; #= MDP (simulation parameter) file
 	-scratch)  SCRATCH=$2                           ; shift 2; continue ;; #= Scratch directory to perform simulation
+        -grid)     GRID=true                            ; shift 1; continue ;; #= GRID-enabled run
         -keep)     KEEP=true                            ; shift  ; continue ;; #= Whether or not to keep intermediate data
 	-rtc)      RotationalConstraints=rtc            ; shift  ; continue ;; #= Whether or not to use rotational constraints
 	-ndlp)     NDLP=true; RotationalConstraints=rtc ; shift  ; continue ;; #= Whether or not to use NDLP (molecular shaped) PBC
@@ -713,7 +706,7 @@ UNTIL=
 
 # If we have a proxy, then we adhere to it, assuming to be running on the GRID
 # The allowed runtime is set slightly lower to allow the script to finish
-which voms-proxy-info && LEFT=$(( $(voms-proxy-info -timeleft &> /dev/null) - 300 )) || LEFT=
+$GRID && which voms-proxy-info && LEFT=$(( $(voms-proxy-info -timeleft &> /dev/null) - 300 )) || LEFT=
 
 
 # If LEFT is set, MAXH may not be set negative
