@@ -139,6 +139,8 @@ ATBGROMOS=https://atb.uq.edu.au/forcefield_files/atb_gromacs/5/gromos54a7_atb.ff
 #---Parsing COMMAND LINE ARGUMENTS AND DEPENDENCIES--
 #--------------------------------------------------------------------
 
+# Directory where this script is
+SDIR=$( [[ $0 != ${0%/*} ]] && cd ${0%/*}; pwd )
 
 # These will be looked for before running, and can be set from the cmdline, e.g.:
 #    -gmxrc /usr/local/gromacs-5.1/bin/GMXRC
