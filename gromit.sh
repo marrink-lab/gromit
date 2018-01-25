@@ -2481,7 +2481,7 @@ Replacing box with a rhombic dodecahedron of radius 3.
 __WARNING__
 
 	box='   3.00000   3.00000   2.12132   0.00000   0.00000   0.00000   0.00000   1.50000   1.50000'
-	awk 'NR==2{X=$1+2} NR==X{print "'$box'"; exit} 1' $base-pbc.gro >tmp.gro
+        awk -vbox="$box" 'NR==2{X=$1+3} NR==X{print box; exit} 1' $base-pbc.gro > tmp.gro
 	mv tmp.gro $base-pbc.gro
 	
     fi
