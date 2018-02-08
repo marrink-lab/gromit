@@ -82,6 +82,8 @@ ECHO()  { [[ $STEP == $NOW ]] && echo "$@"; }
 # MARTINI Force field parameters
 MARTINI=martini22
 DRY=
+FFITP=
+FFTAG=v2.0
 
 
 # Solvents
@@ -283,6 +285,8 @@ while [ -n "$1" ]; do
          -m)     MULTI[$((NCH++))]=$2; M=true        ; shift 2; continue ;;
          -M)                   ALL=true; M=true      ; shift 1; continue ;;
         -ff)            ForceField=$2                ; shift 2; continue ;;
+     -ffitp)                 FFITP=$2                ; shift 2; continue ;;
+     -fftag)                 FFTAG=$2                ; shift 2; continue ;;
          -T)           Temperature=$2                ; shift 2; continue ;;
          -P)              Pressure=$2                ; shift 2; continue ;;
       -salt)              Salinity=$2                ; shift 2; continue ;;
@@ -596,37 +600,44 @@ SID=; for ((i=0; i<${#SOLVENTS[@]}; i++)); do [[ ${SOLVENTS[$i]} == ${SOL}* ]] &
 #     a. COARSE GRAINED: MARTINI/ELNEDYN
 #        Set a pointer to the correct forcefield generating script
 #        (of the form: martini_2.1.py or martini_2.1_P.py)
-FFMARTINIPY=$SDIR/${MARTINI}${SOLVFF[$SID]}.py
-if [[ ! -f $FFMARTINIPY ]]
+if [[ -z $FFITP ]]
 then
-    if [[ -f $SDIR/${MARTINI}.py ]]
+    FFMARTINIPY=$SDIR/${MARTINI}${SOLVFF[$SID]}.py
+    if [[ ! -f $FFMARTINIPY ]]
     then
-        # If martini22p was specified in stead of martini22 with PW,
-	# then we end up here, setting the script to martini22p.py
-	FFMARTINIPY=$SDIR/${MARTINI}.py
-    else
-	# Unclear dependency, but shipped with the scripts...
-	FATAL Forcefield script $FFMARTINIPY does not exist, nor does $SDIR/${MARTINI}.py
+	if [[ -f $SDIR/${MARTINI}.py ]]
+	then
+            # If martini22p was specified in stead of martini22 with PW,
+	    # then we end up here, setting the script to martini22p.py
+	    FFMARTINIPY=$SDIR/${MARTINI}.py
+	else
+	    # Unclear dependency, but shipped with the scripts...
+	    FATAL Forcefield script $FFMARTINIPY does not exist, nor does $SDIR/${MARTINI}.py
+	fi
     fi
 fi
-
 
 #     b. ATOMISTIC
 #        Set pointers to ffnonbonded.itp and ffbonded.itp if we do multiscaling
 $M && ffnb=$GMXLIB/$ForceField.ff/ffnonbonded.itp || ffnb=
 $M && ffbn=$GMXLIB/$ForceField.ff/ffbonded.itp    || ffbn=
 
-#     c. GENERATE martini.itp FOR COARSE GRAINED, MULTISCALE or DRY
-if [[ -n $DRY ]]
+if [[ -z $FFITP ]]
 then
-    $FFMARTINIPY "$DRY" > martini.itp
-else
-    $FFMARTINIPY $ffnb $ffbn > martini.itp
-fi
+    #     c. GENERATE martini.itp FOR COARSE GRAINED, MULTISCALE or DRY
+    if [[ -n $DRY ]]
+    then
+	$FFMARTINIPY "$DRY" > martini.itp
+    else
+	$FFMARTINIPY $ffnb $ffbn > martini.itp
+    fi
 
-#     d. UPDATE martini.itp FOR DUMMIES
-#        Replace the #include statement for ff_dum.itp for atomistic force fields by the contents of it
-$M && sed -i -e "/#include \"ff_dum.itp\"/r$GMXLIB/$ForceField.ff/ff_dum.itp" -e "/#include \"ff_dum.itp\"/d" martini.itp
+    #     d. UPDATE martini.itp FOR DUMMIES
+    #        Replace the #include statement for ff_dum.itp for atomistic force fields by the contents of it
+    $M && sed -i -e "/#include \"ff_dum.itp\"/r$GMXLIB/$ForceField.ff/ff_dum.itp" -e "/#include \"ff_dum.itp\"/d" martini.itp
+else
+    cp $FFITP martini.itp
+fi
 
 
 ## 6. ELECTROSTATICS AND TABLES ##
@@ -2012,26 +2023,26 @@ then
     if true
     then
         # Uncomment the include topology for sugars
-	cp $SDIR/martini_v2.0_sugars.itp ./
-	grep -q sugars.itp $TOP && CARBFIX='/sugars.itp/s/^; //' || CARBFIX='/\[ *system *\]/{s/^/#include "martini_v2.0_sugars.itp"'"$N$N"'/;}'
+	cp $SDIR/martini_${FFTAG}_sugars.itp ./ || touch martini_${FFTAG}_sugars.itp
+	grep -q sugars.itp $TOP && CARBFIX='/sugars.itp/s/^; //' || CARBFIX='/\[ *system *\]/{s/^/#include "martini_'$FFTAG'_sugars.itp"'"$N$N"'/;}'
 	SED -i"" -e "$CARBFIX" $TOP
     fi
 
     if [[ $INSANE =~ "-l " ]]
     then
         # Uncomment the include topology for lipids
-	cp $SDIR/martini_v2.0_lipids.itp ./
+	cp $SDIR/martini_${FFTAG}_lipids.itp ./ || touch martini_${FFTAG}_lipids.itp
 	# Check which lipids are defined and which (custom) lipid topologies to add
-	lipids=($(sed -n '/^ *\[ *moleculetype/{n;/^ *;/n;p;}' martini_v2.0_lipids.itp))
+	lipids=($(sed -n '/^ *\[ *moleculetype/{n;/^ *;/n;p;}' martini_${FFTAG}_lipids.itp))
 	for lip in ${alname[@]}
 	do
 	    isdefined=false
 	    for lip2 in ${lipids[@]}; do [[ $lip == $lip2 ]] && isdefined=true && break; done
 	    $isdefined && break
-	    echo >> martini_v2.0_lipids.itp
-	    cat $lip.itp >> martini_v2.0_lipids.itp
+	    echo >> martini_${FFTAG}_lipids.itp
+	    cat $lip.itp >> martini_${FFTAG}_lipids.itp
 	done
-	grep -q lipids.itp $TOP && LIPFIX='/lipids.itp/s/^; //' || LIPFIX='/\[ *system *\]/{s/^/#include "martini_v2.0_lipids.itp"'"$N$N"'/;}'
+	grep -q lipids.itp $TOP && LIPFIX='/lipids.itp/s/^; //' || LIPFIX='/\[ *system *\]/{s/^/#include "martini_'$FFTAG'_lipids.itp"'"$N$N"'/;}'
 	SED -i"" -e "$LIPFIX" $TOP
     else
 	echo "$INSANE"
@@ -2042,8 +2053,8 @@ then
     then
 	IONSITP=$ForceField.ff/ions.itp
     else
-	IONSITP=martini_v2.0_ions.itp
-	cp $SDIR/$IONSITP ./
+	IONSITP=martini_${FFTAG}_ions.itp
+	cp $SDIR/$IONSITP ./ || touch martini_${FFTAG}_ions.itp
     fi
 
     grep -q ions.itp $TOP && IONFIX='/ions.itp/s/^; //' || IONFIX='/\[ *system *\]/{s,^,#include "'$IONSITP'"'"$N$N"',;}'
@@ -2173,7 +2184,7 @@ SHOUT "---STEP 2: ENERGY MINIMIZATION"
 if [[ -f $DAFT ]]
 then
     NDX=$DAFT
-    cp $SDIR/martini_v2.0_{ions,lipids}.itp .
+    cp $SDIR/martini_${FFTAG}_{ions,lipids}.itp .
     __mdp_cg__energygrps=$(sed 's/ /,/g' <<< `sed '/^ *[^[]/d;s/\[ *\(.*\) *\]/\1/;/Solute/d;/System/d;' $DAFT`)
 fi
 
