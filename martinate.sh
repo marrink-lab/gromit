@@ -84,7 +84,7 @@ MARTINI=martini22
 DRY=
 FFITP=
 FFTAG=v2.0
-
+USRITP=() # Additional topologies to include
 
 # Solvents
 # NOTE: with standard Martini water, exclude AA/CG interactions
@@ -287,6 +287,7 @@ while [ -n "$1" ]; do
         -ff)            ForceField=$2                ; shift 2; continue ;;
      -ffitp)                 FFITP=$2                ; shift 2; continue ;;
      -fftag)                 FFTAG=$2                ; shift 2; continue ;;
+       -itp)               USRITP+=($2)              ; shift 2; continue ;;
          -T)           Temperature=$2                ; shift 2; continue ;;
          -P)              Pressure=$2                ; shift 2; continue ;;
       -salt)              Salinity=$2                ; shift 2; continue ;;
@@ -2056,6 +2057,15 @@ then
 
     grep -q ions.itp $TOP && IONFIX='/ions.itp/s/^; //' || IONFIX='/\[ *system *\]/{s,^,#include "'$IONSITP'"'"$N$N"',;}'
     SED -i -e "$IONFIX" $TOP 
+
+    # Include user defined topologies 
+    USRFIX=
+    for itp in ${USRITP[@]}
+    do
+	USRFIX="${USRFIX}"'#include "'$itp'"'"$N"
+    done
+    USRFIX='/\[ *system *\]/{s,^,'${USRFIX}"$N"',;}'
+    SED -i -e "$USRFIX" $TOP
 
     # We made a topology... extract groups
     NSOL=($(grep '; NDX Solvent' $TOP))
