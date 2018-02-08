@@ -597,7 +597,12 @@ SID=; for ((i=0; i<${#SOLVENTS[@]}; i++)); do [[ ${SOLVENTS[$i]} == ${SOL}* ]] &
 
 ## 5. FORCE FIELD ##
 
-#     a. COARSE GRAINED: MARTINI/ELNEDYN
+#     a. ATOMISTIC
+#        Set pointers to ffnonbonded.itp and ffbonded.itp if we do multiscaling
+$M && ffnb=$GMXLIB/$ForceField.ff/ffnonbonded.itp || ffnb=
+$M && ffbn=$GMXLIB/$ForceField.ff/ffbonded.itp    || ffbn=
+
+#     b. COARSE GRAINED: MARTINI/ELNEDYN
 #        Set a pointer to the correct forcefield generating script
 #        (of the form: martini_2.1.py or martini_2.1_P.py)
 if [[ -z $FFITP ]]
@@ -615,15 +620,7 @@ then
 	    FATAL Forcefield script $FFMARTINIPY does not exist, nor does $SDIR/${MARTINI}.py
 	fi
     fi
-fi
 
-#     b. ATOMISTIC
-#        Set pointers to ffnonbonded.itp and ffbonded.itp if we do multiscaling
-$M && ffnb=$GMXLIB/$ForceField.ff/ffnonbonded.itp || ffnb=
-$M && ffbn=$GMXLIB/$ForceField.ff/ffbonded.itp    || ffbn=
-
-if [[ -z $FFITP ]]
-then
     #     c. GENERATE martini.itp FOR COARSE GRAINED, MULTISCALE or DRY
     if [[ -n $DRY ]]
     then
