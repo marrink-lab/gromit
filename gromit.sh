@@ -216,6 +216,8 @@ SolName=SOL
 SolFile=
 LIGANDS=()
 VirtualSites=false
+AtomTypes=()
+MoleculeTypes=()
 
 
 # System setup
@@ -441,6 +443,8 @@ while [ -n "$1" ]; do
         -tpr)      TPR=$2                               ; shift 2; continue ;; #= Run input file
 	-name)     NAME=$2                              ; shift 2; continue ;; #= Name of project
 	-top)      TOP=$2                               ; shift 2; continue ;; #= Topology file
+	-atp)      AtomTypes+=($2)                      ; shift 2; continue ;; #= Additional atom type definitions
+	-itp)      MoleculeTypes+=($2)                  ; shift 2; continue ;; #= Additional molecule type definitions
 	-mdp)      MDP=$2                               ; shift 2; continue ;; #= MDP (simulation parameter) file
 	-scratch)  SCRATCH=$2                           ; shift 2; continue ;; #= Scratch directory to perform simulation
         -grid)     GRID=true                            ; shift 1; continue ;; #= GRID-enabled run
@@ -2359,6 +2363,25 @@ then
 fi
 
 
+if [[ -n $TOP ]]
+then
+    # Add atomtypes and moleculetypes if given
+    sed /^#include.*forcefield.itp/q $TOP > $base-usr.top
+    for atp in ${AtomTypes[@]}
+    do
+	echo
+	sed -n -e '/\[ *atomtypes *\]/p' -e '/\[ *atomtypes *\]/,/^ *\[/{/^ *\[/d;p;}' $atp
+    done >> $base-usr.top
+    for mtp in ${MoleculeTypes[@]}
+    do
+	echo
+	sed -n -e '/\[ *moleculetype *\]/,/\[ *system *\]/{/\[ *system *\]/d;p;}' $mtp
+    done >> $base-usr.top
+    sed -n -e 'H' -e '/^#include.*forcefield.itp/{n;x;}' -e '${x;p;}' $TOP >> $base-usr.top
+    TOP=$DIR/$base-usr.top
+fi
+
+
 # End of step
 [[ $STOP ==   $NOW     ]] && exit_clean
 [[ $STEP == $((NOW++)) ]] && : $((STEP++))
@@ -2556,7 +2579,10 @@ fi
 
 
 # If there is no topology file yet, we have to set one up
-[[ -z $TOP ]] && TOP=$base.top && cat << __TOP__ > $base.top
+if [[ -z $TOP ]]
+then
+    TOP=$base.top
+    cat << __TOP__ > $base.top
 #include "$ForceField.ff/forcefield.itp
 
 [ system ]
@@ -2564,6 +2590,22 @@ Box of solvent, maybe with ions
 
 [ molecules ]
 __TOP__
+
+    # Add atomtypes and moleculetypes if given
+    sed /^#include.*forcefield.itp/q $TOP > $base-usr.top
+    for atp in ${AtomTypes[@]}
+    do
+	echo
+	sed -n -e '/\[ *atomtypes *\]/p' -e '/\[ *atomtypes *\]/,/^ *\[/{/^ *\[/d;p;}' $atp
+    done >> $base-usr.top
+    for mtp in ${MoleculeTypes[@]}
+    do
+	echo
+	sed -n -e '/\[ *moleculetype *\]/,/\[ *system *\]/{/\[ *system *\]/d;p;}' $mtp
+    done >> $base-usr.top
+    sed -n -e 'H' -e '/^#include.*forcefield.itp/{n;x;}' -e '${x;p;}' $TOP >> $base-usr.top
+    TOP=$DIR/$base-usr.top
+fi
 
 
 if [[ $STEP == $NOW ]]
