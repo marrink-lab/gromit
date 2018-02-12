@@ -915,7 +915,7 @@ then
 	then
 	    WaterModel=${ForceFieldSolvents[$i]}
 	    SolModel=$WaterModel
-	    SolventTopology=$WaterModel.itp
+	    SolventTopology=$ForceField.ff/$WaterModel.itp
 	    [[ -z $SolFile ]] && SolFile=${SolventFiles[$i]}
 	fi
     done
