@@ -2657,7 +2657,7 @@ then
 	if ! grep -q '#include.*'$SolventTopology $TOP 
 	then
 	    # Check if the topology for the solvent is here or there
-	    [[ -f $SolventTopology ]] || SolventTopology=$ForceField.ff/$SolventTopology
+	    #[[ -f $SolventTopology ]] || SolventTopology=$ForceField.ff/$SolventTopology
 	    $SED -i.bck '/^\[ *system *\]/s,^,#include "'$SolventTopology$'"\\\n\\\n,' $base-sol-b4ions.top
 	fi
     fi
