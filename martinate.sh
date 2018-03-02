@@ -2192,7 +2192,8 @@ if [[ -f $DAFT ]]
 then
     NDX=$DAFT
     cp $SDIR/martini_${FFTAG}_{ions,lipids}.itp .
-    __mdp_cg__energygrps=$(sed 's/ /,/g' <<< `sed '/^ *[^[]/d;s/\[ *\(.*\) *\]/\1/;/Solute/d;/System/d;' $DAFT`)
+    grps=($(sed '/^ *[^[]/d;s/\[ *\(.*\) *\]/\1/;/Solute/d;/System/d;' $DAFT))
+    __mdp_cg__energygrps=$(sed 's/ /,/g' <<< ${grps[@]})
 fi
 
 trash $base-EM.{tpr,edr,trr} em-out.mdp
