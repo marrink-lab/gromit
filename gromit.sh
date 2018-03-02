@@ -2875,11 +2875,10 @@ then
     # Now see how much solvent was added in total and list in the right group
     # Also add to the ligand environment
     N2=$(awk '{getline; print; exit}' $DIR/$base-sol.gro)
-    Solvent[${#Solvent[@]}]=$N1
+    Solvent[${#Solvent[@]}]=${N1:-1}
     Solvent[${#Solvent[@]}]=$N2
-    Ligenv[${#Ligenv[@]}]=$N1
+    Ligenv[${#Ligenv[@]}]=${N1:-1}
     Ligenv[${#Ligenv[@]}]=$N2
-
 
     if [[ ! -e $DIR/$base-sol.ndx ]]
     then
