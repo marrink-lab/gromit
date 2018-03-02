@@ -1978,7 +1978,7 @@ then
 	$NOEXEC $INSANE 2>&1 | tee -a $TOP
     else
 	$NOEXEC $INSANE 2>insane.stderr
-	cat insane.stderr >> $TOP
+	cat insane.stderr | tee -a $TOP
     fi
 
 
