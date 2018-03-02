@@ -383,7 +383,9 @@ find_program_fun()
     [[ -f $SDIR/$progr ]] && echo $SDIR/$progr && return 0
 
     # Check if the program is in the PATH
-    which $progr 2>/dev/null && return 0 || return 1
+    # Python scripts may be available as 'binaries' (martinize/insane)
+    which $progr 2>/dev/null && return 0
+    which ${progr%.py} 2>/dev/null && return 0 || return 1
 }
 
 
