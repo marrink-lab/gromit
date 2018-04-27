@@ -182,6 +182,7 @@ echo $CMD > CMD
 
 
 # Run control
+MONALL=       # Monitor all steps
 CONTROL=
 CHECKTIME=300 # Run control every five minutes
 
@@ -325,6 +326,8 @@ OPTIONS=$(cat << __OPTIONS__
                  disable addition of ions.
 
   Control
+    -monall      Monitor all steps using control process                 *BOOL:  $MONALL 
+                 (default is production run only)
     -control     A control process, either a program, script or command  *STR:   None
                  that monitors the production run and terminates it
                  upon a certain condition, indicated by a zero exit code.
@@ -486,6 +489,7 @@ while [ -n "$1" ]; do
 	-lie)      LIE=true                             ; shift  ; continue ;; #= Whether or not to use LIE setup and analysis 
 	-l)        LIGANDS+=($2)                        ; shift 2; continue ;; #= Ligands to include (topology or structure,topology)
         -analysis) ANALYSIS+=($2)                       ; shift 2; continue ;; #= Analysis protocols to run
+	-monall)   MONALL=-monitor;                     ; shift 1; continue ;; #= Monitor all steps using control script
 	-control)  CONTROL=$2                           ; shift 2; continue ;; #= Simulation monitor script
 	-ctime)    CHECKTIME=$2                         ; shift 2; continue ;; #= Time for running monitor
         --mdp-*)   MDPOPTS+=(${1#--mdp-})               ; shift  ; continue ;; #= Command-line specified simulation parameters
@@ -3043,7 +3047,7 @@ do
     LOG=06-PR-NVT-$((m++)).log
 
     # Build the command
-    MD="MDRUNNER -f $MDP -c $GRO -p $TOP -o $OUT -n $NDX -np $NP -l $LOG -force $FORCE"
+    MD="MDRUNNER -f $MDP -c $GRO -p $TOP -o $OUT -n $NDX -np $NP -l $LOG -force $FORCE $MONALL"
 
     # Execute
     [[ $STEP ==   $NOW     ]] && mdp_options ${OPT[@]} > $MDP
@@ -3137,7 +3141,7 @@ do
 
 
     # Build the command
-    MD="MDRUNNER -f $MDP -c $GRO -p $TOP -o $OUT -n $NDX -np $NP -l $LOG -force $FORCE"
+    MD="MDRUNNER -f $MDP -c $GRO -p $TOP -o $OUT -n $NDX -np $NP -l $LOG -force $FORCE $MONALL"
 
 
     # Execute
