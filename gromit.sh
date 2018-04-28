@@ -1470,24 +1470,25 @@ function MDRUNNER ()
 {
     writeToLog "MDRUNNER"    
 
-    local NP=1
-    local fnOUT=
-    local fnNDX=
-    local FRC=false
-    local SPLIT=
-    local MONITOR=false
-    while test -n "$1"; do
-	case $1 in
-	    -f)       local fnMDP=$2        ; shift 2; continue;;
+	local NP=1
+	local fnOUT=
+	local fnNDX=
+	local FRC=false
+	local SPLIT=
+	local TABLES=
+	local MONITOR=false
+	while test -n "$1"; do
+		case $1 in
+		    -f)       local fnMDP=$2        ; shift 2; continue;;
             -c)       local  fnIN=$2        ; shift 2; continue;;
-	    -n)       local fnNDX=$2        ; shift 2; continue;;
+		    -n)       local fnNDX=$2        ; shift 2; continue;;
             -o)       local fnOUT=$2        ; shift 2; continue;;
-	    -p)       local fnTOP=$2        ; shift 2; continue;;
-	    -l)       local fnLOG=$2        ; shift 2; continue;;
-	    -force)   local   FRC=$2        ; shift 2; continue;;
-	    -np)      local    NP=$2        ; shift 2; continue;;
-	    -split)   local SPLIT=-noappend ; shift  ; continue;;
-	    -monitor) local MONITOR=true    ; shift  ; continue;;
+		    -p)       local fnTOP=$2        ; shift 2; continue;;
+		    -l)       local fnLOG=$2        ; shift 2; continue;;
+		    -force)   local   FRC=$2        ; shift 2; continue;;
+		    -np)      local    NP=$2        ; shift 2; continue;;
+		    -split)   local SPLIT=-noappend ; shift  ; continue;;
+			-monitor) local MONITOR=true    ; shift  ; continue;;
             *)  echo "PANIC!: Internal Argument Error ($1) in routine MDRUNNER"; exit;;
         esac
     done
@@ -1577,6 +1578,8 @@ function MDRUNNER ()
     fi
 
 
+    echo "# $(date): STARTING MDRUNNER"    
+
     # Set the options for the parameter and index files
     fnMDP="-f $fnMDP -po ${fnMDP%.mdp}-out.mdp"
     [[ -n $fnNDX ]] && fnNDX="-n $fnNDX"
@@ -1585,15 +1588,15 @@ function MDRUNNER ()
     # Skip generation of run input file if it exists
     if [[ ! -e $baseOUT.tpr ]]
     then
-	# Build command
+        # Build command
         # The warnings are pretty much controlled. We usually get a warning because of using a plain cut-off for EM.
-	# With custom ligand topologies we may get warnings about overriding parameters. This should be fine? :S
-	GROMPP="${GMX}grompp $fnMDP -c $fnIN -p $fnTOP $fnNDX -o $baseOUT.tpr $(program_options grompp) -maxwarn -1"
+        # With custom ligand topologies we may get warnings about overriding parameters. This should be fine? :S
+        GROMPP="${GMX}grompp $fnMDP -c $fnIN -p $fnTOP $fnNDX -o $baseOUT.tpr $(program_options grompp) -maxwarn -1"
 
-	echo "$GROMPP" | tee $LOG
-	echo ": << __GROMPP__" >>$LOG
-	$GROMPP >>$LOG 2>&1 || exit_error "Execution of grompp failed in routine MDRUNNER. More information in $LOG."
-	echo "__GROMPP__" >>$LOG
+        echo "$GROMPP" | tee $LOG
+        echo ": << __GROMPP__" >>$LOG
+        $GROMPP >>$LOG 2>&1 || exit_error "Execution of grompp failed in routine MDRUNNER. More information in $LOG."
+        echo "__GROMPP__" >>$LOG
     fi
 
 
@@ -1609,20 +1612,20 @@ function MDRUNNER ()
     # MAXH needs to be updated after every cycle
     if [[ -n $UNTIL ]]
     then
-	MAXS=$(( UNTIL - $(date +%s) ))
-	if (( $MAXS < 0 ))
-	then
-	    exit_error "Somehow we violated the allowed run time... Exiting NOW!"
-	fi
-	MAXH=$(bc <<< "scale=3;$MAXS/3600") 
-	
-	# May want to check if MAXS makes sense for the run...
-	if ((MAXS < LASTRUN))
-	then
-	    echo "# The remaining time is $MAXS seconds, which does not seem sufficient for this part."
-	    echo "# The previous part took $LASTRUN seconds."
-	    exit_error "INSUFFICIENT TIME LEFT. RUN INCOMPLETE. RESUBMIT."
-	fi
+        MAXS=$(( UNTIL - $(date +%s) ))
+        if (( $MAXS < 0 ))
+        then
+            exit_error "Somehow we violated the allowed run time... Exiting NOW!"
+        fi
+        MAXH=$(bc <<< "scale=3;$MAXS/3600") 
+        
+        # May want to check if MAXS makes sense for the run...
+        if ((MAXS < LASTRUN))
+        then
+            echo "# The remaining time is $MAXS seconds, which does not seem sufficient for this part."
+            echo "# The previous part took $LASTRUN seconds."
+            exit_error "INSUFFICIENT TIME LEFT. RUN INCOMPLETE. RESUBMIT."
+        fi
     fi
 
 
@@ -1705,19 +1708,19 @@ function MDRUNNER ()
     # If we split then we have to do some more work to see if we have finished
     if [[ -n $SPLIT ]]
     then
-	step=($SED -n -e '/Step *Time *Lambda/{n;h;}' -e '${x;p;}' $fnLOG)
-	[[ $step == $RUNSTEPS ]] && cp ${fnLOG%.log}.gro $fnOUT
+		step=($SED -n -e '/Step *Time *Lambda/{n;h;}' -e '${x;p;}' $fnLOG)
+		[[ $step == $RUNSTEPS ]] && cp ${fnLOG%.log}.gro $fnOUT
     fi
 
     
     # If $fnOUT exists then we finished this part
     if [[ -e $fnOUT ]]
     then
-	echo "# $(date): FINISHED MDRUNNER (STEP ${STEPS[$STEP]})" | tee -a $fnLOG
-	return 0
+		echo "# $(date): FINISHED MDRUNNER (STEP ${STEPS[$STEP]})" | tee -a $fnLOG
+		return 0
     else
-	echo "# $(date): MDRUN EXITED (STEP ${STEPS[$STEP]}), BUT RUN NOT COMPLETE" | tee -a $fnLOG
-	return 1
+		echo "# $(date): MDRUN EXITED (STEP ${STEPS[$STEP]}), BUT RUN NOT COMPLETE" | tee -a $fnLOG
+		return 1
     fi
 }
 

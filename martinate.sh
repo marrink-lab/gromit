@@ -1164,33 +1164,44 @@ function INDEX()
 
 MDRUNNER ()
 {
-    local NP=1
-    local fnOUT=
-    local fnNDX=
-    local FRC=false
-    local SPLIT=
-    local TABLES=
+	local NP=1
+	local fnOUT=
+	local fnNDX=
+	local FRC=false
+	local SPLIT=
+	local TABLES=
+	local MONITOR=false
     while test -n "$1"; do
         case $1 in
-            -f)      local  fnMDP=$2        ; shift 2; continue;;
-            -c)      local   fnIN=$2        ; shift 2; continue;;
-            -n)      local  fnNDX=$2        ; shift 2; continue;;
-            -o)      local  fnOUT=$2        ; shift 2; continue;;
-            -p)      local  fnTOP=$2        ; shift 2; continue;;
-            -l)      local  fnLOG=$2        ; shift 2; continue;;
-            -force)  local    FRC=$2        ; shift 2; continue;;
-            -np)     local     NP=$2        ; shift 2; continue;;
-            -split)  local  SPLIT=-noappend ; shift  ; continue;;
-	    -tables) local TABLES="-table table.xvg -tablep tablep.xvg"; shift; continue;;
+            -f)       local fnMDP=$2        ; shift 2; continue;;
+            -c)       local  fnIN=$2        ; shift 2; continue;;
+            -n)       local fnNDX=$2        ; shift 2; continue;;
+            -o)       local fnOUT=$2        ; shift 2; continue;;
+            -p)       local fnTOP=$2        ; shift 2; continue;;
+            -l)       local fnLOG=$2        ; shift 2; continue;;
+            -force)   local   FRC=$2        ; shift 2; continue;;
+            -np)      local    NP=$2        ; shift 2; continue;;
+            -split)   local SPLIT=-noappend ; shift  ; continue;;
+			-monitor) local MONITOR=true    ; shift  ; continue;;
+	    	-tables) local TABLES="-table table.xvg -tablep tablep.xvg"; shift; continue;;
             *)  echo "PANIC!: Internal Argument Error ($1) in routine MDRUNNER"; exit;;
         esac
     done
-    local TPR=
 
-    # Check input
-    [[ -f $fnIN  ]] || exit_error "Input structure not found in routine MDRUNNER ($fnIN)"
-    [[ -f $fnTOP ]] || exit_error "Input topology not found in routine MDRUNNER ($fnTOP)"
-    [[ -n $fnNDX && -f $fnNDX ]] || INDEX $fnIN $fnNDX
+
+    if [[ "${fnIN##*.}" == "tpr" ]]
+    then
+	local TPR=$fnIN
+	local fnOUT=${TPR%.tpr}.gro
+    else
+        # Check input
+	[[ -f $fnIN  ]] || exit_error "Input structure not found in routine MDRUNNER ($fnIN)"
+	[[ -f $fnTOP ]] || exit_error "Input topology not found in routine MDRUNNER ($fnTOP)"
+	[[ -f $fnMDP ]] || exit_error "Input parameter file not found in routine MDRUNNER ($fnMDP)"
+	[[ -n $fnNDX && -f $fnNDX ]] || INDEX $fnIN $fnNDX
+	local TPR=
+    fi
+
 
     # Infer basename from output file name
     baseOUT=${fnOUT%.*}
@@ -1305,9 +1316,10 @@ MDRUNNER ()
         fi
     fi
 
-    
-    # Run the run
+
+    # Set up the mdrun command and start it in the background 
     MDRUN="${GMX}mdrun -nice 0 -deffnm $baseOUT -c $fnOUT -cpi $baseOUT.cpt -nt $NP $SPLIT $(program_options mdrun) -maxh $MAXH"
+    echo
     echo "$MDRUN" | tee -a $fnLOG
     echo ": << __MDRUN__" >>$LOG
     $MDRUN >>$fnLOG 2>&1 || exit_error "Execution of mdrun failed in routine MDRUNNER. More information in $LOG."
@@ -1317,19 +1329,19 @@ MDRUNNER ()
     # If we split then we have to do some more work to see if we have finished
     if [[ -n $SPLIT ]]
     then
-        step=($SED -n -e '/Step *Time *Lambda/{n;h;}' -e '${x;p;}' $fnLOG)
-        [[ $step == $FIN ]] && cp ${fnLOG%.log}.gro $fnOUT
+		step=($SED -n -e '/Step *Time *Lambda/{n;h;}' -e '${x;p;}' $fnLOG)
+		[[ $step == $FIN ]] && cp ${fnLOG%.log}.gro $fnOUT
     fi
 
     
     # If $fnOUT exists then we finished this part
     if [[ -e $fnOUT ]]
     then
-        echo "# $(date): FINISHED MDRUNNER (STEP ${STEPS[$STEP]})" | tee -a $fnLOG
-        return 0
+		echo "# $(date): FINISHED MDRUNNER (STEP ${STEPS[$STEP]})" | tee -a $fnLOG
+		return 0
     else
-        echo "# $(date): MDRUN EXITED (STEP ${STEPS[$STEP]}), BUT RUN NOT COMPLETE" | tee -a $fnLOG
-        return 1
+		echo "# $(date): MDRUN EXITED (STEP ${STEPS[$STEP]}), BUT RUN NOT COMPLETE" | tee -a $fnLOG
+		return 1
     fi
 }
 
