@@ -68,7 +68,7 @@ The program allows running only part of the workflow by specifying the
 start and end step (-step/-stop), using an argument uniquely matching 
 one of the tags given between parentheses.
 
-This program requires a working installation of Gromacs $GMXVERSION. To link 
+This program requires a working installation of Gromacs. To link 
 the program to the correct version of Gromacs, it should be placed in the 
 Gromacs binaries directory or the Gromacs GMXRC file should be passed as 
 argument to the option -gmxrc
