@@ -1175,7 +1175,7 @@ function INDEX()
 function MDRUNNER ()
 {
     writeToLog "MDRUNNER"    
-
+    
     local NP=1
     local fnOUT=
     local fnNDX=
@@ -1217,16 +1217,16 @@ function MDRUNNER ()
     
     # Infer basename from output file name
     baseOUT=${fnOUT%.*}
-
     
-    #if [[ -n $SCRATCH ]]
-    #then
-    #    # Make sure to copy the TPR file if we already have one
-    #	[[ -f $DIR/$baseOUT.tpr ]] && cp $DIR/$baseOUT.tpr .    
-    #
-    #    # Make sure we deal well with checkpointing
-    #	[[ -f $DIR/$baseOUT.cpt ]] && cp $DIR/$baseOUT.cpt .
-    #fi
+    
+    if [[ -n $SCRATCH ]]
+    then
+        # Make sure to copy the TPR file if we already have one
+	[[ -f $DIR/$baseOUT.tpr ]] && cp $DIR/$baseOUT.tpr .    
+	
+        # Make sure we deal well with checkpointing
+	[[ -f $DIR/$baseOUT.cpt ]] && cp $DIR/$baseOUT.cpt .
+    fi
     
     
     if $FRC
@@ -1340,18 +1340,85 @@ function MDRUNNER ()
     MDRUN="${GMX}mdrun -nice 0 -deffnm $baseOUT -c $fnOUT -cpi $baseOUT.cpt -nt $NP $SPLIT $(program_options mdrun) -maxh $MAXH"
     echo
     echo "$MDRUN" | tee -a $fnLOG
-    echo ": << __MDRUN__" >>$LOG
-    $MDRUN >>$fnLOG 2>&1 || exit_error "Execution of mdrun failed in routine MDRUNNER. More information in $LOG."
+    echo
+    $MDRUN >>$fnLOG 2>&1 &
+    local -i MDPID=$!
+    writeToLog "MDRUN PID: $MDPID"
+    
+    
+    # Start the monitor (if this is a production run)
+    if $MONITOR && [[ -n $CONTROL ]]
+    then
+	MON=$CONTROL
+	MON=${MON/@PID/$MDPID}
+	MON=${MON/@TPR/$baseOUT.tpr}
+	MON=${MON/@TRR/$baseOUT.trr}
+	MON=${MON/@XTC/$baseOUT.xtc}
+	MON=${MON/@EDR/$baseOUT.edr}
+	MON=${MON/@LOG/$baseOUT.log}
+	writeToLog "Monitoring run"
+	echo
+	echo "$MON"
+	echo
+	# Mark the output
+	{ $MON | sed 's/^/MONITOR: /'; } &
+	
+	local -i MONID=$!
+	writeToLog "Monitor PID: $MONID"
+	
+	# In most cases, the monitor finishes before the run.
+	# The exit code then tells what to do:
+	#
+	#   0: The monitor terminated the run, because conditions were met.
+	#      In this case, all frames have been processed and classified.
+	#
+	#   1: The run was terminated outside of the monitor.
+	#      In this case all frames have been processed and classified,
+	#      but a new shooting point was not generated, because the 
+	#      conditions were not met.
+	#      This can happen if the run crashed, was terminated 
+	#      externally, possibly running over walltime, or simply
+	#      ended because the maximum simulation time was reached.
+	#
+	#   In either case, all frames should have been processed and scored.
+	#
+	trap "terminate $MDPID $MONID" SIGHUP SIGINT SIGTERM SIGCHLD
+
+    	wait $MONID
+	MONEXIT=$?
+	echo MONITOR EXIT: $MONEXIT
+    else
+	trap "terminate $MDPID" SIGHUP SIGINT SIGTERM SIGCHLD
+    fi
+
+
+    # Wait for the MD run to finish
+    wait $MDPID
+    MDEXIT=$?
+
+
     echo "__MDRUN__" >>$LOG
-    
-    
+
+
+    if [[ $MONEXIT == 0 ]]
+    then
+	exit_clean "Run terminated by monitor."
+    fi
+
+
+    if [[ $MDEXIT != 0 ]]
+    then
+	exit_error "MDRUN exited with non-zero exit code ($MDEXIT) ... Exiting $PROGRAM."
+    fi
+
+
     # If we split then we have to do some more work to see if we have finished
     if [[ -n $SPLIT ]]
     then
 	step=($SED -n -e '/Step *Time *Lambda/{n;h;}' -e '${x;p;}' $fnLOG)
-	[[ $step == $FIN ]] && cp ${fnLOG%.log}.gro $fnOUT
+	[[ $step == $RUNSTEPS ]] && cp ${fnLOG%.log}.gro $fnOUT
     fi
-    
+
     
     # If $fnOUT exists then we finished this part
     if [[ -e $fnOUT ]]
