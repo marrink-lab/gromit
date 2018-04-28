@@ -1,27 +1,83 @@
 #!/bin/bash
 
 PROGRAM=martinate.sh
-VERSION=0.1
-VERSTAG=devel-160502-0800-TAW
+VERSION=0.99
+VERSTAG=devel-180428-1200-TAW
 AUTHOR="Tsjerk A. Wassenaar, PhD"
-YEAR="2016"
+YEAR="2018"
 AFFILIATION="
 University of Groningen
+Nijenborgh 7
+9747AG Groningen
 The Netherlands"
 
 CMD="$0 $@"
 echo "$CMD"
 
 DESCRIPTION=$(cat << __DESCRIPTION__
-This is a convenience script to set up, equilibrate and run coarse 
-grained (and multiscaled) systems, using the Martini force field. 
-It is built as a wrapper around martinize.py and insane.py, allowing 
-automated processing of membrane proteins, with full control of membrane 
-composition. If no input file is provided, only a membrane is built.
-Otherwise, if a protein is given and -L is not set, the protein is 
-solvated and run, but if -L is set, a membrane is built in addition.
+
+$PROGRAM $VERSION is a versatile wrapper built around 
+GROMACS, insane, and martinize, for setting up and running
+MARTINI COARSE GRAIN molecular dynamics simulations of solvents, 
+membranes, proteins and/or nucleic acids in any combination.
+
+It is built to allow automated processing of membrane proteins, 
+with full control of membrane composition. If no input file is provided, 
+only a membrane and/or solvent is built. 
 Options given that do not match an option in this script are passed to
 martinize.py.
+
+The script contains a complete and flexible workflow, consisting of the 
+following steps:
+
+    1.   Generate topology from input structure 
+         A. Generate atomistic topology             (AA)
+         B. Generate MARTINI CG/multiscale topology (CG)
+    2.   Solvation and adding ions                  (SOLVENT)
+    5.   Energy minimization                        (EM)
+    6.   Position restrained NVT equilibration      (NVT-PR)
+    7.   Unrestrained NpT equilibration             (NPT)
+    8.   Equilibration under run conditions         (PREPRODUCTION)
+    9.   Production simulation                    
+         A. Run input file                          (TPR)
+         B. Simulation (possibly in parts)          (PRODUCTION)
+
+The program allows running only part of the workflow by specifying the
+start and end step (-step/-stop), using an argument uniquely matching 
+one of the tags given between parentheses.
+
+This program requires a working installation of Gromacs. To link 
+the program to the correct version of Gromacs, it should be placed in the 
+Gromacs binaries directory or the Gromacs GMXRC file should be passed as 
+argument to the option -gmxrc
+
+The workflow contained within this program corresponds to a standard protocol
+that should suffice for routine CG molecular dynamics simulations of proteins 
+and/or nucleic acids in aqueous solution with or without a membrane. 
+It follows the steps that are commonly taken in MD tutorials 
+(e.g. those at http://cgmartini.nl).
+
+This program is designed to enable high-throughput processing of CG molecular
+dynamics simulations in which specific settings are varied systematically. These
+settings include protein/nucleic acid, ligand, temperature, and pressure, as well
+as many others.
+
+
+## -- IMPORTANT -- ##
+
+Molecular dynamics simulations are complex, with many contributing factors. 
+The workflow in this program has been tested extensively and used many times.
+Nonetheless, it should not be considered failsafe. No MD protocol ever is. 
+Despite careful set up, simulations may crash, and the possibility that a crash
+is encountered is larger when many simulations are run. If the run crashes,
+the intermediate results will be kept and can be investigated to identify the
+source of the problem. 
+
+If the run finishes to completion, this does not automatically imply that the
+results are good. The results from the simulations should always be subjected
+to integrity and quality assurance checks to assert that they are correct within
+the objectives of the study.
+
 __DESCRIPTION__
 )
 
