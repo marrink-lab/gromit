@@ -992,7 +992,17 @@ fi
 
 ERROR=0
 
-archive ()
+
+function writeToLog() 
+{  
+    # Write message to log as formatted string in the same way as the server cron scripts do
+  
+    local MSG_STATUS=$2
+    local LOGMSG="# $( date +"%a %b %d %H:%M:%S %Y" ) MDS $$ $MSG_STATUS: $1"
+    echo "$LOGMSG"
+}
+
+function archive ()
 {
     if [[ -n $ARCHIVE ]]
     then
@@ -1162,33 +1172,35 @@ function INDEX()
 }
 
 
-MDRUNNER ()
+function MDRUNNER ()
 {
-	local NP=1
-	local fnOUT=
-	local fnNDX=
-	local FRC=false
-	local SPLIT=
-	local TABLES=
-	local MONITOR=false
+    writeToLog "MDRUNNER"    
+
+    local NP=1
+    local fnOUT=
+    local fnNDX=
+    local FRC=false
+    local SPLIT=
+    local TABLES=
+    local MONITOR=false
     while test -n "$1"; do
-        case $1 in
-            -f)       local fnMDP=$2        ; shift 2; continue;;
+	case $1 in
+	    -f)       local fnMDP=$2        ; shift 2; continue;;
             -c)       local  fnIN=$2        ; shift 2; continue;;
-            -n)       local fnNDX=$2        ; shift 2; continue;;
+	    -n)       local fnNDX=$2        ; shift 2; continue;;
             -o)       local fnOUT=$2        ; shift 2; continue;;
-            -p)       local fnTOP=$2        ; shift 2; continue;;
-            -l)       local fnLOG=$2        ; shift 2; continue;;
-            -force)   local   FRC=$2        ; shift 2; continue;;
-            -np)      local    NP=$2        ; shift 2; continue;;
-            -split)   local SPLIT=-noappend ; shift  ; continue;;
-			-monitor) local MONITOR=true    ; shift  ; continue;;
-	    	-tables) local TABLES="-table table.xvg -tablep tablep.xvg"; shift; continue;;
+	    -p)       local fnTOP=$2        ; shift 2; continue;;
+	    -l)       local fnLOG=$2        ; shift 2; continue;;
+	    -force)   local   FRC=$2        ; shift 2; continue;;
+	    -np)      local    NP=$2        ; shift 2; continue;;
+	    -split)   local SPLIT=-noappend ; shift  ; continue;;
+	    -monitor) local MONITOR=true    ; shift  ; continue;;
+	    -tables) local TABLES="-table table.xvg -tablep tablep.xvg"; shift; continue;;
             *)  echo "PANIC!: Internal Argument Error ($1) in routine MDRUNNER"; exit;;
         esac
     done
-
-
+    
+    
     if [[ "${fnIN##*.}" == "tpr" ]]
     then
 	local TPR=$fnIN
@@ -1201,20 +1213,38 @@ MDRUNNER ()
 	[[ -n $fnNDX && -f $fnNDX ]] || INDEX $fnIN $fnNDX
 	local TPR=
     fi
-
-
+    
+    
     # Infer basename from output file name
     baseOUT=${fnOUT%.*}
 
+    
     #if [[ -n $SCRATCH ]]
     #then
     #    # Make sure to copy the TPR file if we already have one
-    #    [[ -f $DIR/$baseOUT.tpr ]] && cp $DIR/$baseOUT.tpr .    
+    #	[[ -f $DIR/$baseOUT.tpr ]] && cp $DIR/$baseOUT.tpr .    
     #
     #    # Make sure we deal well with checkpointing
-    #    [[ -f $DIR/$baseOUT.cpt ]] && cp $DIR/$baseOUT.cpt .
+    #	[[ -f $DIR/$baseOUT.cpt ]] && cp $DIR/$baseOUT.cpt .
     #fi
-
+    
+    
+    if $FRC
+    then
+	removed=()
+	for z in ${baseOUT}.*; do [[ -f "$z" && "$z" != "$TPR" ]] && rm $z && removed[${#removed[@]}]=$z; done
+	echo "# Forced execution."
+        [[ -n $removed ]] && writeToLog "Removed files:" && echo ${removed[@]}
+    fi
+    
+    
+    if [[ -f $fnOUT || -f $DIR/$fnOUT ]]
+    then
+	writeToLog "Output found ($fnOUT). Skipping step ${STEPS[$STEP]}"
+	return 0
+    fi
+    
+    
     # Check if there are parts of runs (always in the RUN directory)
     if [[ -n $SPLIT ]]
     then
@@ -1232,7 +1262,8 @@ MDRUNNER ()
         log=$baseOUT.log 
         last=$DIR/$log
     fi
-
+    
+    
     # Check whether the log file actually exists
     step=0
     if [[ -e $last ]]
@@ -1242,37 +1273,25 @@ MDRUNNER ()
         # read a next line (n) and put it in the hold space (h)
         # At the end of the file, switch the hold space and the 
         # pattern space (x) and print (p)
-        step=($($SED  -n -e '/^ *Step *Time *Lambda/{n;h;}' -e '${x;p;}' $last))
+	local -i step=($($SED  -n -e '/^ *Step *Time *Lambda/{n;h;}' -e '${x;p;}' $last))
+	
+	# Check the number of steps for this cycle
+	local -i RUNSTEPS=$(sed -n '/nsteps/s/^.*=\([^;]*\).*$/\1/p' $fnMDP)
+	
+	if [[ $step -gt 0 ]]
+	then
+	    writeToLog "A log file exists which reports having run $step of $RUNSTEPS steps ($last)"
+	fi	
     fi
-        
-    local nsteps=$(sed -n '/nsteps/s/^.*=\([^;]*\).*$/\1/p' $fnMDP)
-
-
-    # Check whether we need to do anything
-    if $FRC
-    then
-        removed=()
-        for z in ${baseOUT}.*; do [[ -f $z ]] && rm $z && removed[${#removed[@]}]=$z; done
-        echo "# Forced execution."
-        [[ -n $removed ]] && echo "# Removed files:" && echo ${removed[@]}
-    elif [[ -f $fnOUT || -f $DIR/$fnOUT ]]
-    then
-        echo "# Output found ($fnOUT). Skipping step."
-        return 0
-    elif [[ $step -gt $nsteps ]]
-    then
-        echo "# A log file exists which reports having run $step of $STEPS steps ($last)"
-        return 0
-    fi
-
-
+    
+    
     echo "# $(date): STARTING MDRUNNER"    
-
+    
     # Set the options for the parameter and index files
     fnMDP="-f $fnMDP -po ${fnMDP%.mdp}-out.mdp"
     [[ -n $fnNDX ]] && fnNDX="-n $fnNDX"
-
-
+    
+    
     # Skip generation of run input file if it exists
     if [[ ! -e $baseOUT.tpr ]]
     then
@@ -1280,22 +1299,22 @@ MDRUNNER ()
         # The warnings are pretty much controlled. We usually get a warning because of using a plain cut-off for EM.
         # With custom ligand topologies we may get warnings about overriding parameters. This should be fine? :S
         GROMPP="${GMX}grompp $fnMDP -c $fnIN -p $fnTOP $fnNDX -o $baseOUT.tpr $(program_options grompp) -maxwarn -1"
-
+	
         echo "$GROMPP" | tee $LOG
         echo ": << __GROMPP__" >>$LOG
         $GROMPP >>$LOG 2>&1 || exit_error "Execution of grompp failed in routine MDRUNNER. More information in $LOG."
         echo "__GROMPP__" >>$LOG
     fi
-
-
+    
+    
     # If the output file extension is 'tpr' we should be done here
     [[ "${fnOUT#$baseOUT}" == ".tpr" ]] && return 0
-
-
+    
+    
     # If we extend a partial run, mention it
-    [[ ! -e $fnOUT && -e $baseOUT.cpt ]] && echo $(date): FOUND PARTIAL ${STEPS[$STEP]} RESULTS... CONTINUING
-
-
+    [[ ! -e $fnOUT && -e $baseOUT.cpt ]] && writeToLog "Found partial ${STEPS[$STEP]} results... Continuing"
+    
+    
     # Check the time
     # MAXH needs to be updated after every cycle
     if [[ -n $UNTIL ]]
@@ -1315,8 +1334,8 @@ MDRUNNER ()
             exit_error "INSUFFICIENT TIME LEFT. RUN INCOMPLETE. RESUBMIT."
         fi
     fi
-
-
+    
+    
     # Set up the mdrun command and start it in the background 
     MDRUN="${GMX}mdrun -nice 0 -deffnm $baseOUT -c $fnOUT -cpi $baseOUT.cpt -nt $NP $SPLIT $(program_options mdrun) -maxh $MAXH"
     echo
@@ -1324,24 +1343,24 @@ MDRUNNER ()
     echo ": << __MDRUN__" >>$LOG
     $MDRUN >>$fnLOG 2>&1 || exit_error "Execution of mdrun failed in routine MDRUNNER. More information in $LOG."
     echo "__MDRUN__" >>$LOG
-
-
+    
+    
     # If we split then we have to do some more work to see if we have finished
     if [[ -n $SPLIT ]]
     then
-		step=($SED -n -e '/Step *Time *Lambda/{n;h;}' -e '${x;p;}' $fnLOG)
-		[[ $step == $FIN ]] && cp ${fnLOG%.log}.gro $fnOUT
+	step=($SED -n -e '/Step *Time *Lambda/{n;h;}' -e '${x;p;}' $fnLOG)
+	[[ $step == $FIN ]] && cp ${fnLOG%.log}.gro $fnOUT
     fi
-
+    
     
     # If $fnOUT exists then we finished this part
     if [[ -e $fnOUT ]]
     then
-		echo "# $(date): FINISHED MDRUNNER (STEP ${STEPS[$STEP]})" | tee -a $fnLOG
-		return 0
+	echo "# $(date): FINISHED MDRUNNER (STEP ${STEPS[$STEP]})" | tee -a $fnLOG
+	return 0
     else
-		echo "# $(date): MDRUN EXITED (STEP ${STEPS[$STEP]}), BUT RUN NOT COMPLETE" | tee -a $fnLOG
-		return 1
+	echo "# $(date): MDRUN EXITED (STEP ${STEPS[$STEP]}), BUT RUN NOT COMPLETE" | tee -a $fnLOG
+	return 1
     fi
 }
 
@@ -1910,7 +1929,6 @@ fi
 NPROT=$(SED -n '2{p;q;}' $GRO)
 
 # END OF COARSE GRAINING
-
 [[ $STOP ==   $NOW     ]] && exit_clean
 [[ $STEP == $((NOW++)) ]] && : $((STEP++))
 
@@ -1943,7 +1961,7 @@ then
     NDX=$base-cg.ndx
     LOG=01-SOLVENT.log
 
-    OUTPUT=($OUT $TOP $NDX)
+    OUTPUT=($OUT $NDX)
 
     # Delete existing output if we force this step
     $FORCE && rm ${OUTPUT[@]}
@@ -2181,7 +2199,6 @@ trash *.ssd
 
 
 # END OF COARSE GRAINED/MULTISCALE TOPOLOGY
-
 [[ $STOP ==   $NOW     ]] && exit_clean
 [[ $STEP == $((NOW++)) ]] && : $((STEP++))
 
@@ -2297,15 +2314,17 @@ if [[ $GMXVERSION -le 4 ]]
 then
     $MEMBRANE && __mdp_equil__tau_p=$__mdp_equil__tau_p,$__mdp_equil__tau_p
 fi
+run=1
 for __mdp_equil__dt in ${DT[@]}
 do
-    LOG=04-PR-NPT-$__mdp_equil__dt.log
-    OUT=$base-PR-NPT-$__mdp_equil__dt.gro
-    MDP=pr-npt-$__mdp_equil__dt.mdp
+    LOG=04-PR-NPT-$__mdp_equil__dt-$run.log
+    OUT=$base-PR-NPT-$__mdp_equil__dt-$run.gro
+    MDP=pr-npt-$__mdp_equil__dt-$run.mdp
     mdp_options ${OPT[@]} > $MDP
     MD="MDRUNNER -f $MDP -c $GRO -p $TOP -o $OUT -n $NDX -np $NP -l $LOG -force $FORCE $TABLES"
     $NOEXEC $MD 
     GRO=$OUT
+    : $((run++))
     trash $base-PR-NPT-$__mdp_equil__dt.{cpt,tpr} 
 done
 
@@ -2336,21 +2355,24 @@ else
     DT=(0.020 $DELT)
 fi
 
+run=1
 for __mdp_equil__dt in ${DT[@]}
 do
-    LOG=05-NPT-$__mdp_equil__dt.log
+    LOG=05-NPT-$__mdp_equil__dt-$run.log
 
-    OUT=$base-NPT-$__mdp_equil__dt.gro
-    MDP=md-init-$__mdp_equil__dt.mdp
+    OUT=$base-NPT-$__mdp_equil__dt-$run.gro
+    MDP=md-init-$__mdp_equil__dt-$run.mdp
     mdp_options ${OPT[@]} > $MDP
     nsteps=$(sed -n '/nsteps/s/.*=//p' $MDP)
     before=$(date +%s)
+    echo ==--- $GRO $OUT
     MD="MDRUNNER -f $MDP -c $GRO -p $TOP -o $OUT -n $NDX -np $NP -l $LOG -force $FORCE $TABLES"
     $NOEXEC $MD 
     timing=$(( $(date +%s) - before ))
     echo "Ran $nsteps steps in $timing seconds"
     GRO=$OUT
-    trash $base-NPT-$__mdp_equil__dt.{cpt,tpr} 
+    : $((run++))
+    trash $base-NPT-$__mdp_equil__dt-$run.{cpt,tpr} 
 done
 
 
