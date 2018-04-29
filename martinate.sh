@@ -14,6 +14,34 @@ The Netherlands"
 CMD="$0 $@"
 echo "$CMD"
 
+: << __NOTES_FOR_USE_AND_EDITING__
+
+IF YOU CHANGE THE PARAMETERS AND/OR WORKFLOW, PLEASE RENAME THE PROGRAM AND
+STATE THE NATURE AND PURPOSE OF THE CHANGES MADE.
+
+This has grown to be a rather complicated bash script. It is intended to 
+work through the MD process as a person would, issuing shell commands and reading
+and editing files. Bash feels more natural for this than a Python/C wrapper. 
+It is advised to (get to) know about bash loops and variable substitution, as 
+these are used plenty. In addition, since there are many occassions where files 
+need to be read and edited, there are a lot of calls to sed, with quite a 
+few less ordinary commands. 
+
+To keep the code manageable, it is structured in sections and every section is
+ordered, preferrably by numbered chunks. In addition, there is extensive 
+documentation. Every statement should be clear, either by itself or by a 
+preceding explanation. In case advanced bash/sed/... features are used, they 
+ought to be explained. That will keep the program manageable and make it a nice
+place for learning tricks :)
+
+Oh, and please note that usual copyright laws apply...
+
+TAW - 20120718
+(copied from gromit.sh)
+
+__NOTES_FOR_USE_AND_EDITING__
+
+
 DESCRIPTION=$(cat << __DESCRIPTION__
 
 $PROGRAM $VERSION is a versatile wrapper built around 
