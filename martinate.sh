@@ -428,7 +428,10 @@ while [ -n "$1" ]; do
        -dry)                   DRY=$2                ; shift 2; continue ;;
       -keep)                  KEEP=true              ; shift 1; continue ;;
     -noexec)                NOEXEC=echo              ; shift 1; continue ;;
-    --mdp-*)     MDPOPTS[${#MDPOPTS[@]}]=${1#--mdp-} ; shift 1; continue ;;
+	-monall)   MONALL=-monitor                      ; shift 1; continue ;; #= Monitor all steps using control script
+	-control)  CONTROL=$2                           ; shift 2; continue ;; #= Simulation monitor script
+	-ctime)    CHECKTIME=$2                         ; shift 2; continue ;; #= Time for running monitor
+        --mdp-*)   MDPOPTS+=(${1#--mdp-})               ; shift  ; continue ;; #= Command-line specified simulation parameters
 
     # Options for downstream programs
     # If the options are given on the command line, they are expanded and each
@@ -472,6 +475,24 @@ for ((i=0; i<${#STEPS[@]}; i++)); do [[ ${STEPS[$i]} == ${STEP}* ]] && STEP=$i &
 for ((i=0; i<${#STEPS[@]}; i++)); do [[ ${STEPS[$i]} == ${STOP}* ]] && STOP=$i && break; done
 
 #NOW=$STEP
+
+#--------------------------------------------------------------------
+#---Sed and awk
+#--------------------------------------------------------------------
+
+# Set the correct sed version for multi-platform use
+# Also try to avoid GNU specific sed statements for the
+# poor bastards that are stuck with one of those Mac things
+SED=$(which gsed || which sed)
+
+
+# Awk expression for extracting moleculetype
+#    - at the line matching 'moleculetype' 
+#      read in the next line
+#      continue reading next lines until one is not beginning with ;
+#      print the first field
+AWK_MOLTYPE='/moleculetype/{getline; while ($0 ~ /^ *;/) getline; print $1}'
+
 
 #--------------------------------------------------------------------
 #---GROMACS AND RELATED STUFF
@@ -904,7 +925,7 @@ echo Done gymnastics
 
 ## OT N ## For every parameter not defined the default is used
 ## NOTE ## This is probably fine for equilibration, but check the defaults to be sure
-## E OT ## The list as is was set up for gromacs 4.5
+## E OT ## The list as is was set up for gromacs 4.5 and 5.1
 
 # This function lists the mdp options requested based on a preceding tag
 mdp_options ()
@@ -915,7 +936,11 @@ mdp_options ()
         # Find variables declared with specified tag
         for opt in `set | grep ^__mdp_${tag}__`
         do
+	    # Strip everything from the first = to the end 
+	    # to get the variable name
             var=${opt%%=*}
+	    # Strip everything up to the first = to get
+	    # the value
             val=${opt#*=}
             # Replace the tag and redeclare in local space
             # If the variable was already declared it will
@@ -1481,8 +1506,9 @@ function MDRUNNER ()
 	echo "$MON"
 	echo
 	# Mark the output
-	{ $MON | sed 's/^/MONITOR: /'; } &
-	
+	# Make sure that the exit code from the monitor is exitcode of the process. 
+	($MON | sed 's/^/MONITOR: /'; exit ${PIPESTATUS[0]}) &
+
 	local -i MONID=$!
 	writeToLog "Monitor PID: $MONID"
 	
@@ -2464,7 +2490,7 @@ then
     OUT=$base-PR-NVT.gro
     MDP=pr-nvt.mdp
     mdp_options ${OPT[@]} > $MDP
-    MD="MDRUNNER -f $MDP -c $GRO -p $TOP -o $OUT -n $NDX -np $PRNP -l $LOG -force $FORCE $TABLES"
+    MD="MDRUNNER -f $MDP -c $GRO -p $TOP -o $OUT -n $NDX -np $PRNP -l $LOG -force $FORCE $TABLES $MONALL"
     $NOEXEC $MD 
     GRO=$OUT
     trash $base-PR-NVT.{cpt,tpr} 
@@ -2508,7 +2534,7 @@ do
     OUT=$base-PR-NPT-$__mdp_equil__dt-$run.gro
     MDP=pr-npt-$__mdp_equil__dt-$run.mdp
     mdp_options ${OPT[@]} > $MDP
-    MD="MDRUNNER -f $MDP -c $GRO -p $TOP -o $OUT -n $NDX -np $NP -l $LOG -force $FORCE $TABLES"
+    MD="MDRUNNER -f $MDP -c $GRO -p $TOP -o $OUT -n $NDX -np $NP -l $LOG -force $FORCE $TABLES $MONALL"
     $NOEXEC $MD 
     GRO=$OUT
     : $((run++))
@@ -2553,7 +2579,7 @@ do
     nsteps=$(sed -n '/nsteps/s/.*=//p' $MDP)
     before=$(date +%s)
     echo ==--- $GRO $OUT
-    MD="MDRUNNER -f $MDP -c $GRO -p $TOP -o $OUT -n $NDX -np $NP -l $LOG -force $FORCE $TABLES"
+    MD="MDRUNNER -f $MDP -c $GRO -p $TOP -o $OUT -n $NDX -np $NP -l $LOG -force $FORCE $TABLES $MONALL"
     $NOEXEC $MD 
     timing=$(( $(date +%s) - before ))
     echo "Ran $nsteps steps in $timing seconds"
@@ -2611,7 +2637,7 @@ estimate=$(( (timing*(1000*mdsteps)/nsteps)/1000 ))
 estfin=$(( $(date +%s) + estimate ))
 echo "Expected runtime for $mdsteps step: $(( estimate/3600 ))H:$(( (estimate%3600)/60 ))M:$(( estimate%60 ))S (until $(date -r $estfin))"
 
-MD="MDRUNNER -f $MDP -c $GRO -p $TOP -o $OUT -n $NDX -np $NP -l $LOG -split -force $FORCE $TABLES"
+MD="MDRUNNER -f $MDP -c $GRO -p $TOP -o $OUT -n $NDX -np $NP -l $LOG -split -force $FORCE $TABLES -monitor"
 $NOEXEC $MD 
 
 # : $((STEP++))
