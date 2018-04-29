@@ -82,6 +82,20 @@ __DESCRIPTION__
 )
 
 
+
+# Structure databases
+RCSB=(http://files.rcsb.org/download/ pdb.gz)
+BIO=(http://www.rcsb.org/pdb/files/ pdb1.gz)
+OPM=(http://opm.phar.umich.edu/pdb/ pdb)
+
+
+#--------------------------------------------------------------------
+#---Parsing COMMAND LINE ARGUMENTS AND DEPENDENCIES--
+#--------------------------------------------------------------------
+
+# Directory where this script is
+SDIR=$( [[ $0 != ${0%/*} ]] && cd ${0%/*}; pwd )
+
 # These will be looked for before running, and can be set from the cmdline, e.g.:
 #    -gmxrc /usr/local/gromacs-5.1/bin/GMXRC
 # If not set, the default name will be searched for in
@@ -117,14 +131,23 @@ GRIDRC="${VO_ENMR_EU_SW_DIR}/BCBR/gromacs/4.5.3-rtc/bin/GMXRC.bash"
 GRID=false
 
 
-# Starting step 
+# Run control
+MONALL=       # Monitor all steps
+CONTROL=
+CHECKTIME=300 # Run control every five minutes
+
+
+# Stepping stuff
 STEPS=(AA CG SOLVENT EM NVT-PR NPT PREPRODUCTION TPR PRODUCTION ANALYSIS END)
 get_step_fun() { for ((i=0; i<${#STEPS[@]}; i++)) do [[ ${STEPS[$i]} =~ ^$1 ]] && echo $i; done; }
 STEP=AA
 STOP=PRODUCTION
+
 # Macros to echo stuff only if the step is to be executed -- more about steps further down
 RED='\x1b[1;31m'
 YEL='\x1b[1;33m'
+GRN='\x1b[1;32m'
+CYA='\x1b[1;36m'
 OFF='\x1b[0m'
 LINES() { sed -e 's/^/ /;s/$/ /;h;s/./-/g;p;x;p;x;' <<< "$@"; }
 SHOUT() { [[ $STEP == $NOW ]] && echo && LINES "$@" | sed 's/^/#/'; }
@@ -256,7 +279,8 @@ __OPTIONS__
 )
 
 
-USAGE ()
+# Function for displaying USAGE information
+function USAGE ()
 {
     cat << __USAGE__
 
@@ -266,22 +290,34 @@ $DESCRIPTION
 
 $OPTIONS
 
-(c)$YEAR $AUTHOR
+(c)$YEAR $AUTHORS
 $AFFILIATION
 
 __USAGE__
 }
 
 
+if [[ -z "$1" ]]; then
+  echo "No command line arguments give. Please read the program usage:"
+  USAGE
+  exit
+fi
+
+
 BAD_OPTION ()
 {
-  echo
-  echo "Unknown option "$1" found on command-line"
-  echo "It may be a good idea to read the usage:"
+    echo
+    echo "Unknown option "$1" found on command-line"
+    echo "It may be a good idea to read the usage:"
 
-  USAGE
+    USAGE
 
-  exit 1
+    echo " /\                                               /\ " 
+    echo "/||\  Unknown option "$1" found on command-line  /||\ "
+    echo " ||   It may be a good idea to read the usage     || "
+    echo " ||                                               || "
+
+    exit 1
 }
 
 
