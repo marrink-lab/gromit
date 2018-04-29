@@ -2909,7 +2909,6 @@ then
     Ligenv[${#Ligenv[@]}]=${N1:-1}
     Ligenv[${#Ligenv[@]}]=$N2
 
-
     if [[ ! -e $DIR/$base-sol.ndx ]]
     then
         ## WRITE MASTER INDEX FILE ##

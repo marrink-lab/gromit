@@ -524,7 +524,9 @@ find_program_fun()
     [[ -f $SDIR/$progr ]] && echo $SDIR/$progr && return 0
 
     # Check if the program is in the PATH
-    which $progr 2>/dev/null && return 0 || return 1
+    # Python scripts may be available as 'binaries' (martinize/insane)
+    which $progr 2>/dev/null && return 0
+    which ${progr%.py} 2>/dev/null && return 0 || return 1
 }
 
 
@@ -2427,7 +2429,8 @@ if [[ -f $DAFT ]]
 then
     NDX=$DAFT
     cp $SDIR/martini_${FFTAG}_{ions,lipids}.itp .
-    __mdp_cg__energygrps=$(sed 's/ /,/g' <<< `sed '/^ *[^[]/d;s/\[ *\(.*\) *\]/\1/;/Solute/d;/System/d;' $DAFT`)
+    grps=($(sed '/^ *[^[]/d;s/\[ *\(.*\) *\]/\1/;/Solute/d;/System/d;' $DAFT))
+    __mdp_cg__energygrps=$(sed 's/ /,/g' <<< ${grps[@]})
 fi
 
 trash $base-EM.{tpr,edr,trr} em-out.mdp
