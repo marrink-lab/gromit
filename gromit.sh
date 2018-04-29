@@ -189,8 +189,10 @@ CHECKTIME=300 # Run control every five minutes
 
 # Stepping stuff
 STEPS=(TOPOLOGY LIGANDS BOX EMVACUUM SOLVATION EMSOLVENT NVT-PR NPT PREPRODUCTION TPR PRODUCTION ANALYSIS END)
+get_step_fun() { for ((i=0; i<${#STEPS[@]}; i++)) do [[ ${STEPS[$i]} =~ ^$1 ]] && echo $i; done; }
 STEP=
 STOP=PRODUCTION
+
 # Macros to echo stuff only if the step is to be executed -- more about steps further down
 RED='\x1b[1;31m'
 YEL='\x1b[1;33m'
@@ -409,6 +411,32 @@ if [[ -z "$1" ]]; then
 fi
 
 
+BAD_OPTION ()
+{
+    echo
+    echo "Unknown option "$1" found on command-line"
+    echo "It may be a good idea to read the usage:"
+
+    USAGE
+
+    echo " /\                                               /\ " 
+    echo "/||\  Unknown option "$1" found on command-line  /||\ "
+    echo " ||   It may be a good idea to read the usage     || "
+    echo " ||                                               || "
+
+    exit 1
+}
+
+
+# Functions for handling argument lists for downstream programs
+# 1. Expanding options from '-opt=val1\,val2' to '-opt val1 val2', not changing long options (--long-opt=val)
+function expandOptList()   { for i in $@; do [[ $i =~ --+ ]] && echo $i || (j=${i/=/ }; echo ${j//\\,/ }); done; }
+# 2. Condensing options from '-opt1=val1,val2 -opt2=val3,val4' to '-opt1=val1\,val2,-opt2=val3\,val4' 
+function condenseOptList() { echo $(sed 's/,/\,/g;s/  */,/g;' <<< $@); }
+# 3. Reading condensed options from the command line
+function readOptList() { sed "s/\\\,/##/g;s/,/ /g;s/##/,/g;s/--[^{]\+{\(.*\)}/\1/;" <<< $1; }
+
+
 # Collect errors, warnings and notes to (re)present to user at the end
 # Spaces are replaced by the unlikely combination QQQ to keep the 
 # messages together.
@@ -422,20 +450,20 @@ note_function() { a=$@; notes_array+=(${x// /QQQ}); NOTE "$@"; }
 
 while [ -n "$1" ]; do
 
-    # Check for program option
-    depset=false
-    NDEP=${#DEPENDENCIES[@]}
-    for ((i=0; i<$NDEP; i++))
-    do
-	if [[ $1 == "-${DEPENDENCIES[$i]}" ]]
-	then
-            PROGEXEC[$i]=$2
-            depset=true
-            shift 2
-	fi
-    done
-    # If we just 'used up' the argument, skip to the next cycle
-    $depset && continue
+  # Check for program option
+  depset=false
+  NDEP=${#DEPENDENCIES[@]}
+  for ((i=0; i<$NDEP; i++))
+  do
+      if [[ $1 == "-${DEPENDENCIES[$i]}" ]]
+      then
+          PROGEXEC[$i]=$2
+          shift 2
+          depset=true
+      fi
+  done
+  # If we set a dependency, skip to the next cycle
+  $depset && continue
 
     case $1 in
 	-h)        USAGE                                ; exit 0 ;;
@@ -489,20 +517,16 @@ while [ -n "$1" ]; do
 	-lie)      LIE=true                             ; shift  ; continue ;; #= Whether or not to use LIE setup and analysis 
 	-l)        LIGANDS+=($2)                        ; shift 2; continue ;; #= Ligands to include (topology or structure,topology)
         -analysis) ANALYSIS+=($2)                       ; shift 2; continue ;; #= Analysis protocols to run
-	-monall)   MONALL=-monitor;                     ; shift 1; continue ;; #= Monitor all steps using control script
+	-monall)   MONALL=-monitor                      ; shift 1; continue ;; #= Monitor all steps using control script
 	-control)  CONTROL=$2                           ; shift 2; continue ;; #= Simulation monitor script
 	-ctime)    CHECKTIME=$2                         ; shift 2; continue ;; #= Time for running monitor
         --mdp-*)   MDPOPTS+=(${1#--mdp-})               ; shift  ; continue ;; #= Command-line specified simulation parameters
 	--*)       PROGOPTS+=($1)                       ; shift  ; continue ;; #= Command-line specified program parameters
-	*)        
-	    USAGE
 
-	    echo " /\                                               /\ " 
-	    echo "/||\  Unknown option "$1" found on command-line  /||\ "
-	    echo " ||   It may be a good idea to read the usage     || "
-	    echo " ||                                               || "
+    # All options should be covered above. Anything else raises an error here.
 
-	    exit 1;;
+      *)         BAD_OPTION "$1";;
+
     esac
 done
 
@@ -1655,8 +1679,9 @@ function MDRUNNER ()
 	echo "$MON"
 	echo
 	# Mark the output
-	{ $MON | sed 's/^/MONITOR: /'; } &
-	
+	# Make sure that the exit code from the monitor is exitcode of the process. 
+	($MON | sed 's/^/MONITOR: /'; exit ${PIPESTATUS[0]}) &
+
 	local -i MONID=$!
 	writeToLog "Monitor PID: $MONID"
 	
