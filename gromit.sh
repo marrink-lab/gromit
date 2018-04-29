@@ -1217,6 +1217,7 @@ then
     done    
 fi
 
+
 if [[ -n $MDPOPTS ]]
 then
     for i in ${MDPOPTS[@]}
@@ -1228,7 +1229,9 @@ then
     done
 fi
 
+
 #--------------------------------------------------------------------
+
 
 #--------------------------------------------------------------------
 #---SUBROUTINES--
@@ -1674,6 +1677,9 @@ function MDRUNNER ()
 	MON=${MON/@XTC/$baseOUT.xtc}
 	MON=${MON/@EDR/$baseOUT.edr}
 	MON=${MON/@LOG/$baseOUT.log}
+	MON=${MON/@TOP/$fnTOP}
+	MON=${MON/@NDX/$fnNDX}
+	MON=${MON/@MDP/$fnMDP}
 	writeToLog "Monitoring run"
 	echo
 	echo "$MON"
@@ -1686,21 +1692,7 @@ function MDRUNNER ()
 	writeToLog "Monitor PID: $MONID"
 	
 	# In most cases, the monitor finishes before the run.
-	# The exit code then tells what to do:
-	#
-	#   0: The monitor terminated the run, because conditions were met.
-	#      In this case, all frames have been processed and classified.
-	#
-	#   1: The run was terminated outside of the monitor.
-	#      In this case all frames have been processed and classified,
-	#      but a new shooting point was not generated, because the 
-	#      conditions were not met.
-	#      This can happen if the run crashed, was terminated 
-	#      externally, possibly running over walltime, or simply
-	#      ended because the maximum simulation time was reached.
-	#
-	#   In either case, all frames should have been processed and scored.
-	#
+	# The exit code then tells what to do (see below).
 	trap "terminate $MDPID $MONID" SIGHUP SIGINT SIGTERM SIGCHLD
 
     	wait $MONID
@@ -1719,10 +1711,14 @@ function MDRUNNER ()
     echo "__MDRUN__" >>$LOG
 
 
-    if [[ $MONEXIT == 0 ]]
-    then
-	exit_clean "Run terminated by monitor."
-    fi
+    case $MONEXIT in
+	0) writeToLog "Monitor exited after run finished without taking action (PASS)";;
+	1) exit_error "Monitor exited after run finished: condition not met, while it should be (FAIL)";;
+	2) writeToLog "Monitor terminated process, because condition was met (PASS)";;
+	3) exit_error "Monitor terminated process, because condition was met, but shouldn't be (FAIL)";;
+	4) writeToLog "Monitor killed process, because condition was met (PASS)";;
+	5) exit_error "Monitor killed process, because condition was met, but shouldn't be (FAIL)";;
+    esac
 
 
     if [[ $MDEXIT != 0 ]]
