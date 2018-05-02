@@ -1471,7 +1471,7 @@ function MDRUNNER ()
         then
             exit_error "Somehow we violated the allowed run time... Exiting NOW!"
         fi
-        MAXH=$(bc <<< "scale=3;$MAXS/3600") 
+        MAXH=$(awk '{print $1/3600}' <<< "$MAXS") 
         
         # May want to check if MAXS makes sense for the run...
         if ((MAXS < LASTRUN))
