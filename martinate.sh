@@ -14,6 +14,7 @@ The Netherlands"
 CMD="$0 $@"
 echo "$CMD"
 
+
 : << __NOTES_FOR_USE_AND_EDITING__
 
 IF YOU CHANGE THE PARAMETERS AND/OR WORKFLOW, PLEASE RENAME THE PROGRAM AND
@@ -370,7 +371,7 @@ store_note_fun() { a=$@; notes_array+=(${x// /QQQ}); NOTE "$@"; }
 
 
 while [ -n "$1" ]; do
-
+  echo '---------->' $1
   # Check for program option
   depset=false
   NDEP=${#DEPENDENCIES[@]}
@@ -428,8 +429,16 @@ while [ -n "$1" ]; do
        -dry)                   DRY=$2                ; shift 2; continue ;;
       -keep)                  KEEP=true              ; shift 1; continue ;;
     -noexec)                NOEXEC=echo              ; shift 1; continue ;;
-	-monall)   MONALL=-monitor                      ; shift 1; continue ;; #= Monitor all steps using control script
-	-control)  CONTROL=$2                           ; shift 2; continue ;; #= Simulation monitor script
+	-monall)   MONALL=-monitor                   ; shift 1; continue ;; #= Monitor all steps using control script
+	-control)                                                           #= Simulation monitor script
+		while [[ -n $2 && $2 != ';' ]]
+		do
+			CONTROL="$CONTROL $2"
+			shift
+		done
+                shift 2
+                echo MONITOR COMMAND: $CONTROL 
+		continue;; 
 	-ctime)    CHECKTIME=$2                         ; shift 2; continue ;; #= Time for running monitor
         --mdp-*)   MDPOPTS+=(${1#--mdp-})               ; shift  ; continue ;; #= Command-line specified simulation parameters
 
@@ -664,13 +673,8 @@ then
     MAXS=$((3600*MAXS[0] + 60*MAXS[1] + MAXS[2]))
 else
     # Format x.y HH
-    # BASH floating point arithmetics
-    int=${MAXH%.*}
-    frac=${MAXH#$int}
-    frac=${frac/./}
-    MAXS=$(( ${MAXH/./} * 3600 / (10**${#frac})  ))
+    MAXS=$(awk '{printf "%d\n", $1*3600}' <<< $MAXH )
 fi
-
 
 [[ -n $LEFT ]] && (( MAXS > LEFT )) && MAXS=$LEFT
 
