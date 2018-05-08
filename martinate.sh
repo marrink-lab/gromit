@@ -1,30 +1,129 @@
 #!/bin/bash
 
 PROGRAM=martinate.sh
-VERSION=0.1
-VERSTAG=devel-160502-0800-TAW
+VERSION=0.99
+VERSTAG=devel-180428-1200-TAW
 AUTHOR="Tsjerk A. Wassenaar, PhD"
-YEAR="2016"
+YEAR="2018"
 AFFILIATION="
 University of Groningen
+Nijenborgh 7
+9747AG Groningen
 The Netherlands"
 
 CMD="$0 $@"
 echo "$CMD"
 
+
+: << __NOTES_FOR_USE_AND_EDITING__
+
+IF YOU CHANGE THE PARAMETERS AND/OR WORKFLOW, PLEASE RENAME THE PROGRAM AND
+STATE THE NATURE AND PURPOSE OF THE CHANGES MADE.
+
+This has grown to be a rather complicated bash script. It is intended to 
+work through the MD process as a person would, issuing shell commands and reading
+and editing files. Bash feels more natural for this than a Python/C wrapper. 
+It is advised to (get to) know about bash loops and variable substitution, as 
+these are used plenty. In addition, since there are many occassions where files 
+need to be read and edited, there are a lot of calls to sed, with quite a 
+few less ordinary commands. 
+
+To keep the code manageable, it is structured in sections and every section is
+ordered, preferrably by numbered chunks. In addition, there is extensive 
+documentation. Every statement should be clear, either by itself or by a 
+preceding explanation. In case advanced bash/sed/... features are used, they 
+ought to be explained. That will keep the program manageable and make it a nice
+place for learning tricks :)
+
+Oh, and please note that usual copyright laws apply...
+
+TAW - 20120718
+(copied from gromit.sh)
+
+__NOTES_FOR_USE_AND_EDITING__
+
+
 DESCRIPTION=$(cat << __DESCRIPTION__
-This is a convenience script to set up, equilibrate and run coarse 
-grained (and multiscaled) systems, using the Martini force field. 
-It is built as a wrapper around martinize.py and insane.py, allowing 
-automated processing of membrane proteins, with full control of membrane 
-composition. If no input file is provided, only a membrane is built.
-Otherwise, if a protein is given and -L is not set, the protein is 
-solvated and run, but if -L is set, a membrane is built in addition.
+
+$PROGRAM $VERSION is a versatile wrapper built around 
+GROMACS, insane, and martinize, for setting up and running
+MARTINI COARSE GRAIN molecular dynamics simulations of solvents, 
+membranes, proteins and/or nucleic acids in any combination.
+
+It is built to allow automated processing of membrane proteins, 
+with full control of membrane composition. If no input file is provided, 
+only a membrane and/or solvent is built. 
 Options given that do not match an option in this script are passed to
 martinize.py.
+
+The script contains a complete and flexible workflow, consisting of the 
+following steps:
+
+    1.   Generate topology from input structure 
+         A. Generate atomistic topology             (AA)
+         B. Generate MARTINI CG/multiscale topology (CG)
+    2.   Solvation and adding ions                  (SOLVENT)
+    5.   Energy minimization                        (EM)
+    6.   Position restrained NVT equilibration      (NVT-PR)
+    7.   Unrestrained NpT equilibration             (NPT)
+    8.   Equilibration under run conditions         (PREPRODUCTION)
+    9.   Production simulation                    
+         A. Run input file                          (TPR)
+         B. Simulation (possibly in parts)          (PRODUCTION)
+
+The program allows running only part of the workflow by specifying the
+start and end step (-step/-stop), using an argument uniquely matching 
+one of the tags given between parentheses.
+
+This program requires a working installation of Gromacs. To link 
+the program to the correct version of Gromacs, it should be placed in the 
+Gromacs binaries directory or the Gromacs GMXRC file should be passed as 
+argument to the option -gmxrc
+
+The workflow contained within this program corresponds to a standard protocol
+that should suffice for routine CG molecular dynamics simulations of proteins 
+and/or nucleic acids in aqueous solution with or without a membrane. 
+It follows the steps that are commonly taken in MD tutorials 
+(e.g. those at http://cgmartini.nl).
+
+This program is designed to enable high-throughput processing of CG molecular
+dynamics simulations in which specific settings are varied systematically. These
+settings include protein/nucleic acid, ligand, temperature, and pressure, as well
+as many others.
+
+
+## -- IMPORTANT -- ##
+
+Molecular dynamics simulations are complex, with many contributing factors. 
+The workflow in this program has been tested extensively and used many times.
+Nonetheless, it should not be considered failsafe. No MD protocol ever is. 
+Despite careful set up, simulations may crash, and the possibility that a crash
+is encountered is larger when many simulations are run. If the run crashes,
+the intermediate results will be kept and can be investigated to identify the
+source of the problem. 
+
+If the run finishes to completion, this does not automatically imply that the
+results are good. The results from the simulations should always be subjected
+to integrity and quality assurance checks to assert that they are correct within
+the objectives of the study.
+
 __DESCRIPTION__
 )
 
+
+
+# Structure databases
+RCSB=(http://files.rcsb.org/download/ pdb.gz)
+BIO=(http://www.rcsb.org/pdb/files/ pdb1.gz)
+OPM=(http://opm.phar.umich.edu/pdb/ pdb)
+
+
+#--------------------------------------------------------------------
+#---Parsing COMMAND LINE ARGUMENTS AND DEPENDENCIES--
+#--------------------------------------------------------------------
+
+# Directory where this script is
+SDIR=$( [[ $0 != ${0%/*} ]] && cd ${0%/*}; pwd )
 
 # These will be looked for before running, and can be set from the cmdline, e.g.:
 #    -gmxrc /usr/local/gromacs-5.1/bin/GMXRC
@@ -61,14 +160,23 @@ GRIDRC="${VO_ENMR_EU_SW_DIR}/BCBR/gromacs/4.5.3-rtc/bin/GMXRC.bash"
 GRID=false
 
 
-# Starting step 
+# Run control
+MONALL=       # Monitor all steps
+CONTROL=
+CHECKTIME=300 # Run control every five minutes
+
+
+# Stepping stuff
 STEPS=(AA CG SOLVENT EM NVT-PR NPT PREPRODUCTION TPR PRODUCTION ANALYSIS END)
 get_step_fun() { for ((i=0; i<${#STEPS[@]}; i++)) do [[ ${STEPS[$i]} =~ ^$1 ]] && echo $i; done; }
 STEP=AA
 STOP=PRODUCTION
+
 # Macros to echo stuff only if the step is to be executed -- more about steps further down
 RED='\x1b[1;31m'
 YEL='\x1b[1;33m'
+GRN='\x1b[1;32m'
+CYA='\x1b[1;36m'
 OFF='\x1b[0m'
 LINES() { sed -e 's/^/ /;s/$/ /;h;s/./-/g;p;x;p;x;' <<< "$@"; }
 SHOUT() { [[ $STEP == $NOW ]] && echo && LINES "$@" | sed 's/^/#/'; }
@@ -200,7 +308,8 @@ __OPTIONS__
 )
 
 
-USAGE ()
+# Function for displaying USAGE information
+function USAGE ()
 {
     cat << __USAGE__
 
@@ -210,22 +319,34 @@ $DESCRIPTION
 
 $OPTIONS
 
-(c)$YEAR $AUTHOR
+(c)$YEAR $AUTHORS
 $AFFILIATION
 
 __USAGE__
 }
 
 
+if [[ -z "$1" ]]; then
+  echo "No command line arguments give. Please read the program usage:"
+  USAGE
+  exit
+fi
+
+
 BAD_OPTION ()
 {
-  echo
-  echo "Unknown option "$1" found on command-line"
-  echo "It may be a good idea to read the usage:"
+    echo
+    echo "Unknown option "$1" found on command-line"
+    echo "It may be a good idea to read the usage:"
 
-  USAGE
+    USAGE
 
-  exit 1
+    echo " /\                                               /\ " 
+    echo "/||\  Unknown option "$1" found on command-line  /||\ "
+    echo " ||   It may be a good idea to read the usage     || "
+    echo " ||                                               || "
+
+    exit 1
 }
 
 
@@ -250,7 +371,7 @@ store_note_fun() { a=$@; notes_array+=(${x// /QQQ}); NOTE "$@"; }
 
 
 while [ -n "$1" ]; do
-
+  echo '---------->' $1
   # Check for program option
   depset=false
   NDEP=${#DEPENDENCIES[@]}
@@ -308,7 +429,18 @@ while [ -n "$1" ]; do
        -dry)                   DRY=$2                ; shift 2; continue ;;
       -keep)                  KEEP=true              ; shift 1; continue ;;
     -noexec)                NOEXEC=echo              ; shift 1; continue ;;
-    --mdp-*)     MDPOPTS[${#MDPOPTS[@]}]=${1#--mdp-} ; shift 1; continue ;;
+	-monall)   MONALL=-monitor                   ; shift 1; continue ;; #= Monitor all steps using control script
+	-control)                                                           #= Simulation monitor script
+		while [[ -n $2 && $2 != ';' ]]
+		do
+			CONTROL="$CONTROL $2"
+			shift
+		done
+                shift 2
+                echo MONITOR COMMAND: $CONTROL 
+		continue;; 
+	-ctime)    CHECKTIME=$2                         ; shift 2; continue ;; #= Time for running monitor
+        --mdp-*)   MDPOPTS+=(${1#--mdp-})               ; shift  ; continue ;; #= Command-line specified simulation parameters
 
     # Options for downstream programs
     # If the options are given on the command line, they are expanded and each
@@ -352,6 +484,24 @@ for ((i=0; i<${#STEPS[@]}; i++)); do [[ ${STEPS[$i]} == ${STEP}* ]] && STEP=$i &
 for ((i=0; i<${#STEPS[@]}; i++)); do [[ ${STEPS[$i]} == ${STOP}* ]] && STOP=$i && break; done
 
 #NOW=$STEP
+
+#--------------------------------------------------------------------
+#---Sed and awk
+#--------------------------------------------------------------------
+
+# Set the correct sed version for multi-platform use
+# Also try to avoid GNU specific sed statements for the
+# poor bastards that are stuck with one of those Mac things
+SED=$(which gsed || which sed)
+
+
+# Awk expression for extracting moleculetype
+#    - at the line matching 'moleculetype' 
+#      read in the next line
+#      continue reading next lines until one is not beginning with ;
+#      print the first field
+AWK_MOLTYPE='/moleculetype/{getline; while ($0 ~ /^ *;/) getline; print $1}'
+
 
 #--------------------------------------------------------------------
 #---GROMACS AND RELATED STUFF
@@ -523,13 +673,8 @@ then
     MAXS=$((3600*MAXS[0] + 60*MAXS[1] + MAXS[2]))
 else
     # Format x.y HH
-    # BASH floating point arithmetics
-    int=${MAXH%.*}
-    frac=${MAXH#$int}
-    frac=${frac/./}
-    MAXS=$(( ${MAXH/./} * 3600 / (10**${#frac})  ))
+    MAXS=$(awk '{printf "%d\n", $1*3600}' <<< $MAXH )
 fi
-
 
 [[ -n $LEFT ]] && (( MAXS > LEFT )) && MAXS=$LEFT
 
@@ -786,7 +931,7 @@ echo Done gymnastics
 
 ## OT N ## For every parameter not defined the default is used
 ## NOTE ## This is probably fine for equilibration, but check the defaults to be sure
-## E OT ## The list as is was set up for gromacs 4.5
+## E OT ## The list as is was set up for gromacs 4.5 and 5.1
 
 # This function lists the mdp options requested based on a preceding tag
 mdp_options ()
@@ -797,7 +942,11 @@ mdp_options ()
         # Find variables declared with specified tag
         for opt in `set | grep ^__mdp_${tag}__`
         do
+	    # Strip everything from the first = to the end 
+	    # to get the variable name
             var=${opt%%=*}
+	    # Strip everything up to the first = to get
+	    # the value
             val=${opt#*=}
             # Replace the tag and redeclare in local space
             # If the variable was already declared it will
@@ -994,7 +1143,17 @@ fi
 
 ERROR=0
 
-archive ()
+
+function writeToLog() 
+{  
+    # Write message to log as formatted string in the same way as the server cron scripts do
+  
+    local MSG_STATUS=$2
+    local LOGMSG="# $( date +"%a %b %d %H:%M:%S %Y" ) MDS $$ $MSG_STATUS: $1"
+    echo "$LOGMSG"
+}
+
+function archive ()
 {
     if [[ -n $ARCHIVE ]]
     then
@@ -1164,48 +1323,79 @@ function INDEX()
 }
 
 
-MDRUNNER ()
+function MDRUNNER ()
 {
+    writeToLog "MDRUNNER"    
+    
     local NP=1
     local fnOUT=
     local fnNDX=
     local FRC=false
     local SPLIT=
     local TABLES=
+    local MONITOR=false
     while test -n "$1"; do
-        case $1 in
-            -f)      local  fnMDP=$2        ; shift 2; continue;;
-            -c)      local   fnIN=$2        ; shift 2; continue;;
-            -n)      local  fnNDX=$2        ; shift 2; continue;;
-            -o)      local  fnOUT=$2        ; shift 2; continue;;
-            -p)      local  fnTOP=$2        ; shift 2; continue;;
-            -l)      local  fnLOG=$2        ; shift 2; continue;;
-            -force)  local    FRC=$2        ; shift 2; continue;;
-            -np)     local     NP=$2        ; shift 2; continue;;
-            -split)  local  SPLIT=-noappend ; shift  ; continue;;
+	case $1 in
+	    -f)       local fnMDP=$2        ; shift 2; continue;;
+            -c)       local  fnIN=$2        ; shift 2; continue;;
+	    -n)       local fnNDX=$2        ; shift 2; continue;;
+            -o)       local fnOUT=$2        ; shift 2; continue;;
+	    -p)       local fnTOP=$2        ; shift 2; continue;;
+	    -l)       local fnLOG=$2        ; shift 2; continue;;
+	    -force)   local   FRC=$2        ; shift 2; continue;;
+	    -np)      local    NP=$2        ; shift 2; continue;;
+	    -split)   local SPLIT=-noappend ; shift  ; continue;;
+	    -monitor) local MONITOR=true    ; shift  ; continue;;
 	    -tables) local TABLES="-table table.xvg -tablep tablep.xvg"; shift; continue;;
             *)  echo "PANIC!: Internal Argument Error ($1) in routine MDRUNNER"; exit;;
         esac
     done
-    local TPR=
-
-    # Check input
-    [[ -f $fnIN  ]] || exit_error "Input structure not found in routine MDRUNNER ($fnIN)"
-    [[ -f $fnTOP ]] || exit_error "Input topology not found in routine MDRUNNER ($fnTOP)"
-    [[ -n $fnNDX && -f $fnNDX ]] || INDEX $fnIN $fnNDX
-
+    
+    
+    if [[ "${fnIN##*.}" == "tpr" ]]
+    then
+	local TPR=$fnIN
+	local fnOUT=${TPR%.tpr}.gro
+    else
+        # Check input
+	[[ -f $fnIN  ]] || exit_error "Input structure not found in routine MDRUNNER ($fnIN)"
+	[[ -f $fnTOP ]] || exit_error "Input topology not found in routine MDRUNNER ($fnTOP)"
+	[[ -f $fnMDP ]] || exit_error "Input parameter file not found in routine MDRUNNER ($fnMDP)"
+	[[ -n $fnNDX && -f $fnNDX ]] || INDEX $fnIN $fnNDX
+	local TPR=
+    fi
+    
+    
     # Infer basename from output file name
     baseOUT=${fnOUT%.*}
-
-    #if [[ -n $SCRATCH ]]
-    #then
-    #    # Make sure to copy the TPR file if we already have one
-    #    [[ -f $DIR/$baseOUT.tpr ]] && cp $DIR/$baseOUT.tpr .    
-    #
-    #    # Make sure we deal well with checkpointing
-    #    [[ -f $DIR/$baseOUT.cpt ]] && cp $DIR/$baseOUT.cpt .
-    #fi
-
+    
+    
+    if [[ -n $SCRATCH ]]
+    then
+        # Make sure to copy the TPR file if we already have one
+	[[ -f $DIR/$baseOUT.tpr ]] && cp $DIR/$baseOUT.tpr .    
+	
+        # Make sure we deal well with checkpointing
+	[[ -f $DIR/$baseOUT.cpt ]] && cp $DIR/$baseOUT.cpt .
+    fi
+    
+    
+    if $FRC
+    then
+	removed=()
+	for z in ${baseOUT}.*; do [[ -f "$z" && "$z" != "$TPR" ]] && rm $z && removed[${#removed[@]}]=$z; done
+	echo "# Forced execution."
+        [[ -n $removed ]] && writeToLog "Removed files:" && echo ${removed[@]}
+    fi
+    
+    
+    if [[ -f $fnOUT || -f $DIR/$fnOUT ]]
+    then
+	writeToLog "Output found ($fnOUT). Skipping step ${STEPS[$STEP]}"
+	return 0
+    fi
+    
+    
     # Check if there are parts of runs (always in the RUN directory)
     if [[ -n $SPLIT ]]
     then
@@ -1223,7 +1413,8 @@ MDRUNNER ()
         log=$baseOUT.log 
         last=$DIR/$log
     fi
-
+    
+    
     # Check whether the log file actually exists
     step=0
     if [[ -e $last ]]
@@ -1233,37 +1424,25 @@ MDRUNNER ()
         # read a next line (n) and put it in the hold space (h)
         # At the end of the file, switch the hold space and the 
         # pattern space (x) and print (p)
-        step=($($SED  -n -e '/^ *Step *Time *Lambda/{n;h;}' -e '${x;p;}' $last))
+	local -i step=($($SED  -n -e '/^ *Step *Time *Lambda/{n;h;}' -e '${x;p;}' $last))
+	
+	# Check the number of steps for this cycle
+	local -i RUNSTEPS=$(sed -n '/nsteps/s/^.*=\([^;]*\).*$/\1/p' $fnMDP)
+	
+	if [[ $step -gt 0 ]]
+	then
+	    writeToLog "A log file exists which reports having run $step of $RUNSTEPS steps ($last)"
+	fi	
     fi
-        
-    local nsteps=$(sed -n '/nsteps/s/^.*=\([^;]*\).*$/\1/p' $fnMDP)
-
-
-    # Check whether we need to do anything
-    if $FRC
-    then
-        removed=()
-        for z in ${baseOUT}.*; do [[ -f $z ]] && rm $z && removed[${#removed[@]}]=$z; done
-        echo "# Forced execution."
-        [[ -n $removed ]] && echo "# Removed files:" && echo ${removed[@]}
-    elif [[ -f $fnOUT || -f $DIR/$fnOUT ]]
-    then
-        echo "# Output found ($fnOUT). Skipping step."
-        return 0
-    elif [[ $step -gt $nsteps ]]
-    then
-        echo "# A log file exists which reports having run $step of $STEPS steps ($last)"
-        return 0
-    fi
-
-
+    
+    
     echo "# $(date): STARTING MDRUNNER"    
-
+    
     # Set the options for the parameter and index files
     fnMDP="-f $fnMDP -po ${fnMDP%.mdp}-out.mdp"
     [[ -n $fnNDX ]] && fnNDX="-n $fnNDX"
-
-
+    
+    
     # Skip generation of run input file if it exists
     if [[ ! -e $baseOUT.tpr ]]
     then
@@ -1271,22 +1450,22 @@ MDRUNNER ()
         # The warnings are pretty much controlled. We usually get a warning because of using a plain cut-off for EM.
         # With custom ligand topologies we may get warnings about overriding parameters. This should be fine? :S
         GROMPP="${GMX}grompp $fnMDP -c $fnIN -p $fnTOP $fnNDX -o $baseOUT.tpr $(program_options grompp) -maxwarn -1"
-
+	
         echo "$GROMPP" | tee $LOG
         echo ": << __GROMPP__" >>$LOG
         $GROMPP >>$LOG 2>&1 || exit_error "Execution of grompp failed in routine MDRUNNER. More information in $LOG."
         echo "__GROMPP__" >>$LOG
     fi
-
-
+    
+    
     # If the output file extension is 'tpr' we should be done here
     [[ "${fnOUT#$baseOUT}" == ".tpr" ]] && return 0
-
-
+    
+    
     # If we extend a partial run, mention it
-    [[ ! -e $fnOUT && -e $baseOUT.cpt ]] && echo $(date): FOUND PARTIAL ${STEPS[$STEP]} RESULTS... CONTINUING
-
-
+    [[ ! -e $fnOUT && -e $baseOUT.cpt ]] && writeToLog "Found partial ${STEPS[$STEP]} results... Continuing"
+    
+    
     # Check the time
     # MAXH needs to be updated after every cycle
     if [[ -n $UNTIL ]]
@@ -1296,7 +1475,7 @@ MDRUNNER ()
         then
             exit_error "Somehow we violated the allowed run time... Exiting NOW!"
         fi
-        MAXH=$(bc <<< "scale=3;$MAXS/3600") 
+        MAXH=$(awk '{print $1/3600}' <<< "$MAXS") 
         
         # May want to check if MAXS makes sense for the run...
         if ((MAXS < LASTRUN))
@@ -1306,32 +1485,94 @@ MDRUNNER ()
             exit_error "INSUFFICIENT TIME LEFT. RUN INCOMPLETE. RESUBMIT."
         fi
     fi
-
     
-    # Run the run
+    
+    # Set up the mdrun command and start it in the background 
     MDRUN="${GMX}mdrun -nice 0 -deffnm $baseOUT -c $fnOUT -cpi $baseOUT.cpt -nt $NP $SPLIT $(program_options mdrun) -maxh $MAXH"
+    echo
     echo "$MDRUN" | tee -a $fnLOG
-    echo ": << __MDRUN__" >>$LOG
-    $MDRUN >>$fnLOG 2>&1 || exit_error "Execution of mdrun failed in routine MDRUNNER. More information in $LOG."
+    echo
+    $MDRUN >>$fnLOG 2>&1 &
+    local -i MDPID=$!
+    writeToLog "MDRUN PID: $MDPID"
+    
+    
+    # Start the monitor (if this is a production run)
+    if $MONITOR && [[ -n $CONTROL ]]
+    then
+	MON=$CONTROL
+	MON=${MON/@PID/$MDPID}
+	MON=${MON/@TPR/$baseOUT.tpr}
+	MON=${MON/@TRR/$baseOUT.trr}
+	MON=${MON/@XTC/$baseOUT.xtc}
+	MON=${MON/@EDR/$baseOUT.edr}
+	MON=${MON/@LOG/$baseOUT.log}
+	MON=${MON/@TOP/$fnTOP}
+	MON=${MON/@NDX/$fnNDX}
+	MON=${MON/@MDP/$fnMDP}
+	writeToLog "Monitoring run"
+	echo
+	echo "$MON"
+	echo
+	# Mark the output
+	# Make sure that the exit code from the monitor is exitcode of the process. 
+	($MON | sed 's/^/MONITOR: /'; exit ${PIPESTATUS[0]}) &
+
+	local -i MONID=$!
+	writeToLog "Monitor PID: $MONID"
+	
+	# In most cases, the monitor finishes before the run.
+	# The exit code then tells what to do (see below).
+	trap "terminate $MDPID $MONID" SIGHUP SIGINT SIGTERM SIGCHLD
+
+    	wait $MONID
+	MONEXIT=$?
+	echo MONITOR EXIT: $MONEXIT
+    else
+	trap "terminate $MDPID" SIGHUP SIGINT SIGTERM SIGCHLD
+    fi
+
+
+    # Wait for the MD run to finish
+    wait $MDPID
+    MDEXIT=$?
+
+
     echo "__MDRUN__" >>$LOG
+
+
+    case $MONEXIT in
+	0) writeToLog "Monitor exited after run finished without taking action (PASS)";;
+	1) exit_error "Monitor exited after run finished: condition not met, while it should be (FAIL)";;
+	2) writeToLog "Monitor terminated process, because condition was met (PASS)";;
+	3) exit_error "Monitor terminated process, because condition was met, but shouldn't be (FAIL)";;
+	4) writeToLog "Monitor killed process, because condition was met (PASS)";;
+	5) exit_error "Monitor killed process, because condition was met, but shouldn't be (FAIL)";;
+    esac
+
+
+    if [[ $MDEXIT != 0 ]]
+    then
+	exit_error "MDRUN exited with non-zero exit code ($MDEXIT) ... Exiting $PROGRAM."
+    fi
 
 
     # If we split then we have to do some more work to see if we have finished
     if [[ -n $SPLIT ]]
     then
-        step=($SED -n -e '/Step *Time *Lambda/{n;h;}' -e '${x;p;}' $fnLOG)
-        [[ $step == $FIN ]] && cp ${fnLOG%.log}.gro $fnOUT
+	step=($SED -n -e '/Step *Time *Lambda/{n;h;}' -e '${x;p;}' $fnLOG)
+	[[ $step == $RUNSTEPS ]] && cp ${fnLOG%.log}.gro $fnOUT
     fi
 
     
     # If $fnOUT exists then we finished this part
     if [[ -e $fnOUT ]]
     then
-        echo "# $(date): FINISHED MDRUNNER (STEP ${STEPS[$STEP]})" | tee -a $fnLOG
-        return 0
+	echo "# $(date): FINISHED MDRUNNER (STEP ${STEPS[$STEP]})" | tee -a $fnLOG
+	return 0
     else
-        echo "# $(date): MDRUN EXITED (STEP ${STEPS[$STEP]}), BUT RUN NOT COMPLETE" | tee -a $fnLOG
-        return 1
+	echo "# $(date): MDRUN EXITED (STEP ${STEPS[$STEP]}), BUT RUN NOT COMPLETE" | tee -a $fnLOG
+	return 1
     fi
 }
 
@@ -1900,7 +2141,6 @@ fi
 NPROT=$(SED -n '2{p;q;}' $GRO)
 
 # END OF COARSE GRAINING
-
 [[ $STOP ==   $NOW     ]] && exit_clean
 [[ $STEP == $((NOW++)) ]] && : $((STEP++))
 
@@ -1933,7 +2173,7 @@ then
     NDX=$base-cg.ndx
     LOG=01-SOLVENT.log
 
-    OUTPUT=($OUT $TOP $NDX)
+    OUTPUT=($OUT $NDX)
 
     # Delete existing output if we force this step
     $FORCE && rm ${OUTPUT[@]}
@@ -2171,7 +2411,6 @@ trash *.ssd
 
 
 # END OF COARSE GRAINED/MULTISCALE TOPOLOGY
-
 [[ $STOP ==   $NOW     ]] && exit_clean
 [[ $STEP == $((NOW++)) ]] && : $((STEP++))
 
@@ -2251,7 +2490,7 @@ then
     OUT=$base-PR-NVT.gro
     MDP=pr-nvt.mdp
     mdp_options ${OPT[@]} > $MDP
-    MD="MDRUNNER -f $MDP -c $GRO -p $TOP -o $OUT -n $NDX -np $PRNP -l $LOG -force $FORCE $TABLES"
+    MD="MDRUNNER -f $MDP -c $GRO -p $TOP -o $OUT -n $NDX -np $PRNP -l $LOG -force $FORCE $TABLES $MONALL"
     $NOEXEC $MD 
     GRO=$OUT
     trash $base-PR-NVT.{cpt,tpr} 
@@ -2288,15 +2527,17 @@ if [[ $GMXVERSION -le 4 ]]
 then
     $MEMBRANE && __mdp_equil__tau_p=$__mdp_equil__tau_p,$__mdp_equil__tau_p
 fi
+run=1
 for __mdp_equil__dt in ${DT[@]}
 do
-    LOG=04-PR-NPT-$__mdp_equil__dt.log
-    OUT=$base-PR-NPT-$__mdp_equil__dt.gro
-    MDP=pr-npt-$__mdp_equil__dt.mdp
+    LOG=04-PR-NPT-$__mdp_equil__dt-$run.log
+    OUT=$base-PR-NPT-$__mdp_equil__dt-$run.gro
+    MDP=pr-npt-$__mdp_equil__dt-$run.mdp
     mdp_options ${OPT[@]} > $MDP
-    MD="MDRUNNER -f $MDP -c $GRO -p $TOP -o $OUT -n $NDX -np $NP -l $LOG -force $FORCE $TABLES"
+    MD="MDRUNNER -f $MDP -c $GRO -p $TOP -o $OUT -n $NDX -np $NP -l $LOG -force $FORCE $TABLES $MONALL"
     $NOEXEC $MD 
     GRO=$OUT
+    : $((run++))
     trash $base-PR-NPT-$__mdp_equil__dt.{cpt,tpr} 
 done
 
@@ -2327,21 +2568,24 @@ else
     DT=(0.020 $DELT)
 fi
 
+run=1
 for __mdp_equil__dt in ${DT[@]}
 do
-    LOG=05-NPT-$__mdp_equil__dt.log
+    LOG=05-NPT-$__mdp_equil__dt-$run.log
 
-    OUT=$base-NPT-$__mdp_equil__dt.gro
-    MDP=md-init-$__mdp_equil__dt.mdp
+    OUT=$base-NPT-$__mdp_equil__dt-$run.gro
+    MDP=md-init-$__mdp_equil__dt-$run.mdp
     mdp_options ${OPT[@]} > $MDP
     nsteps=$(sed -n '/nsteps/s/.*=//p' $MDP)
     before=$(date +%s)
-    MD="MDRUNNER -f $MDP -c $GRO -p $TOP -o $OUT -n $NDX -np $NP -l $LOG -force $FORCE $TABLES"
+    echo ==--- $GRO $OUT
+    MD="MDRUNNER -f $MDP -c $GRO -p $TOP -o $OUT -n $NDX -np $NP -l $LOG -force $FORCE $TABLES $MONALL"
     $NOEXEC $MD 
     timing=$(( $(date +%s) - before ))
     echo "Ran $nsteps steps in $timing seconds"
     GRO=$OUT
-    trash $base-NPT-$__mdp_equil__dt.{cpt,tpr} 
+    : $((run++))
+    trash $base-NPT-$__mdp_equil__dt-$run.{cpt,tpr} 
 done
 
 
@@ -2393,7 +2637,7 @@ estimate=$(( (timing*(1000*mdsteps)/nsteps)/1000 ))
 estfin=$(( $(date +%s) + estimate ))
 echo "Expected runtime for $mdsteps step: $(( estimate/3600 ))H:$(( (estimate%3600)/60 ))M:$(( estimate%60 ))S (until $(date -r $estfin))"
 
-MD="MDRUNNER -f $MDP -c $GRO -p $TOP -o $OUT -n $NDX -np $NP -l $LOG -split -force $FORCE $TABLES"
+MD="MDRUNNER -f $MDP -c $GRO -p $TOP -o $OUT -n $NDX -np $NP -l $LOG -split -force $FORCE $TABLES -monitor"
 $NOEXEC $MD 
 
 # : $((STEP++))
