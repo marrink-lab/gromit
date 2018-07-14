@@ -131,8 +131,8 @@ SDIR=$( [[ $0 != ${0%/*} ]] && cd ${0%/*}; pwd )
 #    1. the environment (if PROGEVAR is given)
 #    2. the directory where this calling script (martinate) is located
 #    3. the PATH 
-DEPENDENCIES=( dssp  gmxrc  martinize     insane     liptop    )
-PROGEXEC=(     dssp  GMXRC  martinize.py  insane.py  liptop.py )
+DEPENDENCIES=( dssp  gmxrc  martinize     insane     liptop    squeeze)
+PROGEXEC=(     dssp  GMXRC  martinize.py  insane.py  liptop.py squeeze)
 PROGEVAR=(     DSSP  GMXRC)
 
 
@@ -263,7 +263,7 @@ Temperature=310  # Degree Kelvin
 Pressure=1       # Bar
 Salinity=0.1536  # Concentration NaCl
 SEED=$$
-
+RotationalConstraints=   # Use rotational constraints, which is mandatory with NDLP
 
 # Directories and executables
 # This gives the directory where the script is located
@@ -419,6 +419,7 @@ while [ -n "$1" ]; do
        -dir)                   DIR=$2                ; shift 2; continue ;;
 #     -gmxrc)                 GMXRC=$2                ; shift 2; continue ;;
 #      -dssp)                  DSSP=$2                ; shift 2; continue ;;
+	-rtc)      RotationalConstraints=rtc            ; shift  ; continue ;; #= Whether or not to use rotational constraints
       -step)                  STEP=$2                ; shift 2; continue ;;
       -stop)                  STOP=$2                ; shift 2; continue ;;
         -np)                    NP=$2                ; shift 2; continue ;;
@@ -584,6 +585,19 @@ echo Gromacs data directory: $GMXLIB
 # otherwise raise a fatal error.
 ${GMX}grompp -h >/dev/null 2>&1 || executable_not_found_error "GROMACS (GMXRC)"
 
+# Check if Gromacs can handle RTC (if so needed)
+# This only works for GMX <5
+if [[ $RotationalConstraints == "rtc" ]]
+then
+    echo Testing rotational constraints
+    echo "comm_mode = RTC" > gromacs_rtc_test.mdp
+    if ${GMX}grompp -f gromacs_rtc_test.mdp 2>&1 | grep -q "Invalid enum 'RTC'"
+    then
+	rm gromacs_rtc_test.mdp
+	FATAL "Roto-translational constraints requested (comm_mode = RTC), but not supported by ${GMX}grompp"
+    fi
+    rm gromacs_rtc_test.mdp mdout.mdp
+fi
 
 ## 2. DSSP ##
 
@@ -1028,6 +1042,9 @@ __mdp_cg__pcoupltype=Isotropic
 __mdp_cg__compressibility=3e-4
 __mdp_cg__tau_p=3.0 
 __mdp_cg__ref_p=$Pressure
+
+__mdp_rtc__comm_mode=RTC
+__mdp_rtc__comm_grps=Solute
 
 __mdp_mem__pcoupltype=Semiisotropic
 __mdp_mem__compressibility=3e-4,3e-4
@@ -1982,8 +1999,13 @@ then
 	then
 	    FATAL "Coarse graining PDB file ($pdb), but martinize was not found."
 	fi
+	# If multiscaling, let martinize generate the index
+	# martinize2 cannot generate it, but cannot do multiscaling anyway
+	[[ -n $M_MULTI ]] && MNDX="-n $base-mart.ndx"
 	MARTINIZE="$MART $(expandOptList ${MARTINIZE[@]})"
-	MARTINIZE="$MARTINIZE -f $pdb -o $TOP -x $base-mart.pdb -n $base-mart.ndx -ff $MARTINI $M_MULTI"
+	MARTINIZE="$MARTINIZE -f $pdb -o $TOP -x $base-mart.pdb $MNDX -ff $MARTINI $M_MULTI"
+	# If martinize did not generate the index file, we need to do it now
+	[[ -z $M_MULTI ]] && { echo "[ CG ]"; seq $(grep -c "^ATOM" $base-mart.pdb); } > $base-mart.ndx
 	echo $MARTINIZE
     fi
 
@@ -2218,7 +2240,7 @@ then
 	$NOEXEC $INSANE 2>&1 | tee -a $TOP
     else
 	$NOEXEC $INSANE 2>insane.stderr
-	cat insane.stderr >> $TOP
+	cat insane.stderr | tee -a $TOP
     fi
 
 
@@ -2521,7 +2543,7 @@ fi
 
 
 # Base MDP options for all cycles
-$MEMBRANE && OPT=(cg mem $MDPMS equil npt) || OPT=(cg $MDPMS equil npt)
+$MEMBRANE && OPT=(cg mem $MDPMS equil npt $RotationalConstraints) || OPT=(cg $MDPMS equil npt $RotationalConstraints)
 # Set pressure coupling to PR if running with GMX5
 if [[ $GMXVERSION -le 4 ]]
 then
@@ -2549,7 +2571,7 @@ done
 SHOUT "---STEP 5: UNRESTRAINED NpT"
 #--------------------------------------------------------------------
 
-$MEMBRANE && OPT=(cg mem $MDPMS equil usr) || OPT=(cg $MDPMS equil usr)
+$MEMBRANE && OPT=(cg mem $MDPMS equil $RotationalConstraints usr) || OPT=(cg $MDPMS equil $RotationalConstraints usr)
 GRO=$OUT
 OUT=$GRO
 LOG=05-NPT.log
@@ -2599,7 +2621,7 @@ done
 SHOUT "---STEP 6: PRODUCTION RUN"
 #--------------------------------------------------------------------
 
-$MEMBRANE && OPT=(cg mem $MDPMS usr) || OPT=(cg $MDPMS usr)
+$MEMBRANE && OPT=(cg mem $MDPMS $RotationalConstraints usr) || OPT=(cg $MDPMS $RotationalConstraints usr)
 GRO=$OUT
 OUT=$base-MD.gro
 LOG=06-MD.log
