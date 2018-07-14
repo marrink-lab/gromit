@@ -467,23 +467,34 @@ while [ -n "$1" ]; do
 
     case $1 in
 	-h)        USAGE                                ; exit 0 ;;
-        # File options
-	-f)        fnIN=$2                              ; shift 2; continue ;; #= Input file (PDB)
-        -g)        MSGFILE=$2                           ; shift 2; continue ;; #= Standard output log file
-        -e)        ERRFILE=$2                           ; shift 2; continue ;; #= Standard error log file
-        -tpr)      TPR=$2                               ; shift 2; continue ;; #= Run input file
+        #== File options
+	-f)        fnIN=$2                              ; shift 2; continue ;; #= Input coordinate file (PDB)
+        -g)        MSGFILE=$2                           ; shift 2; continue ;; #= Standard output log file (default: /dev/stdout)
+        -e)        ERRFILE=$2                           ; shift 2; continue ;; #= Standard error log file (default: /dev/stderr)
+        -tpr)      TPR=$2                               ; shift 2; continue ;; #= Run input file 
 	-name)     NAME=$2                              ; shift 2; continue ;; #= Name of project
-	-top)      TOP=$2                               ; shift 2; continue ;; #= Topology file
-	-atp)      AtomTypes+=($2)                      ; shift 2; continue ;; #= Additional atom type definitions
-	-itp)      MoleculeTypes+=($2)                  ; shift 2; continue ;; #= Additional molecule type definitions
+	-top)      TOP=$2                               ; shift 2; continue ;; #= Input topology file
+	-atp)      AtomTypes+=($2)                      ; shift 2; continue ;; #= Additional atom type definitions (force field file)
+	-itp)      MoleculeTypes+=($2)                  ; shift 2; continue ;; #= Additional molecule type definitions 
+	-l)        LIGANDS+=($2)                        ; shift 2; continue ;; #= Ligands to include (topology or structure,topology)
 	-mdp)      MDP=$2                               ; shift 2; continue ;; #= MDP (simulation parameter) file
 	-scratch)  SCRATCH=$2                           ; shift 2; continue ;; #= Scratch directory to perform simulation
-        -grid)     GRID=true                            ; shift 1; continue ;; #= GRID-enabled run
-        -keep)     KEEP=true                            ; shift  ; continue ;; #= Whether or not to keep intermediate data
-	-rtc)      RotationalConstraints=rtc            ; shift  ; continue ;; #= Whether or not to use rotational constraints
-	-ndlp)     NDLP=true; RotationalConstraints=rtc ; shift  ; continue ;; #= Whether or not to use NDLP (molecular shaped) PBC
+	-fetch)    FETCH=$2                             ; shift 2; continue ;; #= Database to fetch input structure from
+        -rmhet)    HETATM=false                         ; shift  ; continue ;; #= Whether or not to remove HETATM records
+	#== Overall control options
 	-step)     STEP=$2                              ; shift 2; continue ;; #= Step to start protocol
 	-stop)     STOP=$2                              ; shift 2; continue ;; #= Step to end protocol
+        -grid)     GRID=true                            ; shift 1; continue ;; #= GRID-enabled run
+        -keep)     KEEP=true                            ; shift  ; continue ;; #= Whether or not to keep intermediate data
+	-dir)      DIR=$2                               ; shift 2; continue ;; #= Directory where to perform simulation (make if required)
+	-np)       NP=$2                                ; shift 2; continue ;; #= Number of processors/threads to use
+        -maxh)     MAXH=$2                              ; shift 2; continue ;; #= Maximum time to run (in hours)
+	-archive)  ARCHIVE=${2%.tgz}.tgz                ; shift 2; continue ;; #= Archive file name to save data in
+	-force)    FORCE=true                           ; shift  ; continue ;; #= Whether or not to force redoing parts already run
+        -noexec)   EXEC=echo                            ; shift  ; continue ;; #= Whether or not to actually execute the commands
+	#== Simulation control options
+	-rtc)      RotationalConstraints=rtc            ; shift  ; continue ;; #= Whether or not to use rotational constraints
+	-ndlp)     NDLP=true; RotationalConstraints=rtc ; shift  ; continue ;; #= Whether or not to use NDLP (molecular shaped) PBC
         -bt)       BOXTYPE=$2                           ; shift 2; continue ;; #= Box type to use
 	-salt)     Salt=$2                              ; shift 2; continue ;; #= Salt to use (NA,CL)
 	-conc)     Salinity=$2                          ; shift 2; continue ;; #= Salt concentration
@@ -504,22 +515,16 @@ while [ -n "$1" ]; do
 	-ff)       ForceField=$2                        ; shift 2; continue ;; #= Force field to use
         -vsite)    VirtualSites=true                    ; shift  ; continue ;; #= Whether or not to use virtual sites
 	-seed)     SEED=$2                              ; shift 2; continue ;; #= Seed for random number generator
-	-dir)      DIR=$2                               ; shift 2; continue ;; #= Directory where to perform simulation (make if required)
-	-np)       NP=$2                                ; shift 2; continue ;; #= Number of processors/threads to use
-        -maxh)     MAXH=$2                              ; shift 2; continue ;; #= Maximum time to run (in hours)
 	-solvent)  SolModel=$2                          ; shift 2; continue ;; #= Solvent model name(s), can be itp file(s)
 	-solfile)  SolFile=$2                           ; shift 2; continue ;; #= Solvent (configuration) file
-	-archive)  ARCHIVE=${2%.tgz}.tgz                ; shift 2; continue ;; #= Archive file name to save data in
-	-force)    FORCE=true                           ; shift  ; continue ;; #= Whether or not to force redoing parts already run
-        -noexec)   EXEC=echo                            ; shift  ; continue ;; #= Whether or not to actually execute the commands
-	-fetch)    FETCH=$2                             ; shift 2; continue ;; #= Database to fetch input structure from
-        -rmhet)    HETATM=false                         ; shift  ; continue ;; #= Whether or not to remove HETATM records
+	#== Analysis options
 	-lie)      LIE=true                             ; shift  ; continue ;; #= Whether or not to use LIE setup and analysis 
-	-l)        LIGANDS+=($2)                        ; shift 2; continue ;; #= Ligands to include (topology or structure,topology)
         -analysis) ANALYSIS+=($2)                       ; shift 2; continue ;; #= Analysis protocols to run
+	#== Monitor options
 	-monall)   MONALL=-monitor                      ; shift 1; continue ;; #= Monitor all steps using control script
 	-control)  CONTROL=$2                           ; shift 2; continue ;; #= Simulation monitor script
 	-ctime)    CHECKTIME=$2                         ; shift 2; continue ;; #= Time for running monitor
+	#== Other
         --mdp-*)   MDPOPTS+=(${1#--mdp-})               ; shift  ; continue ;; #= Command-line specified simulation parameters
 	--*)       PROGOPTS+=($1)                       ; shift  ; continue ;; #= Command-line specified program parameters
 
