@@ -270,44 +270,6 @@ RotationalConstraints=   # Use rotational constraints, which is mandatory with N
 SDIR=$( [[ $0 != ${0%/*} ]] && cd ${0%/*}; pwd )
 
 
-OPTIONS=$(cat << __OPTIONS__
-# File options: 
-    -f  	 Input PDB file                                                *FILE:  None 
-    -top         Input topology file                                           *FILE:  None
-    -cg          Coarse grained force field                                    *STR:   $MARTINI
-    -ndx         Index file                                                    *STR:   None
-# Multiscaling: 
-    -m           Chains for multiscaling. Other chains will be coarse grained. *STR:   None
-    -M           Multiscale all chains, except those specified with -m         *BOOL:  False
-    -ff          Atomistic force field for multiscaling                        *STR:   $ForceField
-# Conditions:
-    -sol         Solvent to use                                                *STR:   $SOL
-    -epsr        Dielectric constant of the medium                             *FLOAT: $EPSR
-    -T           Temperature                                                   *FLOAT: $TEMP (K) 
-    -P           Pressure                                                      *FLOAT: $PRES (bar)
-    -salt        Salt (NaCl) Concentration                                     *FLOAT: $Salinity (M)
-# Simulation control: 
-    -time        Simulation length in ns                                       *FLOAT: $TIME (ns)
-    -at          Output resolution                                             *FLOAT: $AT (ns)
-    -np          Number of processors to run on                                *INT:   $NP
-    -vsite       Use virtual sites                                             *BOOL:  False
-# Script control options: 
-    -step        Step at which to start or resume the setup                    *STR:   $STEP
-    -stop        Step at which to stop execution                               *STR:   $STOP
-    -force       Force overwriting existing files                              *BOOL:  False
-    -noexec      Do not actually simulate                                      *BOOL:  False
-    -keep        Keep all rubbish generated; do not clean up                   *BOOL:  False
-# Other options:
-    -daft        Index file with DAFT energy groups. Invokes DAFT run.         *FILE:  None
-    -dry         Use dry martini                                               *STR:   None
-
-Arguments not listed are passed through to martinize.py
-Check '$MARTINIZE -h' for a listing
-
-__OPTIONS__
-)
-
-
 hlevel=1
 olevel=1
 # Function for parsing help from option list
@@ -334,12 +296,14 @@ $AFFILIATION
 __USAGE__
 
 help_fun
+
+exit $1
 }
 
 
 if [[ -z "$1" ]]; then
   echo "No command line arguments give. Please read the program usage:"
-  USAGE
+  USAGE 1
   exit
 fi
 
@@ -350,7 +314,7 @@ BAD_OPTION ()
     echo "Unknown option "$1" found on command-line"
     echo "It may be a good idea to read the usage:"
 
-    USAGE
+    USAGE 1
 
     echo " /\                                               /\ " 
     echo "/||\  Unknown option "$1" found on command-line  /||\ "
@@ -405,8 +369,8 @@ while [ -n "$1" ]; do
 	#=0 OPTIONS
         #=0 =======
         #=0
-	-h       ) USAGE                                ; exit 0 ;; #==0 Display help
-	--help   ) USAGE                                ; exit 0 ;; #==1 Display help
+	-h       ) USAGE 0                              ; exit 0 ;; #==0 Display help
+	--help   ) USAGE 0                              ; exit 0 ;; #==1 Display help
 	-hlevel  ) hlevel=$2                            ; shift 2; continue ;; #==1 Set level of help (use before -h/--help)
 	-olevel  ) olevel=$2                            ; shift 2; continue ;; #==1 Set level of options to display
 
@@ -415,7 +379,6 @@ while [ -n "$1" ]; do
 	#=1 ------------
         #=1
         -f       ) PDB=$2                               ; shift 2; continue ;; #==0 Input PDB file
-        -cg      ) MARTINI=$2                           ; shift 2; continue ;; #==1 Coarse grain force field
         -top     ) TOP=$2                               ; shift 2; continue ;; #==1 Input topology file 
         -ndx     ) NDX=$2                               ; shift 2; continue ;; #==1 Input index file
         -hetatm  ) NOHETATM=false                       ; shift 1; continue ;; #==1 Keep HETATM records
@@ -424,24 +387,30 @@ while [ -n "$1" ]; do
 	#=1 Overall control options
 	#=1 -----------------------
 	#=1
+        -step    ) STEP=$2                              ; shift 2; continue ;; #==1 Step to start protocol
+        -stop    ) STOP=$2                              ; shift 2; continue ;; #==1 Step to stop protocol
+        -keep    ) KEEP=true                            ; shift 1; continue ;; #==2 Whether or not to keep intermediate data
+        -dir     ) DIR=$2                               ; shift 2; continue ;; #==2 Directory for running simulation
+        -np      ) NP=$2                                ; shift 2; continue ;; #==1 Number of cores (processes) to use
+        -maxh    ) MAXH=$2                              ; shift 2; continue ;; #==2 Maximum run time
+        -force   ) FORCE=true                           ; shift 1; continue ;; #==2 Whether or not to force redoing parts already run
+        -noexec  ) NOEXEC=echo                          ; shift 1; continue ;; #==2 Whether or not to actually execute the commands
+
+        #=1
+        #=1 Forcefield control options
+        #=1 --------------------------
+        #=1
+        -cg      ) MARTINI=$2                           ; shift 2; continue ;; #==1 Coarse grain force field
+        -sol     ) SOL=$2                               ; shift 2; continue ;; #==1 Solvent type to use 
+        -ffitp   ) FFITP=$2                             ; shift 2; continue ;; #==2 Coarse-grain force field definition
+        -fftag   ) FFTAG=$2                             ; shift 2; continue ;;
+        -itp     ) USRITP+=($2)                         ; shift 2; continue ;; #==2 User-provided ITP file
+        -dry     ) DRY=$2                               ; shift 2; continue ;; #==2 Use dry martini from file definition
 
 	#=1
 	#=1 Simulation control options
 	#=1 --------------------------
 	#=1
-        -sol     ) SOL=$2                               ; shift 2; continue ;; #==1 Solvent type to use 
-        -epsr    ) EPSR=$2                              ; shift 2; continue ;; #==2 Dielectric constant of vacuum
-        -epsrf   ) EPSRF=$2                             ; shift 2; continue ;; #==2 Dielectric constant of Reaction-Field
-        -ljdp    ) LJDP=$2                              ; shift 2; continue ;; #==2 Lennard-Jones dispersion
-        -ljrp    ) LJRP=$2                              ; shift 2; continue ;; #==2 Lennard-Jones repulsion
-        -ljsw    ) LJSW=$2                              ; shift 2; continue ;; #==2 Lennard-Jones switch radius
-        -rc      ) RC=$2                                ; shift 2; continue ;; #==2 Cut-off for non-bonded terms
-        -m       ) MULTI[$((NCH++))]=$2; M=true         ; shift 2; continue ;; #==2 Chains for multiscaling
-        -M       ) ALL=true; M=true                     ; shift 1; continue ;; #==2 Multiscale all chains
-        -ff      ) ForceField=$2                        ; shift 2; continue ;; #==2 Atomistic force field for multiscaling
-        -ffitp   ) FFITP=$2                             ; shift 2; continue ;; #==2 Coarse-grain force field definition
-        -fftag   ) FFTAG=$2                             ; shift 2; continue ;;
-        -itp     ) USRITP+=($2)                         ; shift 2; continue ;; #==2 User-provided ITP file
         -T       ) Temperature=$2                       ; shift 2; continue ;; #==1 Temperature
         -P       ) Pressure=$2                          ; shift 2; continue ;; #==1 Pressure
         -salt    ) Salinity=$2                          ; shift 2; continue ;; #==1 Salt concentration
@@ -449,32 +418,31 @@ while [ -n "$1" ]; do
         -time    ) TIME=$2                              ; shift 2; continue ;; #==1 Production simulation time
         -at      ) AT=$2                                ; shift 2; continue ;; #==1 Output sampling frequency
         -em      ) EMSTEPS=$2                           ; shift 2; continue ;; #==2 Number of steps for EM
-        -dir     ) DIR=$2                               ; shift 2; continue ;; #==2 Directory for running simulation
 #       -gmxrc   ) GMXRC=$2                             ; shift 2; continue ;; 
 #       -dssp    ) DSSP=$2                              ; shift 2; continue ;;
 	-rtc     ) RotationalConstraints=rtc            ; shift  ; continue ;; #==2 Whether or not to use rotational constraints
-        -step    ) STEP=$2                              ; shift 2; continue ;; #==1 Step to start protocol
-        -stop    ) STOP=$2                              ; shift 2; continue ;; #==1 Step to stop protocol
-        -np      ) NP=$2                                ; shift 2; continue ;; #==1 Number of cores (processes) to use
-        -maxh    ) MAXH=$2                              ; shift 2; continue ;; #==2 Maximum run time
-        -vsite   ) VSITE=true                           ; shift 1; continue ;; #==2 Use virtual sites in multiscaling
-        -force   ) FORCE=true                           ; shift 1; continue ;; #==2 Whether or not to force redoing parts already run
-        -daft    ) DAFT=$2; NDX=$2                      ; shift 2; continue ;; #==2 Run martinate in DAFT pipeline
-        -dry     ) DRY=$2                               ; shift 2; continue ;; #==2 Use dry martini
-        -keep    ) KEEP=true                            ; shift 1; continue ;; #==2 Whether or not to keep intermediate data
-        -noexec  ) NOEXEC=echo                          ; shift 1; continue ;; #==2 Whether or not to actually execute the commands
 
         #=2
         #=2 Multiscale options
         #=2 ------------------
         #=2
+        -m       ) MULTI[$((NCH++))]=$2; M=true         ; shift 2; continue ;; #==2 Chains for multiscaling
+        -M       ) ALL=true; M=true                     ; shift 1; continue ;; #==2 Multiscale all chains
+        -ff      ) ForceField=$2                        ; shift 2; continue ;; #==2 Atomistic force field for multiscaling
+        -vsite   ) VSITE=true                           ; shift 1; continue ;; #==2 Use virtual sites in multiscaling
+        -epsr    ) EPSR=$2                              ; shift 2; continue ;; #==2 Dielectric constant of vacuum
+        -epsrf   ) EPSRF=$2                             ; shift 2; continue ;; #==2 Dielectric constant of Reaction-Field
+        -ljdp    ) LJDP=$2                              ; shift 2; continue ;; #==2 Lennard-Jones dispersion
+        -ljrp    ) LJRP=$2                              ; shift 2; continue ;; #==2 Lennard-Jones repulsion
+        -ljsw    ) LJSW=$2                              ; shift 2; continue ;; #==2 Lennard-Jones switch radius
+        -rc      ) RC=$2                                ; shift 2; continue ;; #==2 Cut-off for non-bonded terms
 
 	#=1
 	#=1 Monitor options
 	#=1 ---------------
 	#=1
-	-monall  ) MONALL=-monitor                      ; shift 1; continue ;; #= Monitor all steps using control script
-	-control )#= Simulation monitor script
+	-monall  ) MONALL=-monitor                      ; shift 1; continue ;; #==2 Monitor all steps using control script
+	-control )                                                             #==2 Simulation monitor script
 		while [[ -n $2 && $2 != ';' ]]
 		do
 			CONTROL="$CONTROL $2"
@@ -483,7 +451,7 @@ while [ -n "$1" ]; do
                 shift 2
                 echo MONITOR COMMAND: $CONTROL 
 		continue;; 
-	-ctime   ) CHECKTIME=$2                         ; shift 2; continue ;; #= Time for running monitor
+	-ctime   ) CHECKTIME=$2                         ; shift 2; continue ;; #==2 Time for running monitor
 
 	#=2
 	#=2 A control process is either a program, script or command 
@@ -498,6 +466,12 @@ while [ -n "$1" ]; do
         #=2         -e ${NAME}-MD.part#.edr
         #=2         -g ${NAME}-MD.part#.log 
 
+        #=2 
+        #=2 Protocol options
+        #=2 ----------------
+        #=2 
+        -daft    ) DAFT=$2; NDX=$2                      ; shift 2; continue ;; #==2 Run martinate in DAFT pipeline
+
 	#=1
 	#=1 Advanced control options
 	#=1 ------------------------
@@ -507,8 +481,9 @@ while [ -n "$1" ]; do
 	#=2 described below.
 	#=2
 
-	#=2    --mdp-option=value         Command-line specified simulation parameters
-        --mdp-*  ) MDPOPTS+=(${1#--mdp-})               ; shift  ; continue ;; #= Command-line specified simulation parameters
+        # The first one is the template/dummy for the help system
+        --mdp-option=value) olevel=2; hlevel=2; USAGE 1; continue;; #==2 Command-line specified simulation parameters
+        --mdp-*  ) MDPOPTS+=(${1#--mdp-})               ; shift  ; continue ;; 
 	#=2
 	#=2 This will add 'option = value' to the MDP file for all simulations 
 	#=2 following energy minimization. MDP options specified on the command line
@@ -520,11 +495,13 @@ while [ -n "$1" ]; do
 	#=2 simulations selectively.
 	#=2
 
-
         # Options for downstream programs
         # If the options are given on the command line, they are expanded and each
         # option will be formatted as --program-opt=val
+        --martinize-option=value) olevel=2; hlevel=2; USAGE 1; continue;; #==2 Parameters for martinize
         --martinize-*) MARTINIZE+=(${1#--martinize})    ; shift  ; continue;;
+         
+        --insane-option=value) olevel=2; hlevel=2; USAGE 1; continue;; #==2 Parameters for insane
         --insane-*)       INSANE+=(${1#--insane})       ; shift  ; continue;;
 
         # If the options are passed by another program, they will be formatted like
