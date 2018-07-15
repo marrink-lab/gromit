@@ -401,49 +401,78 @@ while [ -n "$1" ]; do
 
   # Check for other options
   case $1 in
+	#=0
+	#=0 OPTIONS
+        #=0 =======
+        #=0
 	-h       ) USAGE                                ; exit 0 ;; #==0 Display help
 	--help   ) USAGE                                ; exit 0 ;; #==1 Display help
 	-hlevel  ) hlevel=$2                            ; shift 2; continue ;; #==1 Set level of help (use before -h/--help)
 	-olevel  ) olevel=$2                            ; shift 2; continue ;; #==1 Set level of options to display
-        -f       ) PDB=$2                               ; shift 2; continue ;;
-        -cg      ) MARTINI=$2                           ; shift 2; continue ;;
-        -top     ) TOP=$2                               ; shift 2; continue ;;
-        -ndx     ) NDX=$2                               ; shift 2; continue ;;
-        -hetatm  ) NOHETATM=false                       ; shift 1; continue ;;
-        -sol     ) SOL=$2                               ; shift 2; continue ;;
-        -epsr    ) EPSR=$2                              ; shift 2; continue ;;
-        -epsrf   ) EPSRF=$2                             ; shift 2; continue ;;
-        -ljdp    ) LJDP=$2                              ; shift 2; continue ;;
-        -ljrp    ) LJRP=$2                              ; shift 2; continue ;;
-        -ljsw    ) LJSW=$2                              ; shift 2; continue ;;
-        -rc      ) RC=$2                                ; shift 2; continue ;;
-        -m       ) MULTI[$((NCH++))]=$2; M=true         ; shift 2; continue ;;
-        -M       ) ALL=true; M=true                     ; shift 1; continue ;;
-        -ff      ) ForceField=$2                        ; shift 2; continue ;;
-        -ffitp   ) FFITP=$2                             ; shift 2; continue ;;
+
+	#=1
+        #=1 File options
+	#=1 ------------
+        #=1
+        -f       ) PDB=$2                               ; shift 2; continue ;; #==0 Input PDB file
+        -cg      ) MARTINI=$2                           ; shift 2; continue ;; #==1 Coarse grain force field
+        -top     ) TOP=$2                               ; shift 2; continue ;; #==1 Input topology file 
+        -ndx     ) NDX=$2                               ; shift 2; continue ;; #==1 Input index file
+        -hetatm  ) NOHETATM=false                       ; shift 1; continue ;; #==1 Keep HETATM records
+
+	#=1
+	#=1 Overall control options
+	#=1 -----------------------
+	#=1
+
+	#=1
+	#=1 Simulation control options
+	#=1 --------------------------
+	#=1
+        -sol     ) SOL=$2                               ; shift 2; continue ;; #==1 Solvent type to use 
+        -epsr    ) EPSR=$2                              ; shift 2; continue ;; #==2 Dielectric constant of vacuum
+        -epsrf   ) EPSRF=$2                             ; shift 2; continue ;; #==2 Dielectric constant of Reaction-Field
+        -ljdp    ) LJDP=$2                              ; shift 2; continue ;; #==2 Lennard-Jones dispersion
+        -ljrp    ) LJRP=$2                              ; shift 2; continue ;; #==2 Lennard-Jones repulsion
+        -ljsw    ) LJSW=$2                              ; shift 2; continue ;; #==2 Lennard-Jones switch radius
+        -rc      ) RC=$2                                ; shift 2; continue ;; #==2 Cut-off for non-bonded terms
+        -m       ) MULTI[$((NCH++))]=$2; M=true         ; shift 2; continue ;; #==2 Chains for multiscaling
+        -M       ) ALL=true; M=true                     ; shift 1; continue ;; #==2 Multiscale all chains
+        -ff      ) ForceField=$2                        ; shift 2; continue ;; #==2 Atomistic force field for multiscaling
+        -ffitp   ) FFITP=$2                             ; shift 2; continue ;; #==2 Coarse-grain force field definition
         -fftag   ) FFTAG=$2                             ; shift 2; continue ;;
-        -itp     ) USRITP+=($2)                         ; shift 2; continue ;;
-        -T       ) Temperature=$2                       ; shift 2; continue ;;
-        -P       ) Pressure=$2                          ; shift 2; continue ;;
-        -salt    ) Salinity=$2                          ; shift 2; continue ;;
-        -dt      ) DELT=$2                              ; shift 2; continue ;;
-        -time    ) TIME=$2                              ; shift 2; continue ;;
-        -at      ) AT=$2                                ; shift 2; continue ;;
-        -em      ) EMSTEPS=$2                           ; shift 2; continue ;;
-        -dir     ) DIR=$2                               ; shift 2; continue ;;
-#       -gmxrc   ) GMXRC=$2                             ; shift 2; continue ;;
+        -itp     ) USRITP+=($2)                         ; shift 2; continue ;; #==2 User-provided ITP file
+        -T       ) Temperature=$2                       ; shift 2; continue ;; #==1 Temperature
+        -P       ) Pressure=$2                          ; shift 2; continue ;; #==1 Pressure
+        -salt    ) Salinity=$2                          ; shift 2; continue ;; #==1 Salt concentration
+        -dt      ) DELT=$2                              ; shift 2; continue ;; #==2 Integration time step
+        -time    ) TIME=$2                              ; shift 2; continue ;; #==1 Production simulation time
+        -at      ) AT=$2                                ; shift 2; continue ;; #==1 Output sampling frequency
+        -em      ) EMSTEPS=$2                           ; shift 2; continue ;; #==2 Number of steps for EM
+        -dir     ) DIR=$2                               ; shift 2; continue ;; #==2 Directory for running simulation
+#       -gmxrc   ) GMXRC=$2                             ; shift 2; continue ;; 
 #       -dssp    ) DSSP=$2                              ; shift 2; continue ;;
-	-rtc     ) RotationalConstraints=rtc            ; shift  ; continue ;; #= Whether or not to use rotational constraints
-        -step    ) STEP=$2                              ; shift 2; continue ;;
-        -stop    ) STOP=$2                              ; shift 2; continue ;;
-        -np      ) NP=$2                                ; shift 2; continue ;;
-        -maxh    ) MAXH=$2                              ; shift 2; continue ;;
-        -vsite   ) VSITE=true                           ; shift 1; continue ;;
-        -force   ) FORCE=true                           ; shift 1; continue ;;
-        -daft    ) DAFT=$2; NDX=$2                      ; shift 2; continue ;;
-        -dry     ) DRY=$2                               ; shift 2; continue ;;
-        -keep    ) KEEP=true                            ; shift 1; continue ;;
-        -noexec  ) NOEXEC=echo                          ; shift 1; continue ;;
+	-rtc     ) RotationalConstraints=rtc            ; shift  ; continue ;; #==2 Whether or not to use rotational constraints
+        -step    ) STEP=$2                              ; shift 2; continue ;; #==1 Step to start protocol
+        -stop    ) STOP=$2                              ; shift 2; continue ;; #==1 Step to stop protocol
+        -np      ) NP=$2                                ; shift 2; continue ;; #==1 Number of cores (processes) to use
+        -maxh    ) MAXH=$2                              ; shift 2; continue ;; #==2 Maximum run time
+        -vsite   ) VSITE=true                           ; shift 1; continue ;; #==2 Use virtual sites in multiscaling
+        -force   ) FORCE=true                           ; shift 1; continue ;; #==2 Whether or not to force redoing parts already run
+        -daft    ) DAFT=$2; NDX=$2                      ; shift 2; continue ;; #==2 Run martinate in DAFT pipeline
+        -dry     ) DRY=$2                               ; shift 2; continue ;; #==2 Use dry martini
+        -keep    ) KEEP=true                            ; shift 1; continue ;; #==2 Whether or not to keep intermediate data
+        -noexec  ) NOEXEC=echo                          ; shift 1; continue ;; #==2 Whether or not to actually execute the commands
+
+        #=2
+        #=2 Multiscale options
+        #=2 ------------------
+        #=2
+
+	#=1
+	#=1 Monitor options
+	#=1 ---------------
+	#=1
 	-monall  ) MONALL=-monitor                      ; shift 1; continue ;; #= Monitor all steps using control script
 	-control )#= Simulation monitor script
 		while [[ -n $2 && $2 != ';' ]]
@@ -455,7 +484,42 @@ while [ -n "$1" ]; do
                 echo MONITOR COMMAND: $CONTROL 
 		continue;; 
 	-ctime   ) CHECKTIME=$2                         ; shift 2; continue ;; #= Time for running monitor
+
+	#=2
+	#=2 A control process is either a program, script or command 
+        #=2 that monitors the production run and terminates it
+        #=2 upon a certain condition, indicated by a zero exit code.
+        #=2 The control process gets the following command-line
+        #=2 options added from mdrun:
+	#=2
+        #=2         -s ${NAME}-MD.tpr 
+        #=2         -f ${NAME}-MD.part#.trr 
+        #=2         -x ${NAME}-MD.part#.xtc 
+        #=2         -e ${NAME}-MD.part#.edr
+        #=2         -g ${NAME}-MD.part#.log 
+
+	#=1
+	#=1 Advanced control options
+	#=1 ------------------------
+	#=1
+	#=2 This program allows specifying options for advanced control of 
+	#=2 program invocation and simulation parameters. These options are 
+	#=2 described below.
+	#=2
+
+	#=2    --mdp-option=value         Command-line specified simulation parameters
         --mdp-*  ) MDPOPTS+=(${1#--mdp-})               ; shift  ; continue ;; #= Command-line specified simulation parameters
+	#=2
+	#=2 This will add 'option = value' to the MDP file for all simulations 
+	#=2 following energy minimization. MDP options specified on the command line
+	#=2 take precedence over those specified in an input file (-mdp), which take
+	#=2 precedence over parameters defined in this script. 
+	#=2 If the option takes multiple arguments, then 'value' should be a 
+	#=2 comma separated list.
+	#=2 The STEP/STOP controls can be used to set parameters for (pre)production
+	#=2 simulations selectively.
+	#=2
+
 
         # Options for downstream programs
         # If the options are given on the command line, they are expanded and each
@@ -471,6 +535,9 @@ while [ -n "$1" ]; do
 
         # Other program-specific options
         --*)   PROGOPTS[${#PROGOPTS[@]}]=$1              ; shift 1; continue ;;
+
+	#=0 
+	#=0 
 
         # All options should be covered above. Anything else raises an error here.
         *)         BAD_OPTION "$1";;
