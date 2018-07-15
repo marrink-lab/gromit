@@ -308,6 +308,17 @@ __OPTIONS__
 )
 
 
+hlevel=1
+olevel=1
+# Function for parsing help from option list
+help_fun()
+{
+  local desc='/^.*#=[0-'${hlevel}']/s//    /p'
+  local item='/#==[0-'${olevel}']/{s/).*#==./  /p;d;}'
+  sed -n '/##>> OPTIONS/,/##<< OPTIONS/{'"${item};${desc};}" $SDIR/$PROGRAM
+}
+
+
 # Function for displaying USAGE information
 function USAGE ()
 {
@@ -317,12 +328,12 @@ $PROGRAM version $VERSION:
 
 $DESCRIPTION
 
-$OPTIONS
-
 (c)$YEAR $AUTHORS
 $AFFILIATION
 
 __USAGE__
+
+help_fun
 }
 
 
@@ -370,6 +381,7 @@ notes_array=()
 store_note_fun() { a=$@; notes_array+=(${x// /QQQ}); NOTE "$@"; }
 
 
+##>> OPTIONS
 while [ -n "$1" ]; do
   echo '---------->' $1
   # Check for program option
@@ -389,49 +401,51 @@ while [ -n "$1" ]; do
 
   # Check for other options
   case $1 in
-         -h)       USAGE                             ; exit 0 ;;
-     # File options
-         -f)                   PDB=$2                ; shift 2; continue ;;
-        -cg)               MARTINI=$2                ; shift 2; continue ;;
-       -top)                   TOP=$2                ; shift 2; continue ;;
-       -ndx)                   NDX=$2                ; shift 2; continue ;;
-    -hetatm)              NOHETATM=false             ; shift 1; continue ;;
-       -sol)                   SOL=$2                ; shift 2; continue ;;
-      -epsr)                  EPSR=$2                ; shift 2; continue ;;
-     -epsrf)                 EPSRF=$2                ; shift 2; continue ;;
-      -ljdp)                  LJDP=$2                ; shift 2; continue ;;
-      -ljrp)                  LJRP=$2                ; shift 2; continue ;;
-      -ljsw)                  LJSW=$2                ; shift 2; continue ;;
-        -rc)                    RC=$2                ; shift 2; continue ;;
-         -m)     MULTI[$((NCH++))]=$2; M=true        ; shift 2; continue ;;
-         -M)                   ALL=true; M=true      ; shift 1; continue ;;
-        -ff)            ForceField=$2                ; shift 2; continue ;;
-     -ffitp)                 FFITP=$2                ; shift 2; continue ;;
-     -fftag)                 FFTAG=$2                ; shift 2; continue ;;
-       -itp)               USRITP+=($2)              ; shift 2; continue ;;
-         -T)           Temperature=$2                ; shift 2; continue ;;
-         -P)              Pressure=$2                ; shift 2; continue ;;
-      -salt)              Salinity=$2                ; shift 2; continue ;;
-        -dt)                  DELT=$2                ; shift 2; continue ;;
-      -time)                  TIME=$2                ; shift 2; continue ;;
-        -at)                    AT=$2                ; shift 2; continue ;;
-        -em)               EMSTEPS=$2                ; shift 2; continue ;;
-       -dir)                   DIR=$2                ; shift 2; continue ;;
-#     -gmxrc)                 GMXRC=$2                ; shift 2; continue ;;
-#      -dssp)                  DSSP=$2                ; shift 2; continue ;;
-	-rtc)      RotationalConstraints=rtc            ; shift  ; continue ;; #= Whether or not to use rotational constraints
-      -step)                  STEP=$2                ; shift 2; continue ;;
-      -stop)                  STOP=$2                ; shift 2; continue ;;
-        -np)                    NP=$2                ; shift 2; continue ;;
-      -maxh)                  MAXH=$2                ; shift 2; continue ;;
-     -vsite)                 VSITE=true              ; shift 1; continue ;;
-     -force)                 FORCE=true              ; shift 1; continue ;;
-      -daft)                  DAFT=$2; NDX=$2        ; shift 2; continue ;;
-       -dry)                   DRY=$2                ; shift 2; continue ;;
-      -keep)                  KEEP=true              ; shift 1; continue ;;
-    -noexec)                NOEXEC=echo              ; shift 1; continue ;;
-	-monall)   MONALL=-monitor                   ; shift 1; continue ;; #= Monitor all steps using control script
-	-control)                                                           #= Simulation monitor script
+	-h       ) USAGE                                ; exit 0 ;; #==0 Display help
+	--help   ) USAGE                                ; exit 0 ;; #==1 Display help
+	-hlevel  ) hlevel=$2                            ; shift 2; continue ;; #==1 Set level of help (use before -h/--help)
+	-olevel  ) olevel=$2                            ; shift 2; continue ;; #==1 Set level of options to display
+        -f       ) PDB=$2                               ; shift 2; continue ;;
+        -cg      ) MARTINI=$2                           ; shift 2; continue ;;
+        -top     ) TOP=$2                               ; shift 2; continue ;;
+        -ndx     ) NDX=$2                               ; shift 2; continue ;;
+        -hetatm  ) NOHETATM=false                       ; shift 1; continue ;;
+        -sol     ) SOL=$2                               ; shift 2; continue ;;
+        -epsr    ) EPSR=$2                              ; shift 2; continue ;;
+        -epsrf   ) EPSRF=$2                             ; shift 2; continue ;;
+        -ljdp    ) LJDP=$2                              ; shift 2; continue ;;
+        -ljrp    ) LJRP=$2                              ; shift 2; continue ;;
+        -ljsw    ) LJSW=$2                              ; shift 2; continue ;;
+        -rc      ) RC=$2                                ; shift 2; continue ;;
+        -m       ) MULTI[$((NCH++))]=$2; M=true         ; shift 2; continue ;;
+        -M       ) ALL=true; M=true                     ; shift 1; continue ;;
+        -ff      ) ForceField=$2                        ; shift 2; continue ;;
+        -ffitp   ) FFITP=$2                             ; shift 2; continue ;;
+        -fftag   ) FFTAG=$2                             ; shift 2; continue ;;
+        -itp     ) USRITP+=($2)                         ; shift 2; continue ;;
+        -T       ) Temperature=$2                       ; shift 2; continue ;;
+        -P       ) Pressure=$2                          ; shift 2; continue ;;
+        -salt    ) Salinity=$2                          ; shift 2; continue ;;
+        -dt      ) DELT=$2                              ; shift 2; continue ;;
+        -time    ) TIME=$2                              ; shift 2; continue ;;
+        -at      ) AT=$2                                ; shift 2; continue ;;
+        -em      ) EMSTEPS=$2                           ; shift 2; continue ;;
+        -dir     ) DIR=$2                               ; shift 2; continue ;;
+#       -gmxrc   ) GMXRC=$2                             ; shift 2; continue ;;
+#       -dssp    ) DSSP=$2                              ; shift 2; continue ;;
+	-rtc     ) RotationalConstraints=rtc            ; shift  ; continue ;; #= Whether or not to use rotational constraints
+        -step    ) STEP=$2                              ; shift 2; continue ;;
+        -stop    ) STOP=$2                              ; shift 2; continue ;;
+        -np      ) NP=$2                                ; shift 2; continue ;;
+        -maxh    ) MAXH=$2                              ; shift 2; continue ;;
+        -vsite   ) VSITE=true                           ; shift 1; continue ;;
+        -force   ) FORCE=true                           ; shift 1; continue ;;
+        -daft    ) DAFT=$2; NDX=$2                      ; shift 2; continue ;;
+        -dry     ) DRY=$2                               ; shift 2; continue ;;
+        -keep    ) KEEP=true                            ; shift 1; continue ;;
+        -noexec  ) NOEXEC=echo                          ; shift 1; continue ;;
+	-monall  ) MONALL=-monitor                      ; shift 1; continue ;; #= Monitor all steps using control script
+	-control )#= Simulation monitor script
 		while [[ -n $2 && $2 != ';' ]]
 		do
 			CONTROL="$CONTROL $2"
@@ -440,29 +454,30 @@ while [ -n "$1" ]; do
                 shift 2
                 echo MONITOR COMMAND: $CONTROL 
 		continue;; 
-	-ctime)    CHECKTIME=$2                         ; shift 2; continue ;; #= Time for running monitor
-        --mdp-*)   MDPOPTS+=(${1#--mdp-})               ; shift  ; continue ;; #= Command-line specified simulation parameters
+	-ctime   ) CHECKTIME=$2                         ; shift 2; continue ;; #= Time for running monitor
+        --mdp-*  ) MDPOPTS+=(${1#--mdp-})               ; shift  ; continue ;; #= Command-line specified simulation parameters
 
-    # Options for downstream programs
-    # If the options are given on the command line, they are expanded and each
-    # option will be formatted as --program-opt=val
-    --martinize-*) MARTINIZE+=(${1#--martinize})     ; shift  ; continue;;
-    --insane-*)       INSANE+=(${1#--insane})        ; shift  ; continue;;
+        # Options for downstream programs
+        # If the options are given on the command line, they are expanded and each
+        # option will be formatted as --program-opt=val
+        --martinize-*) MARTINIZE+=(${1#--martinize})    ; shift  ; continue;;
+        --insane-*)       INSANE+=(${1#--insane})       ; shift  ; continue;;
 
-    # If the options are passed by another program, they will be formatted like
-    #   --program{-opt1=val1,-opt2=val2\,val3}
-    # In this case the option needs to be parsed explicitly:
-    --martinize*)  MARTINIZE+=($(readOptList $1))    ; shift  ; continue;;
-    --insane*)        INSANE+=($(readOptList $1))    ; shift  ; continue;;
+        # If the options are passed by another program, they will be formatted like
+        #   --program{-opt1=val1,-opt2=val2\,val3}
+        # In this case the option needs to be parsed explicitly:
+        --martinize*)  MARTINIZE+=($(readOptList $1))    ; shift  ; continue;;
+        --insane*)        INSANE+=($(readOptList $1))    ; shift  ; continue;;
 
-    # Other program-specific options
-    --*)   PROGOPTS[${#PROGOPTS[@]}]=$1              ; shift 1; continue ;;
+        # Other program-specific options
+        --*)   PROGOPTS[${#PROGOPTS[@]}]=$1              ; shift 1; continue ;;
 
-    # All options should be covered above. Anything else raises an error here.
-      *)         BAD_OPTION "$1";;
+        # All options should be covered above. Anything else raises an error here.
+        *)         BAD_OPTION "$1";;
 
   esac
 done
+##<< OPTIONS
 
 
 cat << __RUNINFO__
