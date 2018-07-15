@@ -267,129 +267,13 @@ PROGOPTS=()              # User-defined program options (--program-option=value)
 MDPOPTS=()               # User-defined mdp parametesrs (--mdp-option=value)
 
 
-OPTIONS=$(cat << __OPTIONS__
-
-## OPTIONS ##
-
-  File options:
-    -f           Input coordinate file (PDB|GRO)                         *FILE:  None
-    -name        Basename to use for files                               *STR:   Infer from input file 
-    -top         Input topology (TOP)                                    *FILE:  None
-    -fetch       Fetch file from PDB repository if not present           *STR:   Source
-    -rmhet       Remove HETATM records from input PDB file               *BOOL:  False
-    -l           Ligands to include (multiple instances allowed)         *STR:   None
-    -g           Log file                                                *FILE:  None
-    -gmxrc       GMXRC file specifying gromacs locations                 *FILE:  $GMXRC
-    -mdrun       mdrun executable or alias to run mdrun                  *STR:   $MDRUN
-    -squeeze     squeeze executable                                      *STR:   None
-    -mdp         File with run parameters overriding internal ones       *FILE:  None
-    -tpr         Run input file (will skip to production)                *FILE:  $TPR
-    -scratch     Use scratch directory for intermediate rubbish          *STR:   None
-    -keep        Keep intermediate rubbish                               *BOOL:  False
- 
-  Overall control options:
-    -step        Step at which to start or resume the setup              *STR:   $STEP 
-    -stop        Step at which to stop execution                         *STR:   $STOP
-    -noexec      Do not actually simulate                                *BOOL:  False
-    -force       Force overwriting existing files                        *BOOL:  False
-    -archive     Archive results to file                                 *STR:   None
-    -dir         Output directory                                        *STR:   $DIR
-    -np          Number of processors/threads to use for MD run          *INT:   $NP
-    -maxh        Maximum duration of run in hours (-1 for infinite)      *INT:   $MAXH
-    -seed        Seed for random number generation                       *INT:   \$\$ 
-
-  Simulation setup, parameters and protocols:
-    -ff          Force field                                             *STR:   $ForceField
-    -vsite       Use virtual sites                                       *BOOL:  False
-    -solvent     Solvent model                                           *STR:   Infer from force field
-    -bt          Box type                                                *STR:   $BOXTYPE
-    -elec        Treatment of electrostatic interactions (RF or PME)     *STR:   Infer from force field
-    -t           Temperature                                             *FLOAT: $Temperature (K)
-    -ttau        Coupling time for temperature                           *FLOAT: $Tau_T (ps)
-    -p           Pressure                                                *FLOAT: $Pressure (bar)
-    -ptau        Coupling time for pressure                              *FLOAT: $Tau_P (ps)
-    -d           Minimal distance between periodic images                *FLOAT: $PBCDIST (nm)
-    -prfc        Position restraint force constant                       *FLOAT: $PRFC (kJ/mol/nm^2)
-    -time        Simulation length in ns                                 *FLOAT: $TIME (ns)
-    -at          Output resolution                                       *FLOAT: $AT (ns)
-    -rtc         Use roto-translational constraints                      *BOOL:  False
-    -ndlp        Perform simulations in a optimal (NDLP) simulation cell *BOOL:  False
-    -lie         Calculate ligand (!) interaction energy                 *BOOL:  False
-
-  Ions:
-    -salt        Salt type (e.g. NA,CL or CU,2CL)                        *STR:   $Salt
-    -sq          Ion charges                                             *STR:   $SaltCharge
-    -charge      Charge to compensate (overrules charge of system)       *INT:   None
-    -conc        Salt concentration in mol/l                             *FLOAT: $Salinity (M)
-                 By default, counterions will be added. If the 
-                 concentration is set negative, then salt is added 
-                 without compensating for overall charge of the
-                 system. Setting the concentration to -0 will 
-                 disable addition of ions.
-
-  Control
-    -monall      Monitor all steps using control process                 *BOOL:  $MONALL 
-                 (default is production run only)
-    -control     A control process, either a program, script or command  *STR:   None
-                 that monitors the production run and terminates it
-                 upon a certain condition, indicated by a zero exit code.
-                 The control process gets the following command-line
-                 options added from mdrun:
-
-                   -s $NAME-MD.tpr 
-                   -f \$NAME-MD.part#.trr 
-                   -x \$NAME-MD.part#.xtc 
-                   -e \$NAME-MD.part#.edr
-                   -g \$NAME-MD.part#.log 
-
-  Analysis:
-    -analysis    Perform analysis specified (provided it is implemented) *STR:   None
-                 Analysis routines can be added to the end of the script
-                 They should be tagged to allow being called through the 
-                 command line. 
-                 Currently available routines:
-
-                   * LIE
-                     ---
-                     Extract ligand - environment interaction energies
-                     for post-hoc LIE calculations. This analysis 
-                     requires running with the option -lie and is then
-                     selected automatically.
-
-
-  Advanced control options
-
-    $PROGRAM $VERSION allows specifying options for advanced control of 
-    program invocation and simulation parameters. The former are given as
-
-    --program-option=value
-
-    This will add "-option value" to the command line of the call to 'program'.
-    Note that this does not allow overriding options specified internally. 
-    Trying to do so will result in an error due to double specification of the 
-    option. If the option takes multiple arguments, then 'value' should be a 
-    comma separated list.
-
-    Simulation parameters can be set directly from the command line using
-
-    --mdp-option=value
-
-    This will add 'option = value' to the MDP file for all simulations 
-    following energy minimization. MDP options specified on the command line
-    take precedence over those specified in an input file (-mdp), which take
-    precedence over parameters defined in this script. 
-    The STEP/STOP controls can be used to set parameters for (pre)production
-    simulations selectively.
-    
-
-__OPTIONS__
-)
-
-
+hlevel=1
+olevel=1
+# Function for parsing help from option list
 help_fun()
 {
-  local desc='/^.*#=/s//    /p'
-  local item='/#==/{s/).*#==/  /p;d;}'
+  local desc='/^.*#=[0-'${hlevel}']/s//    /p'
+  local item='/#==[0-'${olevel}']/{s/).*#==./  /p;d;}'
   sed -n '/##>> OPTIONS/,/##<< OPTIONS/{'"${item};${desc};}" $SDIR/$PROGRAM
 }
 
@@ -475,125 +359,154 @@ while [ -n "$1" ]; do
   $depset && continue
 
     case $1 in
-	#=
-	#= OPTIONS
-        #= =======
-        #=
-	-h       ) USAGE                                ; exit 0 ;; #== Display help
-	--help   ) USAGE                                ; exit 0 ;; #== Display help
+	#=0
+	#=0 OPTIONS
+        #=0 =======
+        #=0
+	-h       ) USAGE                                ; exit 0 ;; #==0 Display help
+	--help   ) USAGE                                ; exit 0 ;; #==1 Display help
+	-hlevel  ) hlevel=$2                            ; shift 2; continue ;; #==1 Set level of help (use before -h/--help)
+	-olevel  ) olevel=$2                            ; shift 2; continue ;; #==1 Set level of options to display
 
-	#=
-        #= File options
-	#= ------------
-        #=
-	-f       ) fnIN=$2                              ; shift 2; continue ;; #== Input coordinate file (PDB)
-        -g       ) MSGFILE=$2                           ; shift 2; continue ;; #== Standard output log file (default: /dev/stdout)
-        -e       ) ERRFILE=$2                           ; shift 2; continue ;; #== Standard error log file (default: /dev/stderr)
-        -tpr     ) TPR=$2                               ; shift 2; continue ;; #== Run input file 
-	-name    ) NAME=$2                              ; shift 2; continue ;; #== Name of project
-	-top     ) TOP=$2                               ; shift 2; continue ;; #== Input topology file
-	-atp     ) AtomTypes+=($2)                      ; shift 2; continue ;; #== Additional atom type definitions (force field file)
-	-itp     ) MoleculeTypes+=($2)                  ; shift 2; continue ;; #== Additional molecule type definitions 
-	-l       ) LIGANDS+=($2)                        ; shift 2; continue ;; #== Ligands to include (topology or structure,topology)
-	-mdp     ) MDP=$2                               ; shift 2; continue ;; #== MDP (simulation parameter) file
-	-scratch ) SCRATCH=$2                           ; shift 2; continue ;; #== Scratch directory to perform simulation
-	-fetch   ) FETCH=$2                             ; shift 2; continue ;; #== Database to fetch input structure from
-        -rmhet   ) HETATM=false                         ; shift  ; continue ;; #== Whether or not to remove HETATM records
+	#=1
+        #=1 File options
+	#=1 ------------
+        #=1
+	-f       ) fnIN=$2                              ; shift 2; continue ;; #==0 Input coordinate file (PDB)
+        -g       ) MSGFILE=$2                           ; shift 2; continue ;; #==1 Standard output log file (default: /dev/stdout)
+        -e       ) ERRFILE=$2                           ; shift 2; continue ;; #==1 Standard error log file (default: /dev/stderr)
+        -tpr     ) TPR=$2                               ; shift 2; continue ;; #==1 Run input file 
+	-name    ) NAME=$2                              ; shift 2; continue ;; #==1 Name of project
+	-top     ) TOP=$2                               ; shift 2; continue ;; #==1 Input topology file
+	-atp     ) AtomTypes+=($2)                      ; shift 2; continue ;; #==2 Additional atom type definitions (force field file)
+	-itp     ) MoleculeTypes+=($2)                  ; shift 2; continue ;; #==2 Additional molecule type definitions 
+	-l       ) LIGANDS+=($2)                        ; shift 2; continue ;; #==2 Ligands to include (topology or structure,topology)
+	-mdp     ) MDP=$2                               ; shift 2; continue ;; #==2 MDP (simulation parameter) file
+	-scratch ) SCRATCH=$2                           ; shift 2; continue ;; #==2 Scratch directory to perform simulation
+	-fetch   ) FETCH=$2                             ; shift 2; continue ;; #==1 Database to fetch input structure from 
+        -rmhet   ) HETATM=false                         ; shift  ; continue ;; #==2 Whether or not to remove HETATM records
 
-	#=
-	#= Overall control options
-	#= -----------------------
-	#=
-	-step    ) STEP=$2                              ; shift 2; continue ;; #== Step to start protocol
-	-stop    ) STOP=$2                              ; shift 2; continue ;; #== Step to end protocol
-        -grid    ) GRID=true                            ; shift 1; continue ;; #== GRID-enabled run
-        -keep    ) KEEP=true                            ; shift  ; continue ;; #== Whether or not to keep intermediate data
-	-dir     ) DIR=$2                               ; shift 2; continue ;; #== Directory where to perform simulation (make if required)
-	-np      ) NP=$2                                ; shift 2; continue ;; #== Number of processors/threads to use
-        -maxh    ) MAXH=$2                              ; shift 2; continue ;; #== Maximum time to run (in hours)
-	-archive ) ARCHIVE=${2%.tgz}.tgz                ; shift 2; continue ;; #== Archive file name to save data in
-	-force   ) FORCE=true                           ; shift  ; continue ;; #== Whether or not to force redoing parts already run
-        -noexec  ) EXEC=echo                            ; shift  ; continue ;; #== Whether or not to actually execute the commands
+	#=1
+	#=1 Overall control options
+	#=1 -----------------------
+	#=1
+	-step    ) STEP=$2                              ; shift 2; continue ;; #==1 Step to start protocol
+	-stop    ) STOP=$2                              ; shift 2; continue ;; #==1 Step to end protocol
+        -grid    ) GRID=true                            ; shift 1; continue ;; #==2 GRID-enabled run
+        -keep    ) KEEP=true                            ; shift  ; continue ;; #==2 Whether or not to keep intermediate data
+	-dir     ) DIR=$2                               ; shift 2; continue ;; #==2 Directory where to perform simulation (make if required)
+	-np      ) NP=$2                                ; shift 2; continue ;; #==1 Number of processors/threads to use
+        -maxh    ) MAXH=$2                              ; shift 2; continue ;; #==2 Maximum time to run (in hours)
+	-archive ) ARCHIVE=${2%.tgz}.tgz                ; shift 2; continue ;; #==2 Archive file name to save data in
+	-force   ) FORCE=true                           ; shift  ; continue ;; #==2 Whether or not to force redoing parts already run
+        -noexec  ) EXEC=echo                            ; shift  ; continue ;; #==2 Whether or not to actually execute the commands
 
-	#=
-	#= Simulation control options
-	#= --------------------------
-	#=
-	-rtc     ) RotationalConstraints=rtc            ; shift  ; continue ;; #== Whether or not to use rotational constraints
-	-ndlp    ) NDLP=true; RotationalConstraints=rtc ; shift  ; continue ;; #== Whether or not to use NDLP (molecular shaped) PBC
-        -bt      ) BOXTYPE=$2                           ; shift 2; continue ;; #== Box type to use
-	-salt    ) Salt=$2                              ; shift 2; continue ;; #== Salt to use (NA,CL)
-	-conc    ) Salinity=$2                          ; shift 2; continue ;; #== Salt concentration
-	-sq      ) SaltCharge=$2                        ; shift 2; continue ;; #== Charge of ions from salt (1,-1)
-	-charge  ) CHARGE=$2                            ; shift 2; continue ;; #== 
-	-t       ) Temperature=$2                       ; shift 2; continue ;; #== Temperature
-	-ttau    ) Tau_T=$2                             ; shift 2; continue ;; #== Temperature coupling constant
-        -p       ) Pressure=$2                          ; shift 2; continue ;; #== Pressure
-	-ptau    ) Tau_P=$2                             ; shift 2; continue ;; #== Pressure coupling constant
-	-d       ) PBCDIST=$2                           ; shift 2; continue ;; #== Distance between images over PBC
-	-prfc    ) PosreFC=$2                           ; shift 2; continue ;; #== Position restraint force constant
-	-time    ) TIME=$2                              ; shift 2; continue ;; #== Time to run production simulation (ns)
-	-at      ) AT=$2                                ; shift 2; continue ;; #== Output resolution
-        -em      ) EMSteps=$2                           ; shift 2; continue ;; #== Number of steps in EM
-        -equil   ) EquilTime=$2                         ; shift 2; continue ;; #== Equilibration run time
-        -pre     ) PreTime=$2                           ; shift 2; continue ;; #== Time for preproduction run
-	-elec    ) Electrostatics=$2                    ; shift 2; continue ;; #== Electrostatics treatment (cutoff/RF/PME)
-	-ff      ) ForceField=$2                        ; shift 2; continue ;; #== Force field to use
-        -vsite   ) VirtualSites=true                    ; shift  ; continue ;; #== Whether or not to use virtual sites
-	-seed    ) SEED=$2                              ; shift 2; continue ;; #== Seed for random number generator
-	-solvent ) SolModel=$2                          ; shift 2; continue ;; #== Solvent model name(s), can be itp file(s)
-	-solfile ) SolFile=$2                           ; shift 2; continue ;; #== Solvent (configuration) file
+	#=1
+	#=1 Simulation control options
+	#=1 --------------------------
+	#=1
+	-rtc     ) RotationalConstraints=rtc            ; shift  ; continue ;; #==2 Whether or not to use rotational constraints
+	-ndlp    ) NDLP=true; RotationalConstraints=rtc ; shift  ; continue ;; #==2 Whether or not to use NDLP (molecular shaped) PBC
+        -bt      ) BOXTYPE=$2                           ; shift 2; continue ;; #==2 Box type to use
+	-salt    ) Salt=$2                              ; shift 2; continue ;; #==2 Salt to use (NA,CL)
+	-conc    ) Salinity=$2                          ; shift 2; continue ;; #==2 Salt concentration
+	-sq      ) SaltCharge=$2                        ; shift 2; continue ;; #==2 Charge of ions from salt (1,-1)
+	-charge  ) CHARGE=$2                            ; shift 2; continue ;; #==2 
+	-t       ) Temperature=$2                       ; shift 2; continue ;; #==1 Temperature
+	-ttau    ) Tau_T=$2                             ; shift 2; continue ;; #==2 Temperature coupling constant
+        -p       ) Pressure=$2                          ; shift 2; continue ;; #==1 Pressure
+	-ptau    ) Tau_P=$2                             ; shift 2; continue ;; #==2 Pressure coupling constant
+	-d       ) PBCDIST=$2                           ; shift 2; continue ;; #==1 Distance between images over PBC
+	-prfc    ) PosreFC=$2                           ; shift 2; continue ;; #==2 Position restraint force constant
+	-time    ) TIME=$2                              ; shift 2; continue ;; #==1 Time to run production simulation (ns)
+	-at      ) AT=$2                                ; shift 2; continue ;; #==1 Output resolution
+        -em      ) EMSteps=$2                           ; shift 2; continue ;; #==2 Number of steps in EM
+        -equil   ) EquilTime=$2                         ; shift 2; continue ;; #==2 Equilibration run time
+        -pre     ) PreTime=$2                           ; shift 2; continue ;; #==2 Time for preproduction run
+	-elec    ) Electrostatics=$2                    ; shift 2; continue ;; #==2 Electrostatics treatment (cutoff/RF/PME)
+	-ff      ) ForceField=$2                        ; shift 2; continue ;; #==1 Force field to use
+        -vsite   ) VirtualSites=true                    ; shift  ; continue ;; #==2 Whether or not to use virtual sites
+	-seed    ) SEED=$2                              ; shift 2; continue ;; #==2 Seed for random number generator
+	-solvent ) SolModel=$2                          ; shift 2; continue ;; #==2 Solvent model name(s); can be itp file(s)
+	-solfile ) SolFile=$2                           ; shift 2; continue ;; #==2 Solvent (configuration) file
 
-	#=
-	#= Analysis options
-	#= ----------------
-	#=
-	-lie     ) LIE=true                             ; shift  ; continue ;; #== Whether or not to use LIE setup and analysis 
-        -analysis) ANALYSIS+=($2)                       ; shift 2; continue ;; #== Analysis protocols to run
+	#=1
+	#=1 Analysis options
+	#=1 ----------------
+	#=1
+	-lie     ) LIE=true                             ; shift  ; continue ;; #==2 Whether or not to use LIE setup and analysis 
+        -analysis) ANALYSIS+=($2)                       ; shift 2; continue ;; #==2 Analysis protocols to run
 
-        #=
-        #= Perform analysis specified (provided it is implemented) *STR:   None
-        #= Analysis routines can be added to the end of the script
-        #= They should be tagged to allow being called through the 
-        #= command line. 
-        #= 
-        #= Currently available routines:
-        #=
-        #=     * LIE
-        #=       ---
-        #=       Extract ligand - environment interaction energies
-        #=       for post-hoc LIE calculations. This analysis 
-        #=       requires running with the option -lie and is then
-        #=       selected automatically.
+        #=2
+        #=2 Perform analysis specified (provided it is implemented) *STR:   None
+        #=2 Analysis routines can be added to the end of the script
+        #=2 They should be tagged to allow being called through the 
+        #=2 command line. 
+        #=2 
+        #=2 Currently available routines:
+        #=2
+        #=2     * LIE
+        #=2       ---
+        #=2       Extract ligand - environment interaction energies
+        #=2       for post-hoc LIE calculations. This analysis 
+        #=2       requires running with the option -lie and is then
+        #=2       selected automatically.
 
-	#=
-	#= Monitor options
-	#= ---------------
-	#=
-	-monall  ) MONALL=-monitor                      ; shift 1; continue ;; #== Monitor all steps using control script
-	-control ) CONTROL=$2                           ; shift 2; continue ;; #== Simulation monitor script
-	-ctime   ) CHECKTIME=$2                         ; shift 2; continue ;; #== Time for running monitor
+	#=1
+	#=1 Monitor options
+	#=1 ---------------
+	#=1
+	-monall  ) MONALL=-monitor                      ; shift 1; continue ;; #==2 Monitor all steps using control script
+	-control ) CONTROL=$2                           ; shift 2; continue ;; #==2 Simulation monitor script
+	-ctime   ) CHECKTIME=$2                         ; shift 2; continue ;; #==2 Time for running monitor
 
-	#=
-	#= A control process is either a program, script or command 
-        #= that monitors the production run and terminates it
-        #= upon a certain condition, indicated by a zero exit code.
-        #= The control process gets the following command-line
-        #= options added from mdrun:
-	#=
-        #=         -s ${NAME}-MD.tpr 
-        #=         -f ${NAME}-MD.part#.trr 
-        #=         -x ${NAME}-MD.part#.xtc 
-        #=         -e ${NAME}-MD.part#.edr
-        #=         -g ${NAME}-MD.part#.log 
+	#=2
+	#=2 A control process is either a program, script or command 
+        #=2 that monitors the production run and terminates it
+        #=2 upon a certain condition, indicated by a zero exit code.
+        #=2 The control process gets the following command-line
+        #=2 options added from mdrun:
+	#=2
+        #=2         -s ${NAME}-MD.tpr 
+        #=2         -f ${NAME}-MD.part#.trr 
+        #=2         -x ${NAME}-MD.part#.xtc 
+        #=2         -e ${NAME}-MD.part#.edr
+        #=2         -g ${NAME}-MD.part#.log 
 
-	#= Other
+	#=1
+	#=1 Advanced control options
+	#=1 ------------------------
+	#=1
+	#=2 This program allows specifying options for advanced control of 
+	#=2 program invocation and simulation parameters. These options are 
+	#=2 described below.
+	#=2
 
-        --mdp-*  ) MDPOPTS+=(${1#--mdp-})               ; shift  ; continue ;; #== Command-line specified simulation parameters
-	--*      ) PROGOPTS+=($1)                       ; shift  ; continue ;; #== Command-line specified program parameters
+	#=2    --mdp-option=value         Command-line specified simulation parameters
+        --mdp-*  ) MDPOPTS+=(${1#--mdp-})               ; shift  ; continue ;; 
+	#=2
+	#=2 This will add 'option = value' to the MDP file for all simulations 
+	#=2 following energy minimization. MDP options specified on the command line
+	#=2 take precedence over those specified in an input file (-mdp), which take
+	#=2 precedence over parameters defined in this script. 
+	#=2 If the option takes multiple arguments, then 'value' should be a 
+	#=2 comma separated list.
+	#=2 The STEP/STOP controls can be used to set parameters for (pre)production
+	#=2 simulations selectively.
+	#=2
 
-	#= 
-	#= 
+	#=2    --program-option=value     Command-line specified program parameters
+	--*      ) PROGOPTS+=($1)                       ; shift  ; continue ;;
+	#=2
+	#=2 This will add "-option value" to the command line of the call to 'program'.
+	#=2 Note that this does not allow overriding options specified internally. 
+	#=2 Trying to do so will result in an error due to double specification of the 
+	#=2 option. If the option takes multiple arguments, then 'value' should be a 
+	#=2 comma separated list.
+
+
+	#=0 
+	#=0 
 
     # All options should be covered above. Anything else raises an error here.
 
