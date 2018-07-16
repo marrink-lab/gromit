@@ -128,7 +128,7 @@ ATBGROMOS=https://atb.uq.edu.au/forcefield_files/atb_gromacs/5/gromos54a7_atb.ff
 #--------------------------------------------------------------------
 
 CMD="$0 $@"
-echo "$CMD"
+echo "$CMD" | tee CMD
 
 # Directory where this script is
 SDIR=$( [[ $0 != ${0%/*} ]] && cd ${0%/*}; pwd )
@@ -157,33 +157,6 @@ PROGEVAR=(     GMXRC)
 amino_acids=(ALA CYS ASP GLU PHE GLY HIS HIH ILE LYS LEU MET ASN PRO HYP GLN ARG SER THR VAL TRP TYR)
 nucleic_acids=(DG DA DC DT G A C U)
 solvent_names=(W WF PW BMW SOL HOH)
-
-# Run control and files
-DIR="."       # Directory to run and write           
-fnIN=         # Input file name
-TPR=          # Run input file... skip to production or to STEP
-NAME=         # Run name
-TOP=          # Topology file
-FETCH=        # Try to fetch PDB file from web
-MSGFILE=/dev/stdout      # Master log file (stdout)
-ERRFILE=/dev/stderr      # Error log file (stderr)
-ARCHIVE=      # Archive file name
-FORCE=false   # Overwrite existing run data
-EXEC=         # Execute run
-NP=1          # Number of processors
-MDP=          # User-provided MDP file
-MDARGS=       # User-provided arguments to mdrun
-GMXRC=        # File for loading GMX version
-SQUEEZE=      # Squeeze executable
-ANALYSIS=()   # Analysis tags 
-MAXH=-1       # Maximum duration of run
-JUNK=()       # Garbage collection
-SCRATCH=      # Scratch directory
-KEEP=false    # Keep intermediate rubbish (except junk)
-HETATM=true   # Keep HETATM records in input PDB file
-GRID=false    # Whether this is a grid-enabled run
-CMD="$0 $@"   # The command as it was issued
-echo $CMD > CMD
 
 
 # Run control
@@ -228,6 +201,33 @@ AtomTypes=()
 MoleculeTypes=()
 
 
+# Options:
+
+# Run control and files
+DIR="."       # Directory to run and write           
+fnIN=         # Input file name
+TPR=          # Run input file... skip to production or to STEP
+NAME=         # Run name
+TOP=          # Topology file
+FETCH=        # Try to fetch PDB file from web
+MSGFILE=/dev/stdout      # Master log file (stdout)
+ERRFILE=/dev/stderr      # Error log file (stderr)
+ARCHIVE=      # Archive file name
+FORCE=false   # Overwrite existing run data
+EXEC=         # Execute run
+NP=1          # Number of processors
+MDP=          # User-provided MDP file
+MDARGS=       # User-provided arguments to mdrun
+GMXRC=        # File for loading GMX version
+SQUEEZE=      # Squeeze executable
+ANALYSIS=()   # Analysis tags 
+MAXH=-1       # Maximum duration of run
+JUNK=()       # Garbage collection
+SCRATCH=      # Scratch directory
+KEEP=false    # Keep intermediate rubbish (except junk)
+HETATM=true   # Keep HETATM records in input PDB file
+
+
 # System setup
 PBCDIST=2.25             # Minimal distance between periodic images
 BOXTYPE=dodecahedron     # Box type
@@ -236,22 +236,6 @@ SaltCharge=1,-1          # Charges of salt species
 Salinity=0.1539976       # Salt concentration of solvent
 CHARGE=                  # Net charge to set on system
 NDLP=false               # Use optimal simulation cell (near-densest-lattice-packing)
-
-
-# Simulation parameters
-TIME=0                   # Production run time (ns)
-EquilTime=0.1            # Equilibration run time (ns)          
-PreTime=0.5              # Preproduction run time (ns)
-EMSteps=500              # Number of steps for EM
-AT=0.05                  # Output frequency for positions, energy and log (ns)
-Temperature=200,300      # Degree Kelvin
-Tau_T=0.1                # ps
-Pressure=1               # Bar
-Tau_P=1.0                # ps
-PosreFC=200,200          # Position restraint force constant(s)
-Electrostatics=          # Electrostatics scheme to use if not opting for default
-RotationalConstraints=   # Use rotational constraints, which is mandatory with NDLP
-SEED=$$                  # Random seed for velocity generation
 
 
 # GROUP DEFINITIONS
@@ -265,6 +249,22 @@ Ligenv=()                # Ligand environment to consider for LIE contributions
 CoupleGroups=()          # Groups for temperature coupling
 EnergyGroups=()          # Groups for energy calculations
 LIE=false                # LIE run
+
+
+# - simulations parameters
+TIME=0                   # Production run time (ns)
+AT=0.05                  # Output frequency for positions, energy and log (ns)
+EquilTime=0.1            # Equilibration run time (ns)          
+PreTime=0.5              # Preproduction run time (ns)
+EMSteps=500              # Number of steps for EM
+Temperature=200,300      # Degree Kelvin
+Tau_T=0.1                # ps
+Pressure=1               # Bar
+Tau_P=1.0                # ps
+PosreFC=200,200          # Position restraint force constant(s)
+Electrostatics=          # Electrostatics scheme to use if not opting for default
+SEED=$$                  # Random seed for velocity generation
+RotationalConstraints=   # Use rotational constraints, which is mandatory with NDLP
 
 
 # User defined gromacs program options and simulation parameters (way flexible!)
