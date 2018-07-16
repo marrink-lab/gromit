@@ -639,30 +639,30 @@ AWK_MOLTYPE='/moleculetype/{getline; while ($0 ~ /^ *;/) getline; print $1}'
 
 dependency_not_found_error()
 {
-    FATAL The required dependency $@ was not found.
+  FATAL The required dependency $@ was not found.
 }
 
 NDEP=${#DEPENDENCIES[@]}
 find_program_function()
 {
-    for ((i=0; i<$NDEP; i++)); do
-        if [[ ${DEPENDENCIES[$i]} == "$1" ]] 
-        then
-            progr=${PROGEXEC[$i]}
-            envvar=${PROGEVAR[$i]}
-        fi
-    done
+  for ((i=0; i<$NDEP; i++)); do
+    if [[ ${DEPENDENCIES[$i]} == "$1" ]] 
+    then
+      progr=${PROGEXEC[$i]}
+      envvar=${PROGEVAR[$i]}
+    fi
+  done
 
-    # Check if the program is in the environment
-    [[ -n $envvar ]] && [[ -f ${!envvar} ]] && echo ${!envvar} && return 0
+  # Check if the program is in the environment
+  [[ -n $envvar ]] && [[ -f ${!envvar} ]] && echo ${!envvar} && return 0
 
-    # Check if the program is in the directory of this script
-    [[ -f $SDIR/$progr ]] && echo $SDIR/$progr && return 0
+  # Check if the program is in the directory of this script
+  [[ -f $SDIR/$progr ]] && echo $SDIR/$progr && return 0
 
-    # Check if the program is in the PATH
-    # Python scripts may be available as 'binaries' (martinize/insane)
-    which $progr 2>/dev/null && return 0
-    which ${progr%.py} 2>/dev/null && return 0 || return 1
+  # Check if the program is in the PATH
+  # Python scripts may be available as 'binaries' (martinize/insane)
+  which $progr 2>/dev/null && return 0
+  which ${progr%.py} 2>/dev/null && return 0 || return 1
 }
 
 
@@ -697,13 +697,13 @@ GMXBIN=${GMXBIN:-$SCRIPTDIR}
 # In some cases, 'gromacs' is part of $GMXDATA
 if [[ $GMXVERSION -gt 4 ]]
 then
-    GMX="$GMXBIN/gmx " 
-    GMXLIB=
+  GMX="$GMXBIN/gmx " 
+  GMXLIB=
 else
-    GMX=$GMXBIN/
-    export GMXLIB=${GMXDATA}/gromacs/top
-    [[ -d $GMXLIB ]] || export GMXLIB=${GMXDATA%/gromacs*}/gromacs/top
-    echo Gromacs data directory: $GMXLIB
+  GMX=$GMXBIN/
+  export GMXLIB=${GMXDATA}/gromacs/top
+  [[ -d $GMXLIB ]] || export GMXLIB=${GMXDATA%/gromacs*}/gromacs/top
+  echo Gromacs data directory: $GMXLIB
 fi
 
 # Now finally, test a command and see if it works
@@ -714,14 +714,14 @@ ${GMX}grompp -h >/dev/null 2>&1 || executable_not_found_error "GROMACS (GMXRC)"
 # This only works for GMX <5
 if [[ $RotationalConstraints == "rtc" ]]
 then
-    echo Testing rotational constraints
-    echo "comm_mode = RTC" > gromacs_rtc_test.mdp
-    if ${GMX}grompp -f gromacs_rtc_test.mdp 2>&1 | grep -q "Invalid enum 'RTC'"
-    then
-	rm gromacs_rtc_test.mdp
-	FATAL "Roto-translational constraints requested (comm_mode = RTC), but not supported by ${GMX}grompp"
-    fi
-    rm gromacs_rtc_test.mdp mdout.mdp
+  echo Testing rotational constraints
+  echo "comm_mode = RTC" > gromacs_rtc_test.mdp
+  if ${GMX}grompp -f gromacs_rtc_test.mdp 2>&1 | grep -q "Invalid enum 'RTC'"
+  then
+    rm gromacs_rtc_test.mdp
+    FATAL "Roto-translational constraints requested (comm_mode = RTC), but not supported by ${GMX}grompp"
+  fi
+  rm gromacs_rtc_test.mdp mdout.mdp
 fi
 
 ## 2. DSSP ##
@@ -731,16 +731,16 @@ fi
 SOLSTEP=$(get_step_fun CG)
 if [[ $STEP -le $SOLSTEP && $STOP -ge $SOLSTEP ]]
 then
-    echo -n 'Checking DSSP binary (for martinizing proteins)... '
-    DSSP=$(find_program_fun dssp)
-    if [[ $? == 1 ]]
-    then
-	warn="DSSP binary not found - Will martinize without secondary structure :S"
-	store_warning_fun "$warn"
-    else
-	echo "$DSSP"
-	MARTINIZE+=(-dssp=$DSSP)
-    fi
+  echo -n 'Checking DSSP binary (for martinizing proteins)... '
+  DSSP=$(find_program_fun dssp)
+  if [[ $? == 1 ]]
+  then
+    warn="DSSP binary not found - Will martinize without secondary structure :S"
+    store_warning_fun "$warn"
+  else
+    echo "$DSSP"
+    MARTINIZE+=(-dssp=$DSSP)
+  fi
 fi
 
 
@@ -762,9 +762,9 @@ export PATH="${PATH}:${SDIR}"
 
 if [[ -n $MDPOPTS ]]
 then
-    echo 'Simulation parameters specified on command line (note how flexible!):'
-    for ((i=0; i<${#MDPOPTS[@]}; i++)); do echo ${MDPOPTS[$i]}; done
-    echo ===
+  echo 'Simulation parameters specified on command line (note how flexible!):'
+  for ((i=0; i<${#MDPOPTS[@]}; i++)); do echo ${MDPOPTS[$i]}; done
+  echo ===
 fi
 
 
@@ -789,20 +789,20 @@ fi
 # Maximum time in seconds
 if [[ $MAXH =~ ":" ]]
 then
-    # Format HH:MM:SS
-    ifs=$IFS; IFS=":"; MAXS=($MAXH); IFS=$ifs
-    MAXS=$((3600*MAXS[0] + 60*MAXS[1] + MAXS[2]))
+  # Format HH:MM:SS
+  ifs=$IFS; IFS=":"; MAXS=($MAXH); IFS=$ifs
+  MAXS=$((3600*MAXS[0] + 60*MAXS[1] + MAXS[2]))
 else
-    # Format x.y HH
-    MAXS=$(awk '{printf "%d\n", $1*3600}' <<< $MAXH )
+  # Format x.y HH
+  MAXS=$(awk '{printf "%d\n", $1*3600}' <<< $MAXH )
 fi
 
 if (( MAXS > 0 ))
 then
-    UNTIL=$(( $(date +%s) + MAXS ))
-    echo "# $PROGRAM will run until $(date --date=@$UNTIL), or until run has finished"
+  UNTIL=$(( $(date +%s) + MAXS ))
+  echo "# $PROGRAM will run until $(date --date=@$UNTIL), or until run has finished"
 else
-    echo "# No maximum runtime set. Will run until finished or until crash."
+  echo "# No maximum runtime set. Will run until finished or until crash."
 fi
 
 # This variable will be reset to the time needed for the last run run
@@ -844,10 +844,10 @@ SEQ() { for ((i=$1; i<=$2; i++)); do echo $i; done; }
 # Default solvent is martini water
 if [[ -z $SOL ]]
 then
-    if [[ $MARTINI == *p ]]
-    then
-	SOL=polarizable
-    fi
+  if [[ $MARTINI == *p ]]
+  then
+    SOL=polarizable
+  fi
 fi
 SID=; for ((i=0; i<${#SOLVENTS[@]}; i++)); do [[ ${SOLVENTS[$i]} == ${SOL}* ]] && SID=$i; done
 
@@ -873,33 +873,33 @@ $M && ffbn=$GMXLIB/$ForceField.ff/ffbonded.itp    || ffbn=
 #        (of the form: martini_2.1.py or martini_2.1_P.py)
 if [[ -z $FFITP ]]
 then
-    FFMARTINIPY=$SDIR/${MARTINI}${SOLVFF[$SID]}.py
-    if [[ ! -f $FFMARTINIPY ]]
-    then
+  FFMARTINIPY=$SDIR/${MARTINI}${SOLVFF[$SID]}.py
+  if [[ ! -f $FFMARTINIPY ]]
+  then
 	if [[ -f $SDIR/${MARTINI}.py ]]
 	then
-            # If martini22p was specified in stead of martini22 with PW,
-	    # then we end up here, setting the script to martini22p.py
-	    FFMARTINIPY=$SDIR/${MARTINI}.py
-	else
-	    # Unclear dependency, but shipped with the scripts...
-	    FATAL Forcefield script $FFMARTINIPY does not exist, nor does $SDIR/${MARTINI}.py
-	fi
-    fi
-
-    #     c. GENERATE martini.itp FOR COARSE GRAINED, MULTISCALE or DRY
-    if [[ -n $DRY ]]
-    then
-	$FFMARTINIPY "$DRY" > martini.itp
+      # If martini22p was specified in stead of martini22 with PW,
+      # then we end up here, setting the script to martini22p.py
+      FFMARTINIPY=$SDIR/${MARTINI}.py
     else
-	$FFMARTINIPY $ffnb $ffbn > martini.itp
+      # Unclear dependency, but shipped with the scripts...
+      FATAL Forcefield script $FFMARTINIPY does not exist, nor does $SDIR/${MARTINI}.py
     fi
+  fi
 
-    #     d. UPDATE martini.itp FOR DUMMIES
-    #        Replace the #include statement for ff_dum.itp for atomistic force fields by the contents of it
-    $M && $SED -i -e "/#include \"ff_dum.itp\"/r$GMXLIB/$ForceField.ff/ff_dum.itp" -e "/#include \"ff_dum.itp\"/d" martini.itp
+  #     c. GENERATE martini.itp FOR COARSE GRAINED, MULTISCALE or DRY
+  if [[ -n $DRY ]]
+  then
+    $FFMARTINIPY "$DRY" > martini.itp
+  else
+    $FFMARTINIPY $ffnb $ffbn > martini.itp
+  fi
+
+  #     d. UPDATE martini.itp FOR DUMMIES
+  #        Replace the #include statement for ff_dum.itp for atomistic force fields by the contents of it
+  $M && $SED -i -e "/#include \"ff_dum.itp\"/r$GMXLIB/$ForceField.ff/ff_dum.itp" -e "/#include \"ff_dum.itp\"/d" martini.itp
 else
-    cp $FFITP martini.itp
+  cp $FFITP martini.itp
 fi
 
 
@@ -916,108 +916,107 @@ $M && TABLES=-tables || TABLES=
 
 if [[ -n $PDB ]]
 then
-
-    # If the input file is not found, check whether it was given without extension.
-    # If that is not the case, then fetch the file from the PDB repository.
-    if [[ ! -f $PDB ]]
+  # If the input file is not found, check whether it was given without extension.
+  # If that is not the case, then fetch the file from the PDB repository.
+  if [[ ! -f $PDB ]]
+  then
+    if [[ ! -f $PDB.pdb ]]
     then
-	if [[ ! -f $PDB.pdb ]]
-	then
-	    echo Input file $PDB not found... Trying server
+      echo Input file $PDB not found... Trying server
 
-            # Try fetching it from the PDB    
-            pdb=$(tr [A-Z] [a-z] <<< ${PDB%.pdb})
-            RCSB="http://files.rcsb.org/download/${pdb%%.*}.pdb.gz"
-            echo "# Input file not found, but will try fetching it from the PDB ($RCSB)"
-            # Use wget or curl; one of them should work
-            wget $RCSB 2>/dev/null || curl -O "$RCSB" 
-	    gunzip $pdb.pdb.gz
-            [[ -n $SCRATCH ]] && cp $pdb.pdb $DIR
-	    PDB=$pdb
-	fi
-	PDB=$PDB.pdb
+      # Try fetching it from the PDB    
+      pdb=$(tr [A-Z] [a-z] <<< ${PDB%.pdb})
+      RCSB="http://files.rcsb.org/download/${pdb%%.*}.pdb.gz"
+      echo "# Input file not found, but will try fetching it from the PDB ($RCSB)"
+      # Use wget or curl; one of them should work
+      wget $RCSB 2>/dev/null || curl -O "$RCSB" 
+	  gunzip $pdb.pdb.gz
+      [[ -n $SCRATCH ]] && cp $pdb.pdb $DIR
+	  PDB=$pdb
+    fi
+    PDB=$PDB.pdb
+  fi
+
+
+  # If the input file is missing now, raise an errorr
+  if [[ ! -f $PDB ]]
+  then
+    echo Input file $PDB not found and fetching from PDB server failed.
+    exit 1
+  fi
+
+
+  # Check whether the input file is here or in another directory.
+  # In the latter case, copy it here
+  [[ $PDB == ${PDB##*/} || $PDB == ./${PDB##*/} ]] || cp $PDB .   
+
+
+  pdb=${PDB##*/}          # Filename
+  base=${pdb%.*}          # Basename
+  ext=${pdb##*.}          # Extension
+  dirn=${PDB%$pdb}        # Directory
+  [[ $dirn ]] || dirn="." 
+  dirn=`cd $dirn && pwd`  # Full path to input file directory
+
+
+  if [ $dirn != `pwd` ]
+  then
+    NOTE "The run is performed here (`pwd`), while the input file is elsewhere ($dirn)."
+  fi
+
+  if [[ -z $TOP && $ext == "pdb" ]]
+  then
+    if $NOHETATM -a $(grep -q HETATM $PDB)
+    then
+      NOTE Removing HETATM entries from PDB file
+      $SED -i '' -e /^HETATM/d $PDB
     fi
 
+    # Extract a list of chains from PDB file
+    CHAINS=( $(grep '^\(ATOM\|HETATM\)' $PDB | cut -b 22 | uniq) )
 
-    # If the input file is missing now, raise an errorr
-    if [[ ! -f $PDB ]]
-    then
-	echo Input file $PDB not found and fetching from PDB server failed.
-	exit 1
-    fi
+    # Unpack lists of chains to multiscale separated by commas
+    MULTI=( $(for i in ${MULTI[@]}; do echo ${i//,/ }; done) )
 
+    # Residues defined in martinize.py
+    AA=(ALA CYS ASP GLU PHE GLU HIS ILE LYS LEU MET ASN PRO GLN ARG SER THR VAL TRP TYR)
+    # Sed query for residues (separated by \|):
+    SED_AA=$($SED 's/ \+/\\\|/g' <<< ${AA[@]})
+    # ATOM selection (martinizable residues)
+    ATOM='/^\(ATOM  \|HETATM\)/{/.\{17\} *'$SED_AA' */p;}'
+    # HETATM selection (non-martinizable residues)
+    HETATM='/^\(ATOM  \|HETATM\)/{/.\{17\} *'$SED_AA' */!p;}'
 
-    # Check whether the input file is here or in another directory.
-    # In the latter case, copy it here
-    [[ $PDB == ${PDB##*/} || $PDB == ./${PDB##*/} ]] || cp $PDB .   
-
-
-    pdb=${PDB##*/}          # Filename
-    base=${pdb%.*}          # Basename
-    ext=${pdb##*.}          # Extension
-    dirn=${PDB%$pdb}        # Directory
-    [[ $dirn ]] || dirn="." 
-    dirn=`cd $dirn && pwd`  # Full path to input file directory
-
-
-    if [ $dirn != `pwd` ]
-    then
-	NOTE "The run is performed here (`pwd`), while the input file is elsewhere ($dirn)."
-    fi
-
-    if [[ -z $TOP && $ext == "pdb" ]]
-    then
-	if $NOHETATM -a $(grep -q HETATM $PDB)
-	then
-	    NOTE Removing HETATM entries from PDB file
-	    $SED -i '' -e /^HETATM/d $PDB
-	fi
-
-        # Extract a list of chains from PDB file
-	CHAINS=( $(grep '^\(ATOM\|HETATM\)' $PDB | cut -b 22 | uniq) )
-
-        # Unpack lists of chains to multiscale separated by commas
-        MULTI=( $(for i in ${MULTI[@]}; do echo ${i//,/ }; done) )
-
-        # Residues defined in martinize.py
-        AA=(ALA CYS ASP GLU PHE GLU HIS ILE LYS LEU MET ASN PRO GLN ARG SER THR VAL TRP TYR)
-        # Sed query for residues (separated by \|):
-	SED_AA=$($SED 's/ \+/\\\|/g' <<< ${AA[@]})
-        # ATOM selection (martinizable residues)
-	ATOM='/^\(ATOM  \|HETATM\)/{/.\{17\} *'$SED_AA' */p;}'
-        # HETATM selection (non-martinizable residues)
-	HETATM='/^\(ATOM  \|HETATM\)/{/.\{17\} *'$SED_AA' */!p;}'
-
-        # Split the pdb file in stuff that can be processed with pdb2gmx 
-        # and stuff that cannot be processed with it
-        #  Extract the names of building blocks defined in the rtp file 
-        # of the force field used. These blocks are defined as '[ ALA ]',
-        # so we match a name in square brackets at the start of a line.
-        # The name is appended to the hold space.
-        RTPENTRIES='/^\[ *\(...\).*\].*/{s//\1/;H;}'
-        # At the end of the list, the building block names are reformatted
-        # to make a regular expression string matching each word. First,
-        # the hold space is swapped with the pattern space, the first bit is 
-        # removed and then all embedded newlines are replaced by '\|'
-        FORMAT='${x;s/\n...\n//;s/\n/\\\|/g;p;}'
-        # Finally sed is called processing all rtp files of the force field
-        DEF=$($SED -n -e "$RTPENTRIES" -e "$FORMAT" $GMXLIB/$ForceField.ff/*.rtp)
+    # Split the pdb file in stuff that can be processed with pdb2gmx 
+    # and stuff that cannot be processed with it
+    #  Extract the names of building blocks defined in the rtp file 
+    # of the force field used. These blocks are defined as '[ ALA ]',
+    # so we match a name in square brackets at the start of a line.
+    # The name is appended to the hold space.
+    RTPENTRIES='/^\[ *\(...\).*\].*/{s//\1/;H;}'
+    # At the end of the list, the building block names are reformatted
+    # to make a regular expression string matching each word. First,
+    # the hold space is swapped with the pattern space, the first bit is 
+    # removed and then all embedded newlines are replaced by '\|'
+    FORMAT='${x;s/\n...\n//;s/\n/\\\|/g;p;}'
+    # Finally sed is called processing all rtp files of the force field
+    DEF=$($SED -n -e "$RTPENTRIES" -e "$FORMAT" $GMXLIB/$ForceField.ff/*.rtp)
  
-        # Now we can split the input PDB file into a processable and a non-processable part
-	echo $DEF
-        #sed -e '/^\(TER\|MODEL\|ENDMDL\)/p' -e '/^\(ATOM  \|HETATM\)/{/.\{17\} *\('$DEF'\) */p;}' $dirn/$base.pdb  > $base-def.pdb
-        #sed -e '/^\(TER\|MODEL\|ENDMDL\)/p' -e '/^\(ATOM  \|HETATM\)/{/.\{17\} *\('$DEF'\) */!p;}' $dirn/$base.pdb > $base-ndef.pdb  
-    fi
+    # Now we can split the input PDB file into a processable and a non-processable part
+    echo $DEF
+    #sed -e '/^\(TER\|MODEL\|ENDMDL\)/p' -e '/^\(ATOM  \|HETATM\)/{/.\{17\} *\('$DEF'\) */p;}' $dirn/$base.pdb  > $base-def.pdb
+    #sed -e '/^\(TER\|MODEL\|ENDMDL\)/p' -e '/^\(ATOM  \|HETATM\)/{/.\{17\} *\('$DEF'\) */!p;}' $dirn/$base.pdb > $base-ndef.pdb  
+  fi
 else
-    base=
+  base=
 fi
 
 
 if [[ $PBC == retain && -n $PDB ]]
 then
-    PBC="-pbc keep"
+  PBC="-pbc keep"
 else
-    PBC="-pbc $PBC"
+  PBC="-pbc $PBC"
 fi
 
 
@@ -1083,18 +1082,18 @@ function mdp_options ()
 __mdp_cg__nstlist=10
 if [[ -n $DELT ]]
 then
-    __mdp_cg__dt=$DELT
+  __mdp_cg__dt=$DELT
 elif $ALL -o [[ -n $MULTI ]]
 then
-    if $VSITE
-    then
-	__mdp_cg__dt=0.004
-	__mdp_cg__nstlist=4
-    else
-	__mdp_cg__dt=0.002
-    fi	
+  if $VSITE
+  then
+    __mdp_cg__dt=0.004
+    __mdp_cg__nstlist=4
+  else
+    __mdp_cg__dt=0.002
+  fi	
 else
-    __mdp_cg__dt=0.020
+  __mdp_cg__dt=0.020
 fi
 
 # Output parameters
@@ -1111,27 +1110,27 @@ __mdp_cg__nstenergy=$AT
 # Nonbonded interactions
 if [[ $GMXVERSION -gt 4 ]]
 then
-    # GMX 5 parameters from De Jong, Baoukina and Marrink
-    __mdp_cg__cutoff_scheme=Verlet
-    __mdp_cg__coulombtype=Cut-off
-    __mdp_cg__coulomb_modifier=Potential-shift
-    __mdp_cg__rcoulomb=1.1
-    __mdp_cg__epsilon_r=$EPSR_CG
-    __mdp_cg__vdw_type=Cut-off
-    __mdp_cg__vdw_modifier=Potential-shift
-    __mdp_cg__rvdw=1.1
-    __mdp_cg__dispcorr=No
-    __mdp_cg__nstlist=20
+  # GMX 5 parameters from De Jong, Baoukina and Marrink
+  __mdp_cg__cutoff_scheme=Verlet
+  __mdp_cg__coulombtype=Cut-off
+  __mdp_cg__coulomb_modifier=Potential-shift
+  __mdp_cg__rcoulomb=1.1
+  __mdp_cg__epsilon_r=$EPSR_CG
+  __mdp_cg__vdw_type=Cut-off
+  __mdp_cg__vdw_modifier=Potential-shift
+  __mdp_cg__rvdw=1.1
+  __mdp_cg__dispcorr=No
+  __mdp_cg__nstlist=20
 else
-    __mdp_cg__coulombtype=Shift
-    __mdp_cg__rcoulomb=1.2
-    __mdp_cg__rcoulomb_switch=0.0
-    __mdp_cg__epsilon_r=$EPSR_CG
-    __mdp_cg__rlist=1.2
-    __mdp_cg__vdw_type=Shift
-    __mdp_cg__rvdw=1.2
-    __mdp_cg__rvdw_switch=0.9
-    __mdp_cg__dispcorr=No
+  __mdp_cg__coulombtype=Shift
+  __mdp_cg__rcoulomb=1.2
+  __mdp_cg__rcoulomb_switch=0.0
+  __mdp_cg__epsilon_r=$EPSR_CG
+  __mdp_cg__rlist=1.2
+  __mdp_cg__vdw_type=Shift
+  __mdp_cg__rvdw=1.2
+  __mdp_cg__rvdw_switch=0.9
+  __mdp_cg__dispcorr=No
 fi
 
 # Coupling - depending on presence of protein/membrane
@@ -1181,11 +1180,11 @@ __mdp_ms__energygrps=AA,CG,VZ
 __mdp_ms__epsilon_r=1
 if $POLARIZABLE
 then
-    __mdp_ms__energygrp_table=AA,AA,AA,CG
-    __mdp_ms__energygrp_excl=AA,VZ,VZ,VZ
+  __mdp_ms__energygrp_table=AA,AA,AA,CG
+  __mdp_ms__energygrp_excl=AA,VZ,VZ,VZ
 else
-    __mdp_ms__energygrp_table=AA,AA
-    __mdp_ms__energygrp_excl=AA,VZ,AA,CG,VZ,VZ
+  __mdp_ms__energygrp_table=AA,AA
+  __mdp_ms__energygrp_excl=AA,VZ,AA,CG,VZ,VZ
 fi
 
 #--------------------------------------------------------------------
@@ -1268,65 +1267,124 @@ ERROR=0
 
 function writeToLog() 
 {  
-    # Write message to log as formatted string in the same way as the server cron scripts do
-  
-    local MSG_STATUS=$2
-    local LOGMSG="# $( date +"%a %b %d %H:%M:%S %Y" ) MDS $$ $MSG_STATUS: $1"
-    echo "$LOGMSG"
+  # Write message to log as formatted string in the same way as the server cron scripts do
+  local MSG_STATUS=$2
+  local LOGMSG="# $( date +"%a %b %d %H:%M:%S %Y" ) MDS $$ $MSG_STATUS: $1"
+  echo "$LOGMSG"
 }
 
-function archive ()
+
+function print_messages() 
 {
-    if [[ -n $ARCHIVE ]]
-    then
-        tar cfz $ARCHIVE.tmp.tgz `ls --ignore=$ARCHIVE`
-        mv $ARCHIVE.tmp.tgz $ARCHIVE
-    fi
+  [[ -z $3 ]] && return 0
+  N=$#
+  echo -e $1 There were $((N-2)) $2:
+  for ((i=2; i<=$N; i++))
+  do 
+    echo [$i] ${!i//QQQ/ }
+  done
+}
+
+
+function archive()
+{
+  if [[ -n $ARCHIVE ]]
+  then
+    tar cfz $ARCHIVE.tmp.tgz `ls --ignore=$ARCHIVE`
+    mv $ARCHIVE.tmp.tgz $ARCHIVE
+  fi
 }
 trap "archive" 2 9 15
 
 
-exit_clean()
+function exit_clean()
 {
-    [[ -f RUNNING ]] && rm -f RUNNING
+  # Finished... Removing flag for running
+  [[ -f RUNNING ]] && rm -f RUNNING
 
-    touch DONE
+  # Set flag indicating job done
+  touch DONE
 
-    if ! $KEEP
-    then
-        echo Deleting redundant files:
-        printf "%-25s %-25s %-25s %-25s %-25s\n" ${JUNK[@]} \#*\#
-        for i in ${JUNK[@]} \#*\#; do [[ -f $i ]] && rm $i; done
-    fi
+  # Add message to log file
+  if [[ -n $1 ]]
+  then
+    writeToLog "$@"
+  fi
+  writeToLog "Wrapping up and exiting."
 
-    exit 0
+  # Clean up
+  if ! $KEEP
+  then
+    echo "# Deleting redundant files:"
+    printf "%-25s %-25s %-25s %-25s %-25s\n" ${JUNK[@]} \#*\#
+    for i in ${JUNK[@]} \#*\# *.bck; do [[ -f $i ]] && rm $i; done
+  fi
+  [[ -n $SCRATCH ]] && cd $DIR # && rm -rf $SCRATCH
+
+  # Archive
+  archive
+
+  writeToLog "$PROGRAM finished successfully"
+
+  exit 0
 }
 
 
-exit_error()
+function exit_error()
 {
-
-  echo "**"
-  echo "** Something went wrong in running script martinize.sh from"
-  echo "** `pwd`/:"
-  echo "**"
-  echo "** exit code: $1"
-  echo "** $MSG"
-  echo "**"
-
-  [[ -f RUNNING ]] && rm -f RUNNING
   touch ERROR
 
+  # Give error message
+  writeToLog "$PROGRAM STEP $STEP ${STEPS[$STEP]} : $@" ERROR
+
+  # Set flags
+  [[ -f RUNNING ]] && rm -f RUNNING
+ 
+  [[ -n $SCRATCH ]] && cp * $DIR && cd $DIR # && rm -rf $SCRATCH
+
+  # Archive everything
   archive
+
+  [[ -n $MSGFILE ]] && exec 1>&3
+  [[ -n $ERRFILE ]] && exec 2>&4
+
+  print_messages $CYA NOTES    ${notes_array[@]}
+  print_messages $YEL WARNINGS ${warnings_array[@]}
+  print_messages $RED ERRORS   ${errors_array[@]}
+
+  FATAL "$@"
+}
+
+
+function terminate()
+{
+  echo
+  writeToLog "SIGNAL CAUGHT... "
+  while [[ -n $1 ]]
+  do
+    if kill -0 $1 >/dev/null 2>&1 
+    then
+      writeToLog "Terminating \"$(ps -o command= $1)\" (PID $1)"
+      kill -15 $1
+    else
+      writeToLog "Attempt to terminate already terminated process \"$(ps -o command= $1)\" (PID $1)"
+    fi
+    shift
+  done
+    
+  writeToLog "Exiting"
+
+  touch ERROR
+  touch TERMINATED
 
   exit 1
 }
 
 
 # Trashing files
-trash()
+function trash()
 {
-    for item in $@; do JUNK[${#JUNK[@]}]=$item; done
+  for item in $@; do JUNK[${#JUNK[@]}]=$item; done
 }
 
 
@@ -1342,106 +1400,109 @@ all_exist()
 }
 
 
-# Parsing program specific options
-program_options()
+# Routine for gathering program specific options
+# In the version edited by MvD (UU) this routine 
+# uses numbers: for ((opt=0; opt<${#...
+# Do not understand why.
+function program_options()
 {    
-    local OPTS=
-    for opt in ${PROGOPTS[@]}
-    do
-        if [[ $opt =~ --$1 ]]
-        then
-            OPTS="$OPTS $($SED 's/--[^-]*//;s/=/ /' <<< $opt)"
-        fi
-    done
-    echo $OPTS
+  local OPTS=
+  for opt in ${PROGOPTS[@]}
+  do
+    if [[ $opt =~ --$1 ]]
+    then
+      OPTS="$OPTS $($SED 's/--[^-]*//;s/=/ /' <<< $opt)"
+    fi
+  done
+  echo $OPTS
 }
 
 # Amino acids
 function sed_protein()
 {
-    for a in ${amino_acids[@]}
-    do 
-	echo '-e /^.....\s*'$a/$1
-    done
+  for a in ${amino_acids[@]}
+  do 
+    echo '-e /^.....\s*'$a/$1
+  done
 }
 
 # Nucleic acids
 function sed_nucleic()
 {
-    for a in ${nucleic_acids[@]}
-    do 
-	echo '-e /^.....\s*'$a/$1
-    done
+  for a in ${nucleic_acids[@]}
+  do 
+    echo '-e /^.....\s*'$a/$1
+  done
 }
 
 # Solvent
 function sed_solvent()
 {
-    for a in ${solvent_names[@]}
-    do 
-	echo '-e /^.....\s*'$a/$1
-    done
+  for a in ${solvent_names[@]}
+  do 
+    echo '-e /^.....\s*'$a/$1
+  done
 }
 
 function INDEX()
 {
-    [[ -n $2 ]] && fn=$2 || fn=basic.ndx
+  [[ -n $2 ]] && fn=$2 || fn=basic.ndx
  
-    exec 6>&1 && exec >$fn
+  exec 6>&1 && exec >$fn
 
-    fmt="%5d %5d %5d %5d %5d %5d %5d %5d %5d %5d"
+  fmt="%5d %5d %5d %5d %5d %5d %5d %5d %5d %5d"
 
-    # Whatever we do not have explicitly must be membrane
+  # Whatever we do not have explicitly must be membrane
 
-    # Total number of atoms
-    N=$(awk '{getline; print; exit}' $1)
-    echo "[ System ]"
-    printf "$fmt\n" `SEQ 1 $N` | $SED 's/ 0//g'
+  # Total number of atoms
+  N=$(awk '{getline; print; exit}' $1)
+  echo "[ System ]"
+  printf "$fmt\n" `SEQ 1 $N` | $SED 's/ 0//g'
+
+  # Solvent atoms (including ions, etc, listed after 'SOL/W/...')
+  SOL=$(( $($SED -n $(sed_solvent '{=;q;}') $1) - 2 ))
+  echo "[ Solvent ]"
+  printf "$fmt\n" `SEQ $SOL $N` | $SED 's/ 0//g'
     
-    # Solvent atoms (including ions, etc, listed after 'SOL/W/...')
-    SOL=$(( $($SED -n $(sed_solvent '{=;q;}') $1) - 2 ))
-    echo "[ Solvent ]"
-    printf "$fmt\n" `SEQ $SOL $N` | $SED 's/ 0//g'
-    
-    # Base system: solute and membrane, if present
-    echo "[ Base ]"
-    printf "$fmt\n" `SEQ 1 $((SOL - 1))` | $SED 's/ 0//g'
-    
-    # Protein - Get the first and last atom of protein stuff
-    PROTSTART=$(( $($SED -n $(sed_protein '{=;q;}') $1) - 2 ))
-    PROTEND=$(( $($SED -n -e 1,2d $(sed_protein d) -e '{=;q;}' $1) - 3 )) 
-    echo "[ Protein ]"
-    [[ $PROTSTART -gt 0 ]] && printf "$fmt\n" `SEQ $PROTSTART $PROTEND` | $SED 's/ 0//g'
+  # Base system: solute and membrane, if present
+  echo "[ Base ]"
+  printf "$fmt\n" `SEQ 1 $((SOL - 1))` | $SED 's/ 0//g'
 
-    # Protein - Get the first and last atom of protein stuff
-    NUCSTART=$(( $($SED -n $(sed_nucleic '{=;q;}') $1) - 2 ))
-    NUCEND=$(( $($SED -n -e 1,2d $(sed_nucleic d) -e '{=;q;}' $1) - 3 )) 
-    echo "[ Nucleic ]"
-    [[ $NUCSTART -gt 0 ]] && printf "$fmt\n" `SEQ $NUCSTART $NUCEND` | $SED 's/ 0//g'
+  # Protein - Get the first and last atom of protein stuff
+  PROTSTART=$(( $($SED -n $(sed_protein '{=;q;}') $1) - 2 ))
+  PROTEND=$(( $($SED -n -e 1,2d $(sed_protein d) -e '{=;q;}' $1) - 3 )) 
+  echo "[ Protein ]"
+  [[ $PROTSTART -gt 0 ]] && printf "$fmt\n" `SEQ $PROTSTART $PROTEND` | $SED 's/ 0//g'
 
-    # Membrane, if any
-    MEMBRANE=$(( $($SED -n -e '1,2d' $(sed_protein d) $(sed_nucleic d) -e '{=;q;}' $1) - 2 ))
-    echo '[ Membrane ]'
-    if [[ -n $MEMBRANE && $MEMBRANE -gt 0 && $MEMBRANE != $SOL ]]
-    then
-        printf "$fmt\n" `SEQ $MEMBRANE $((SOL - 1))` | $SED 's/ 0//g'
-    fi
+  # Protein - Get the first and last atom of protein stuff
+  NUCSTART=$(( $($SED -n $(sed_nucleic '{=;q;}') $1) - 2 ))
+  NUCEND=$(( $($SED -n -e 1,2d $(sed_nucleic d) -e '{=;q;}' $1) - 3 )) 
+  echo "[ Nucleic ]"
+  [[ $NUCSTART -gt 0 ]] && printf "$fmt\n" `SEQ $NUCSTART $NUCEND` | $SED 's/ 0//g'
 
-    echo '[ Solute ]'
-    if [[ $PROTSTART -gt 0 && $NUCSTART -gt 0 ]]
-    then
-	printf "$fmt\n" `SEQ $PROTSTART $NUCEND` | $SED 's/ 0//g'
-    elif [[ $PROTSTART -gt 0 ]]
-    then
-	printf "$fmt\n" `SEQ $PROTSTART $PROTEND` | $SED 's/ 0//g'
-    elif [[ $NUCSTART -gt 0 ]]
-    then
-	printf "$fmt\n" `SEQ $NUCSTART $NUCEND` | $SED 's/ 0//g'
-    fi
-	
-    exec 1>&6 6>&-
+  # Membrane, if any
+  MEMBRANE=$(( $($SED -n -e '1,2d' $(sed_protein d) $(sed_nucleic d) -e '{=;q;}' $1) - 2 ))
+  echo '[ Membrane ]'
+  if [[ -n $MEMBRANE && $MEMBRANE -gt 0 && $MEMBRANE != $SOL ]]
+  then
+    printf "$fmt\n" `SEQ $MEMBRANE $((SOL - 1))` | $SED 's/ 0//g'
+  fi
 
-    return 0
+  echo '[ Solute ]'
+  if [[ $PROTSTART -gt 0 && $NUCSTART -gt 0 ]]
+  then
+    printf "$fmt\n" `SEQ $PROTSTART $NUCEND` | $SED 's/ 0//g'
+  elif [[ $PROTSTART -gt 0 ]]
+  then
+    printf "$fmt\n" `SEQ $PROTSTART $PROTEND` | $SED 's/ 0//g'
+  elif [[ $NUCSTART -gt 0 ]]
+  then
+    printf "$fmt\n" `SEQ $NUCSTART $NUCEND` | $SED 's/ 0//g'
+  fi
+
+  exec 1>&6 6>&-
+
+  return 0
 }
 
 

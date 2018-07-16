@@ -621,30 +621,30 @@ AWK_MOLTYPE='/moleculetype/{getline; while ($0 ~ /^ *;/) getline; print $1}'
 
 dependency_not_found_error()
 {
-    FATAL The required dependency $@ was not found.
+  FATAL The required dependency $@ was not found.
 }
 
 NDEP=${#DEPENDENCIES[@]}
 find_program_function()
 {
-    for ((i=0; i<$NDEP; i++)); do
-        if [[ ${DEPENDENCIES[$i]} == "$1" ]] 
-        then
-            progr=${PROGEXEC[$i]}
-            envvar=${PROGEVAR[$i]}
-        fi
-    done
+  for ((i=0; i<$NDEP; i++)); do
+    if [[ ${DEPENDENCIES[$i]} == "$1" ]] 
+    then
+      progr=${PROGEXEC[$i]}
+      envvar=${PROGEVAR[$i]}
+    fi
+  done
 
-    # Check if the program is in the environment
-    [[ -n $envvar ]] && [[ -f ${!envvar} ]] && echo ${!envvar} && return 0
+  # Check if the program is in the environment
+  [[ -n $envvar ]] && [[ -f ${!envvar} ]] && echo ${!envvar} && return 0
 
-    # Check if the program is in the directory of this script
-    [[ -f $SDIR/$progr ]] && echo $SDIR/$progr && return 0
+  # Check if the program is in the directory of this script
+  [[ -f $SDIR/$progr ]] && echo $SDIR/$progr && return 0
 
-    # Check if the program is in the PATH
-    # Python scripts may be available as 'binaries' (martinize/insane)
-    which $progr 2>/dev/null && return 0
-    which ${progr%.py} 2>/dev/null && return 0 || return 1
+  # Check if the program is in the PATH
+  # Python scripts may be available as 'binaries' (martinize/insane)
+  which $progr 2>/dev/null && return 0
+  which ${progr%.py} 2>/dev/null && return 0 || return 1
 }
 
 
@@ -679,13 +679,13 @@ GMXBIN=${GMXBIN:-$SCRIPTDIR}
 # In some cases, 'gromacs' is part of $GMXDATA
 if [[ $GMXVERSION -gt 4 ]]
 then
-    GMX="$GMXBIN/gmx " 
-    GMXLIB=
+  GMX="$GMXBIN/gmx " 
+  GMXLIB=
 else
-    GMX=$GMXBIN/
-    export GMXLIB=${GMXDATA}/gromacs/top
-    [[ -d $GMXLIB ]] || export GMXLIB=${GMXDATA%/gromacs*}/gromacs/top
-    echo Gromacs data directory: $GMXLIB
+  GMX=$GMXBIN/
+  export GMXLIB=${GMXDATA}/gromacs/top
+  [[ -d $GMXLIB ]] || export GMXLIB=${GMXDATA%/gromacs*}/gromacs/top
+  echo Gromacs data directory: $GMXLIB
 fi
 
 # Now finally, test a command and see if it works
@@ -696,14 +696,14 @@ ${GMX}grompp -h >/dev/null 2>&1 || executable_not_found_error "GROMACS (GMXRC)"
 # This only works for GMX <5
 if [[ $RotationalConstraints == "rtc" ]]
 then
-    echo Testing rotational constraints
-    echo "comm_mode = RTC" > gromacs_rtc_test.mdp
-    if ${GMX}grompp -f gromacs_rtc_test.mdp 2>&1 | grep -q "Invalid enum 'RTC'"
-    then
-	rm gromacs_rtc_test.mdp
-	FATAL "Roto-translational constraints requested (comm_mode = RTC), but not supported by ${GMX}grompp"
-    fi
-    rm gromacs_rtc_test.mdp mdout.mdp
+  echo Testing rotational constraints
+  echo "comm_mode = RTC" > gromacs_rtc_test.mdp
+  if ${GMX}grompp -f gromacs_rtc_test.mdp 2>&1 | grep -q "Invalid enum 'RTC'"
+  then
+    rm gromacs_rtc_test.mdp
+    FATAL "Roto-translational constraints requested (comm_mode = RTC), but not supported by ${GMX}grompp"
+  fi
+  rm gromacs_rtc_test.mdp mdout.mdp
 fi
 
 # 2. SQUEEZE/NDLP for minimal-volume simulation.
@@ -711,17 +711,17 @@ fi
 # - Requires SQUEEZE executable:
 if $NDLP
 then
-    SQUEEZE=$(find_program_function squeeze)
-    if [[ $? != 0 ]]
-    then
-        FATAL "NDLP SETUP REQUESTED, BUT SQUEEZE EXECUTABLE NOT FOUND"	
-    fi
-    if ! $SQUEEZE -h >/dev/null 2>&1
-    then
-        echo 
-	echo "Squeeze was probably compiled for a different version of Gromacs."
-        FATAL "NDLP SETUP REQUESTED, BUT SQUEEZE EXECUTABLE FAILED" 
-    fi
+  SQUEEZE=$(find_program_function squeeze)
+  if [[ $? != 0 ]]
+  then
+    FATAL "NDLP SETUP REQUESTED, BUT SQUEEZE EXECUTABLE NOT FOUND"	
+  fi
+  if ! $SQUEEZE -h >/dev/null 2>&1
+  then
+    echo 
+    echo "Squeeze was probably compiled for a different version of Gromacs."
+    FATAL "NDLP SETUP REQUESTED, BUT SQUEEZE EXECUTABLE FAILED" 
+  fi
 fi
 
 
@@ -742,20 +742,20 @@ __METHOD__
 # Maximum time in seconds
 if [[ $MAXH =~ ":" ]]
 then
-    # Format HH:MM:SS
-    ifs=$IFS; IFS=":"; MAXS=($MAXH); IFS=$ifs
-    MAXS=$((3600*MAXS[0] + 60*MAXS[1] + MAXS[2]))
+  # Format HH:MM:SS
+  ifs=$IFS; IFS=":"; MAXS=($MAXH); IFS=$ifs
+  MAXS=$((3600*MAXS[0] + 60*MAXS[1] + MAXS[2]))
 else
-    # Format x.y HH
-    MAXS=$(awk '{printf "%d\n", $1*3600}' <<< $MAXH )
+  # Format x.y HH
+  MAXS=$(awk '{printf "%d\n", $1*3600}' <<< $MAXH )
 fi
 
 if (( MAXS > 0 ))
 then
-    UNTIL=$(( $(date +%s) + MAXS ))
-    echo "# $PROGRAM will run until $(date --date=@$UNTIL), or until run has finished"
+  UNTIL=$(( $(date +%s) + MAXS ))
+  echo "# $PROGRAM will run until $(date --date=@$UNTIL), or until run has finished"
 else
-    echo "# No maximum runtime set. Will run until finished or until crash."
+  echo "# No maximum runtime set. Will run until finished or until crash."
 fi
 
 # This variable will be reset to the time needed for the last run run
@@ -803,8 +803,8 @@ IFS=$ifs
 
 if [[ -n $PROGOPTS ]]
 then
-    echo "# Program options specified on command line:"
-    for ((i=0; i<${#PROGOPTS[@]}; i++)); do echo "#     ${PROGOPTS[$i]}"; done
+   echo "# Program options specified on command line:"
+  for ((i=0; i<${#PROGOPTS[@]}; i++)); do echo "#     ${PROGOPTS[$i]}"; done
     echo "#==="
 fi
 
@@ -821,9 +821,9 @@ fi
 
 if [[ -n $MDPOPTS ]]
 then
-    echo "# Simulation parameters specified on command line (note how flexible!):"
-    for ((i=0; i<${#MDPOPTS[@]}; i++)); do echo "#     ${MDPOPTS[$i]}"; done
-    echo "#==="
+  echo "# Simulation parameters specified on command line (note how flexible!):"
+  for ((i=0; i<${#MDPOPTS[@]}; i++)); do echo "#     ${MDPOPTS[$i]}"; done
+  echo "#==="
 fi
 
 
@@ -890,22 +890,22 @@ echo
 # Set a trap for signals
 function archive ()
 {
-    if [[ -n $ARCHIVE ]]
-    then
-	tar cfz $DIR/$ARCHIVE.tmp.tgz $(ls | grep -v $ARCHIVE)
-	mv $DIR/$ARCHIVE.tmp.tgz $DIR/$ARCHIVE
-    fi
-    exit
+  if [[ -n $ARCHIVE ]]
+  then
+    tar cfz $DIR/$ARCHIVE.tmp.tgz $(ls | grep -v $ARCHIVE)
+    mv $DIR/$ARCHIVE.tmp.tgz $DIR/$ARCHIVE
+  fi
+  exit
 }
 trap "archive" 2 9 15
 
 
 # Set the forcefield tag
 case $ForceField in
-    gromos*) ForceFieldFamily=gromos;;
-    amber*)  ForceFieldFamily=amber;;
-    charmm*) ForceFieldFamily=charmm;;
-    opls*)   ForceFieldFamily=opls;;
+  gromos*) ForceFieldFamily=gromos;;
+  amber*)  ForceFieldFamily=amber;;
+  charmm*) ForceFieldFamily=charmm;;
+  opls*)   ForceFieldFamily=opls;;
 esac
 
 
@@ -925,46 +925,46 @@ esac
 
 if [[ -z $SolModel ]]
 then
-    # Get the right solvent model for the force field selected
-    for ((i=0; i<${#ForceFieldFamilies[@]}; i++))
-    do
-	if [[ $ForceFieldFamily == ${ForceFieldFamilies[$i]} ]]
-	then
-	    WaterModel=${ForceFieldSolvents[$i]}
-	    SolModel=$WaterModel
-	    SolventTopology=$ForceField.ff/$WaterModel.itp
-	    [[ -z $SolFile ]] && SolFile=${SolventFiles[$i]}
-	fi
-    done
-else
-    # If the name is known (in the ForceFieldSolvents list)
-    # use the corresponding file
-    found=false
-    # Get the right solvent model for the force field selected
-    for ((i=0; i<${#ForceFieldFamilies[@]}; i++))
-    do
-	if [[ $SolModel == ${ForceFieldSolvents[$i]} ]]
-	then
-	    WaterModel=$SolModel
-	    SolventTopology=$WaterModel.itp
-	    [[ -z $SolFile ]] && SolFile=${SolventFiles[$i]}
-	    found=true
-	fi
-    done
-
-    if ! $found
+  # Get the right solvent model for the force field selected
+  for ((i=0; i<${#ForceFieldFamilies[@]}; i++))
+  do
+    if [[ $ForceFieldFamily == ${ForceFieldFamilies[$i]} ]]
     then
-	# Solvent model was specified, but not found
-	if [[ -f $SolModel ]]
-	then
-	    SolName=$(awk "$AWK_MOLTYPE" $SolModel)
-	    SolventTopology=$SolModel
-	    NOTE Using solvent model $SolName from $SolModel with file $SolFile
-	else
-	    # Don't know what to do...
-	    FATAL The solvent model should be a registered name or provided as topology
-	fi
+      WaterModel=${ForceFieldSolvents[$i]}
+      SolModel=$WaterModel
+      SolventTopology=$ForceField.ff/$WaterModel.itp
+      [[ -z $SolFile ]] && SolFile=${SolventFiles[$i]}
     fi
+  done
+else
+  # If the name is known (in the ForceFieldSolvents list)
+  # use the corresponding file
+  found=false
+  # Get the right solvent model for the force field selected
+  for ((i=0; i<${#ForceFieldFamilies[@]}; i++))
+  do
+    if [[ $SolModel == ${ForceFieldSolvents[$i]} ]]
+    then
+      WaterModel=$SolModel
+      SolventTopology=$WaterModel.itp
+      [[ -z $SolFile ]] && SolFile=${SolventFiles[$i]}
+      found=true
+    fi
+  done
+
+  if ! $found
+  then
+    # Solvent model was specified, but not found
+    if [[ -f $SolModel ]]
+    then
+      SolName=$(awk "$AWK_MOLTYPE" $SolModel)
+      SolventTopology=$SolModel
+      NOTE Using solvent model $SolName from $SolModel with file $SolFile
+    else
+      # Don't know what to do...
+      FATAL The solvent model should be a registered name or provided as topology
+    fi
+  fi
 fi
 
 
@@ -1004,19 +1004,19 @@ echo "# Starting MD protocol for $fnIN"
 
 if [[ -z $TPR ]]
 then
-    echo "# Using $ForceFieldFamily force field $ForceField with $WaterModel water model"
+  echo "# Using $ForceFieldFamily force field $ForceField with $WaterModel water model"
 
-    [[ -n $Electrostatics ]] \
-	&& echo "# Using $Electrostatics for treatment of long range coulomb interactions" \
-	|| echo "# Inferring electrostatics treatment from force field family (check mdp files)"
+  [[ -n $Electrostatics ]] \
+    && echo "# Using $Electrostatics for treatment of long range coulomb interactions" \
+    || echo "# Inferring electrostatics treatment from force field family (check mdp files)"
 
-    $VirtualSites \
-	&& echo "# Using virtual sites" \
-	|| echo "# Not using virtual sites"
+  $VirtualSites \
+    && echo "# Using virtual sites" \
+    || echo "# Not using virtual sites"
     
-    $NDLP \
-	&& echo "# Simulations will be performed using a near-densest lattice packing unit cell" \
-	|| echo "# Simulations will be performed in a rhombic dodecahedron unit cell" 
+  $NDLP \
+    && echo "# Simulations will be performed using a near-densest lattice packing unit cell" \
+    || echo "# Simulations will be performed in a rhombic dodecahedron unit cell" 
 fi
 
 
@@ -1227,79 +1227,73 @@ ERROR=0
 
 function writeToLog() 
 {  
-    # Write message to log as formatted string in the same way as the server cron scripts do
-  
-    local MSG_STATUS=$2
-    local LOGMSG="# $( date +"%a %b %d %H:%M:%S %Y" ) MDS $$ $MSG_STATUS: $1"
-    echo "$LOGMSG"
+  # Write message to log as formatted string in the same way as the server cron scripts do
+  local MSG_STATUS=$2
+  local LOGMSG="# $( date +"%a %b %d %H:%M:%S %Y" ) MDS $$ $MSG_STATUS: $1"
+  echo "$LOGMSG"
 }
 
 
 function print_messages() 
 {
-    [[ -z $3 ]] && return 0
-    N=$#
-    echo -e $1 There were $((N-2)) $2:
-    for ((i=2; i<=$N; i++))
-    do 
-        echo [$i] ${!i//QQQ/ }
-    done
+  [[ -z $3 ]] && return 0
+  N=$#
+  echo -e $1 There were $((N-2)) $2:
+  for ((i=2; i<=$N; i++))
+  do 
+    echo [$i] ${!i//QQQ/ }
+  done
 }
 
 
-function archive ()
+function archive()
 {
-  if [[ -n $ARCHIVE ]]; then
-    
-    FILES=$( ls )
-    EXCLUDE="$ARCHIVE gmx45setup.sh"
-    for EX in $EXCLUDE; do
-      FILES=$( echo $FILES | $SED "s/ $EX / /g;" ) 
-    done
-    
-    tar cfz gmx-server-tmp-archive.tgz $FILES
-    [[ -e gmx-server-tmp-archive.tgz ]] && \mv gmx-server-tmp-archive.tgz $ARCHIVE
-    
+  if [[ -n $ARCHIVE ]]
+  then
+    tar cfz $ARCHIVE.tmp.tgz `ls --ignore=$ARCHIVE`
+    mv $ARCHIVE.tmp.tgz $ARCHIVE
   fi
 }
+trap "archive" 2 9 15
 
 
 function exit_clean()
 {
-    # Finished... Removing flag for running
-    [[ -f RUNNING ]] && rm -f RUNNING
+  # Finished... Removing flag for running
+  [[ -f RUNNING ]] && rm -f RUNNING
 
-    # Set flag indicating job done
-    touch DONE
+  # Set flag indicating job done
+  touch DONE
 
-    # Add message to log file
-    if [[ -n $1 ]]
-    then
-	writeToLog "$@"
-    fi
-    writeToLog "Wrapping up and exiting."
+  # Add message to log file
+  if [[ -n $1 ]]
+  then
+    writeToLog "$@"
+  fi
+  writeToLog "Wrapping up and exiting."
 
-    # Clean up
+  # Clean up
+  if ! $KEEP
+  then
     echo "# Deleting redundant files:"
     printf "%-25s %-25s %-25s %-25s %-25s\n" ${JUNK[@]} \#*\#
     for i in ${JUNK[@]} \#*\# *.bck; do [[ -f $i ]] && rm $i; done
+  fi
+  [[ -n $SCRATCH ]] && cd $DIR # && rm -rf $SCRATCH
 
-    [[ -n $SCRATCH ]] && cd $DIR # && rm -rf $SCRATCH
+  # Archive
+  archive
 
-    # Archive
-    archive
-    #uoploadToSE
+  writeToLog "$PROGRAM finished successfully"
 
-    writeToLog "$PROGRAM finished successfully"
-
-    exit 0
+  exit 0
 }
 
 
 function exit_error()
 {
   touch ERROR
- 
+
   # Give error message
   writeToLog "$PROGRAM STEP $STEP ${STEPS[$STEP]} : $@" ERROR
 
@@ -1324,26 +1318,26 @@ function exit_error()
 
 function terminate()
 {
-    echo
-    writeToLog "SIGNAL CAUGHT... "
-    while [[ -n $1 ]]
-    do
-	if kill -0 $1 >/dev/null 2>&1 
-	then
-	    writeToLog "Terminating \"$(ps -o command= $1)\" (PID $1)"
-	    kill -15 $1
-	else
-	    writeToLog "Attempt to terminate already terminated process \"$(ps -o command= $1)\" (PID $1)"
-	fi
-	shift
-    done
+  echo
+  writeToLog "SIGNAL CAUGHT... "
+  while [[ -n $1 ]]
+  do
+    if kill -0 $1 >/dev/null 2>&1 
+    then
+      writeToLog "Terminating \"$(ps -o command= $1)\" (PID $1)"
+      kill -15 $1
+    else
+      writeToLog "Attempt to terminate already terminated process \"$(ps -o command= $1)\" (PID $1)"
+    fi
+    shift
+  done
     
-    writeToLog "Exiting"
-    
-    touch ERROR
-    touch TERMINATED
+  writeToLog "Exiting"
 
-    exit 1
+  touch ERROR
+  touch TERMINATED
+
+  exit 1
 }
 
 
@@ -1357,7 +1351,17 @@ function pdb2gmx_error()
 # Trashing files
 function trash()
 {
-    for item in $@; do JUNK[${#JUNK[@]}]=$item; done
+  for item in $@; do JUNK[${#JUNK[@]}]=$item; done
+}
+
+
+# Check for the existence of all arguments as files
+function all_exist()
+{
+  for f in ${OUTPUT[@]} 
+  do 
+    [[ -e $f || -e $dirn/$f ]] || return 1
+  done
 }
 
 
@@ -1367,25 +1371,15 @@ function trash()
 # Do not understand why.
 function program_options()
 {    
-    local OPTS=
-    for opt in ${PROGOPTS[@]}
-    do
-	if [[ $opt =~ --$1- ]]
-	then
-            OPTS="$OPTS $($SED 's/--[^-]*//;s/=/ /;' <<< $opt)"
-	fi
-    done
-    echo $OPTS
-}
-
-
-# Check for the existence of all arguments as files
-function all_exist()
-{
-    for f in ${OUTPUT[@]} 
-    do 
-        [[ -e $f || -e $dirn/$f ]] || return 1
-    done
+  local OPTS=
+  for opt in ${PROGOPTS[@]}
+  do
+    if [[ $opt =~ --$1 ]]
+    then
+      OPTS="$OPTS $($SED 's/--[^-]*//;s/=/ /' <<< $opt)"
+    fi
+  done
+  echo $OPTS
 }
 
 
@@ -1409,49 +1403,49 @@ AWK_TPR_CHARGE='/^ *atom.*q=/{sub(".*q=","",$0); sub(",.*","",$0); C[T]+=$0}'
 AWK_TPR_END='END{S=0; for (i in C) {S+=N[i]*C[i]}; if (S<0) S-=0.5; else S+=0.5; printf "%d\n", S}'
 function getCharge ()
 {
-    gmxdump -s $1 2>&1 | awk "$AWK_TPR_MOLNAME $AWK_TPR_MOLTYPE $AWK_TPR_MOLNUM $AWK_TPR_CHARGE $AWK_TPR_END"
+  gmxdump -s $1 2>&1 | awk "$AWK_TPR_MOLNAME $AWK_TPR_MOLTYPE $AWK_TPR_MOLNUM $AWK_TPR_CHARGE $AWK_TPR_END"
 }
 
 
 # Routine for generating a simple index file
 function INDEX()
 {
-    [[ -n $2 ]] && fn=$2 || fn=basic.ndx
+  [[ -n $2 ]] && fn=$2 || fn=basic.ndx
  
-    exec 6>&1 && exec >$fn
+  exec 6>&1 && exec >$fn
 
-    fmt="%5d %5d %5d %5d %5d %5d %5d %5d %5d %5d"
+  fmt="%5d %5d %5d %5d %5d %5d %5d %5d %5d %5d"
 
-    # Total number of atoms
-    N=$(awk '{getline; print; exit}' $1)
-    echo "[ System ]"
-    printf "$fmt\n" `SEQ 1 $N` | $SED 's/ 0//g'
-  
-    # Solvent atoms (including ions, etc, listed after 'SOL')
-    SOL=$(( $($SED -n '/'$SolName'/{=;q;}' $1) - 2 ))
-    echo "[ Solvent ]"
-    printf "$fmt\n" `SEQ $SOL $N` | $SED 's/ 0//g'
+  # Total number of atoms
+  N=$(awk '{getline; print; exit}' $1)
+  echo "[ System ]"
+  printf "$fmt\n" `SEQ 1 $N` | $SED 's/ 0//g'
 
-    # Base system: solute and membrane, if present
-    echo "[ Base ]"
-    printf "$fmt\n" `SEQ 1 $((SOL - 1))` | $SED 's/ 0//g'
+  # Solvent atoms (including ions, etc, listed after 'SOL')
+  SOL=$(( $($SED -n '/'$SolName'/{=;q;}' $1) - 2 ))
+  echo "[ Solvent ]"
+  printf "$fmt\n" `SEQ $SOL $N` | $SED 's/ 0//g'
 
-    # Membrane, if any
-    MEMBRANE=$($SED -n '/\(POP\|DPP\|DMP\|DOP\|PPC\)/{=;q;}' $1)
-    if [[ -n $MEMBRANE ]]
-    then
-        echo '[ Membrane ]'
-        printf "$fmt\n" `SEQ $MEMBRANE $((SOL - 1))` | $SED 's/ 0//g'
-    else
-        MEMBRANE=SOL
-    fi
+  # Base system: solute and membrane, if present
+  echo "[ Base ]"
+  printf "$fmt\n" `SEQ 1 $((SOL - 1))` | $SED 's/ 0//g'
 
-    echo '[ Solute ]'
-    printf "$fmt\n" `SEQ 1 $((MEMBRANE - 1))` | $SED 's/ 0//g'
+  # Membrane, if any
+  MEMBRANE=$($SED -n '/\(POP\|DPP\|DMP\|DOP\|PPC\)/{=;q;}' $1)
+  if [[ -n $MEMBRANE ]]
+  then
+    echo '[ Membrane ]'
+    printf "$fmt\n" `SEQ $MEMBRANE $((SOL - 1))` | $SED 's/ 0//g'
+  else
+    MEMBRANE=SOL
+  fi
 
-    exec 1>&6 6>&-
+  echo '[ Solute ]'
+  printf "$fmt\n" `SEQ 1 $((MEMBRANE - 1))` | $SED 's/ 0//g'
 
-    return 0
+  exec 1>&6 6>&-
+
+  return 0
 }
 
 
