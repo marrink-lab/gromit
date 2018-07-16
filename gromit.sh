@@ -223,15 +223,15 @@ EXEC=         # Execute run
 NP=1          # Number of processors
 MDP=          # User-provided MDP file
 MDARGS=       # User-provided arguments to mdrun
-GMXRC=        # File for loading GMX version
-SQUEEZE=      # Squeeze executable
-ANALYSIS=()   # Analysis tags 
 MAXH=-1       # Maximum duration of run
 JUNK=()       # Garbage collection
 SCRATCH=      # Scratch directory
 ARCHIVE=      # Archive file name
 FORCE=false   # Overwrite existing run data
 KEEP=false    # Keep intermediate rubbish (except junk)
+GMXRC=        # File for loading GMX version
+SQUEEZE=      # Squeeze executable
+ANALYSIS=()   # Analysis tags 
 
 
 # - system setup
@@ -538,6 +538,20 @@ exec 3>&1 4>&2
 [[ -n $MSGFILE ]] && exec 1>$MSGFILE
 [[ -n $ERRFILE ]] && exec 2>$ERRFILE
 
+cat << __RUNINFO__
+
+$PROGRAM version $VERSION:
+
+(c)$YEAR $AUTHOR
+$AFFILIATION
+
+Now executing...
+
+$CMD
+
+__RUNINFO__
+
+echo $CMD > cmd.log
 
 # Time. To keep track of the remaining run time
 START=$(date +%s)
@@ -600,7 +614,7 @@ AWK_MOLTYPE='/moleculetype/{getline; while ($0 ~ /^ *;/) getline; print $1}'
 
 
 #--------------------------------------------------------------------
-#---GROMACS STUFF
+#---GROMACS AND RELATED STUFF
 #--------------------------------------------------------------------
 
 ## 0. Finding programs
@@ -628,7 +642,9 @@ find_program_function()
     [[ -f $SDIR/$progr ]] && echo $SDIR/$progr && return 0
 
     # Check if the program is in the PATH
-    which $progr 2>/dev/null && return 0 || return 1
+    # Python scripts may be available as 'binaries' (martinize/insane)
+    which $progr 2>/dev/null && return 0
+    which ${progr%.py} 2>/dev/null && return 0 || return 1
 }
 
 
@@ -657,14 +673,6 @@ ifs=$IFS; IFS="."; GMXVERSION=($GMXVERSION); IFS=$ifs
 GMXBIN=${GMXBIN%/*}
 # Set the directory to SCRIPTDIR if GMXBIN is empty 
 GMXBIN=${GMXBIN:-$SCRIPTDIR}
-
-# Make binaries executable if they are not
-# (This may be required for Grid processing)
-[[ -f $GMXBIN/grompp && ! -x $GMXBIN/grompp ]] && chmod +x $GMXBIN/grompp
-[[ -f $GMXBIN/mdrun  && ! -x $GMXBIN/mdrun  ]] && chmod +x $GMXBIN/mdrun
-[[ -f $GMXBIN/gmx    && ! -x $GMXBIN/gmx    ]] && chmod +x $GMXBIN/gmx
-
-[[ $GMXVERSION -gt 4 ]] && 
 
 # Set the command prefix and set the GMXLIB variable to point to 
 # the force field data and such.

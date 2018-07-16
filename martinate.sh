@@ -248,13 +248,17 @@ EXEC=         # Execute run
 NP=1          # Number of processors
 MDP=          # User-provided MDP file
 MDARGS=       # User-provided arguments to mdrun
-DAFT=
 MAXH=-1       # Maximum duration of run
 JUNK=()       # Garbage collection
 SCRATCH=      # Scratch directory
 ARCHIVE=      # Archive file name
 FORCE=false   # Overwrite existing run data
 KEEP=false    # Keep intermediate rubbish (except junk)
+DAFT=
+
+# - system setup
+Salinity=0.1536  # Salt concentration of solvent
+
 
 # - group definitions
 NATOMS=0                 # Total number of atoms
@@ -278,7 +282,6 @@ Temperature=310  # Degree Kelvin
 Tau_T=0.1                # ps
 Pressure=1               # Bar
 Tau_P=1.0                # ps
-Salinity=0.1536  # Concentration NaCl
 SEED=$$                  # Random seed for velocity generation
 RotationalConstraints=   # Use rotational constraints, which is mandatory with NDLP
 
@@ -397,8 +400,14 @@ while [ -n "$1" ]; do
     #=1 ------------
     #=1
     -f       ) PDB=$2                               ; shift 2; continue ;; #==0 Input PDB file
+    -g       ) MSGFILE=$2                           ; shift 2; continue ;; #==9 Standard output log file (default: /dev/stdout)
+    -e       ) ERRFILE=$2                           ; shift 2; continue ;; #==9 Standard error log file (default: /dev/stderr)
+    -name    ) NAME=$2                              ; shift 2; continue ;; #==9 Name of project
     -top     ) TOP=$2                               ; shift 2; continue ;; #==1 Input topology file 
     -ndx     ) NDX=$2                               ; shift 2; continue ;; #==1 Input index file
+    -mdp     ) MDP=$2                               ; shift 2; continue ;; #==9 MDP (simulation parameter) file
+    -scratch ) SCRATCH=$2                           ; shift 2; continue ;; #==9 Scratch directory to perform simulation
+    -fetch   ) FETCH=$2                             ; shift 2; continue ;; #==9 Database to fetch input structure from 
     -hetatm  ) NOHETATM=false                       ; shift 1; continue ;; #==1 Keep HETATM records
 
     #=1
@@ -534,6 +543,14 @@ done
 ##<< OPTIONS
 
 
+#--------------------------------------------------------------------
+#---GLOBAL PARAMETERS AND STUFF--
+#--------------------------------------------------------------------
+
+exec 3>&1 4>&2
+[[ -n $MSGFILE ]] && exec 1>$MSGFILE
+[[ -n $ERRFILE ]] && exec 2>$ERRFILE
+
 cat << __RUNINFO__
 
 $PROGRAM version $VERSION:
@@ -549,11 +566,52 @@ __RUNINFO__
 
 echo $CMD > cmd.log
 
+# Time. To keep track of the remaining run time
+START=$(date +%s)
+
+
 # START/STOP FLOW CONTROL
 for ((i=0; i<${#STEPS[@]}; i++)); do [[ ${STEPS[$i]} == ${STEP}* ]] && STEP=$i && break; done
 for ((i=0; i<${#STEPS[@]}; i++)); do [[ ${STEPS[$i]} == ${STOP}* ]] && STOP=$i && break; done
 
-#NOW=$STEP
+
+# Set the script directory
+SCRIPTDIR=$(cd ${0%${0##*/}}; pwd)
+
+
+# Directory where command was issued
+BDIR=$(pwd)
+
+
+# Set the scratch directory, if any:
+#    scratch directory, user name, random number
+if [[ -n $SCRATCH ]]
+then
+    # The scratch directory can be specified as 
+    # (escaped) variable, like \$TMPDIR. This
+    # variable will be expanded at runtime.
+    # That may be handy on clusters, where the 
+    # $TMPDIR is set for every node.
+    if [[ ${SCRATCH:0:1} == '$' ]]
+    then
+	tmp=${SCRATCH:1}
+	SCRATCH=${!tmp}
+    fi
+    
+    # To ensure that there is no further rubbish
+    # the scratch directory is extended with the
+    # username, the data and the process ID. There
+    # the run will be performed.
+    SCRATCH=$SCRATCH/$(date +%F).$USER.$$
+    if ! mkdir -p $SCRATCH
+    then
+	echo Scratch directory $SCRATCH is not available... exiting
+	exit
+    fi
+
+    echo $SCRATCH > SCRATCH
+fi
+
 
 #--------------------------------------------------------------------
 #---Sed and awk
@@ -577,7 +635,6 @@ AWK_MOLTYPE='/moleculetype/{getline; while ($0 ~ /^ *;/) getline; print $1}'
 #---GROMACS AND RELATED STUFF
 #--------------------------------------------------------------------
 
-
 ## 0. Finding programs
 
 dependency_not_found_error()
@@ -586,7 +643,7 @@ dependency_not_found_error()
 }
 
 NDEP=${#DEPENDENCIES[@]}
-find_program_fun()
+find_program_function()
 {
     for ((i=0; i<$NDEP; i++)); do
         if [[ ${DEPENDENCIES[$i]} == "$1" ]] 
@@ -612,7 +669,7 @@ find_program_fun()
 ##  1. GROMACS  ##
 
 # Check and set the gromacs related stuff  
-GMXRC=$(find_program_fun gmxrc)
+GMXRC=$(find_program_function gmxrc)
 echo Gromacs RC file: $GMXRC
 
 # Source the gromacs RC file if one was found
@@ -624,7 +681,7 @@ GMXVERSION=$(mdrun -h 2>&1 | sed -n '/^.*VERSION \([^ ]*\).*$/{s//\1/p;q;}')
 # From version 5.0.x on, the commands are gathered in one 'gmx' program
 # The original commands are aliased, but there is no guarantee they will always remain
 [[ -z $GMXVERSION ]] && GMXVERSION=$(gmx -h 2>&1 | sed -n '/^.*VERSION \([^ ]*\).*$/{s//\1/p;q;}')
-# Version 2016.x changes the format of the version string.
+# Version 2016 uses lower case "version", which is potentially ambiguous, so match carefully
 [[ -z $GMXVERSION ]] && GMXVERSION=$(gmx -h 2>&1 | sed -n '/^GROMACS:.*gmx, version \([^ ]*\).*$/{s//\1/p;q;}')
 ifs=$IFS; IFS="."; GMXVERSION=($GMXVERSION); IFS=$ifs
 
@@ -635,14 +692,19 @@ GMXBIN=${GMXBIN%/*}
 # Set the directory to SCRIPTDIR if GMXBIN is empty 
 GMXBIN=${GMXBIN:-$SCRIPTDIR}
 
-# Set the command prefix
-[[ $GMXVERSION -gt 4 ]] && GMX="$GMXBIN/gmx " || GMX=$GMXBIN/
-
-# Set the GMXLIB variable to point to the force field data and such
+# Set the command prefix and set the GMXLIB variable to point to 
+# the force field data and such.
 # In some cases, 'gromacs' is part of $GMXDATA
-export GMXLIB=${GMXDATA}/gromacs/top
-[[ -d $GMXLIB ]] || export GMXLIB=${GMXDATA%/gromacs*}/gromacs/top
-echo Gromacs data directory: $GMXLIB
+if [[ $GMXVERSION -gt 4 ]]
+then
+    GMX="$GMXBIN/gmx " 
+    GMXLIB=
+else
+    GMX=$GMXBIN/
+    export GMXLIB=${GMXDATA}/gromacs/top
+    [[ -d $GMXLIB ]] || export GMXLIB=${GMXDATA%/gromacs*}/gromacs/top
+    echo Gromacs data directory: $GMXLIB
+fi
 
 # Now finally, test a command and see if it works
 # otherwise raise a fatal error.
