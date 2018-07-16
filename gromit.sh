@@ -2,12 +2,8 @@
 
 PROGRAM=${0##*/}
 VERSION=2.5      # 20170706.1200
-GMXVERSION=5.x.y # But 4.x.y and 2016 are supported
-HISTORY="\
-"
-
 AUTHORS="Tsjerk A. Wassenaar, PhD"
-YEAR="2017"
+YEAR="2018"
 AFFILIATION="
 University of Groningen
 Nijenborgh 7
@@ -110,13 +106,6 @@ __DESCRIPTION__
 #--------------------------------------------------------------------
 #---EXTERNAL/USER STUFF
 #--------------------------------------------------------------------
-
-# Some variables can be set here to provide defaults 
-# for example for GRID-specific settings.
-LFC_ROOT=/grid/enmr.eu
-export LFC_HOME=$LFC_ROOT/gromacs
-export LFC_HOST=lfcserver.cnaf.infn.it
-GRID_SE=se-enmr.cerm.unifi.it
 
 # Structure databases
 RCSB=(http://files.rcsb.org/download/ pdb.gz)
@@ -1230,25 +1219,6 @@ function print_messages()
 }
 
 
-function uploadToSE() 
-{
-    # Upload results to a storage element
-   
-    # These variables should be available on the command line or
-    # at least higher up in the script in a user-modifiable section
-    LFC_ROOT='/grid/enmr.eu/'
-    export LFC_HOME=$LFC_ROOT/gromacs
-    export LFC_HOST='lfcserver.cnaf.infn.it'
-  
-    if [[ -e $ARCHIVE ]]
-    then
-        lcg-cr -v --vo enmr.eu -d se-enmr.cerm.unifi.it -l $ARCHIVE $ARCHIVE
-    else
-        echo "ERROR: no archive $ARCHIVE found. Cannot upload to SE"
-    fi
-}
-
-
 function archive ()
 {
   if [[ -n $ARCHIVE ]]; then
@@ -1312,9 +1282,6 @@ function exit_error()
 
   # Archive everything
   archive
-
-  # Upload stuff to SE
-  # uploadToSE
 
   [[ -n $MSGFILE ]] && exec 1>&3
   [[ -n $ERRFILE ]] && exec 2>&4
