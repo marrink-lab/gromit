@@ -203,17 +203,22 @@ MoleculeTypes=()
 
 # Options:
 
-# Run control and files
-DIR="."       # Directory to run and write           
+# Downstream programs:
+
+# This program:
+
+# - protein:
 fnIN=         # Input file name
+TOP=          # Topology file
+HETATM=true   # Keep HETATM records in input PDB file
+
+# - run control and files
+DIR="."       # Directory to run and write           
 TPR=          # Run input file... skip to production or to STEP
 NAME=         # Run name
-TOP=          # Topology file
 FETCH=        # Try to fetch PDB file from web
 MSGFILE=/dev/stdout      # Master log file (stdout)
 ERRFILE=/dev/stderr      # Error log file (stderr)
-ARCHIVE=      # Archive file name
-FORCE=false   # Overwrite existing run data
 EXEC=         # Execute run
 NP=1          # Number of processors
 MDP=          # User-provided MDP file
@@ -224,11 +229,12 @@ ANALYSIS=()   # Analysis tags
 MAXH=-1       # Maximum duration of run
 JUNK=()       # Garbage collection
 SCRATCH=      # Scratch directory
+ARCHIVE=      # Archive file name
+FORCE=false   # Overwrite existing run data
 KEEP=false    # Keep intermediate rubbish (except junk)
-HETATM=true   # Keep HETATM records in input PDB file
 
 
-# System setup
+# - system setup
 PBCDIST=2.25             # Minimal distance between periodic images
 BOXTYPE=dodecahedron     # Box type
 Salt=NA,CL               # Salt species
@@ -238,7 +244,7 @@ CHARGE=                  # Net charge to set on system
 NDLP=false               # Use optimal simulation cell (near-densest-lattice-packing)
 
 
-# GROUP DEFINITIONS
+# - group definitions
 NATOMS=0                 # Total number of atoms
 Biomol=()                # Biomolecules (protein, nucleic acid, lipid)
 Solute=()                # Solute molecule (protein or so)
@@ -251,7 +257,7 @@ EnergyGroups=()          # Groups for energy calculations
 LIE=false                # LIE run
 
 
-# - simulations parameters
+# - simulation parameters
 TIME=0                   # Production run time (ns)
 AT=0.05                  # Output frequency for positions, energy and log (ns)
 EquilTime=0.1            # Equilibration run time (ns)          
