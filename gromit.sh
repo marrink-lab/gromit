@@ -659,12 +659,12 @@ echo Gromacs RC file: $GMXRC
 [[ $GMXRC ]] && source $GMXRC 
 
 # Find out which Gromacs version this is
-GMXVERSION=$(mdrun -h 2>&1 | sed -n '/^.*VERSION \([^ ]*\).*$/{s//\1/p;q;}')
+GMXVERSION=$(mdrun -h 2>&1 | $SED -n '/^.*VERSION \([^ ]*\).*$/{s//\1/p;q;}')
 # From version 5.0.x on, the commands are gathered in one 'gmx' program
 # The original commands are aliased, but there is no guarantee they will always remain
-[[ -z $GMXVERSION ]] && GMXVERSION=$(gmx -h 2>&1 | sed -n '/^.*VERSION \([^ ]*\).*$/{s//\1/p;q;}')
+[[ -z $GMXVERSION ]] && GMXVERSION=$(gmx -h 2>&1 | $SED -n '/^.*VERSION \([^ ]*\).*$/{s//\1/p;q;}')
 # Version 2016 uses lower case "version", which is potentially ambiguous, so match carefully
-[[ -z $GMXVERSION ]] && GMXVERSION=$(gmx -h 2>&1 | sed -n '/^GROMACS:.*gmx, version \([^ ]*\).*$/{s//\1/p;q;}')
+[[ -z $GMXVERSION ]] && GMXVERSION=$(gmx -h 2>&1 | $SED -n '/^GROMACS:.*gmx, version \([^ ]*\).*$/{s//\1/p;q;}')
 ifs=$IFS; IFS="."; GMXVERSION=($GMXVERSION); IFS=$ifs
 
 # Set the directory for binaries
@@ -1349,7 +1349,7 @@ function terminate()
 
 function pdb2gmx_error()
 {
-  sed -n -e '/^Fatal error/,/^----/p' $1
+  $SED -n -e '/^Fatal error/,/^----/p' $1
   exit_error "Converting structure with pdb2gmx failed."
 }
 
@@ -1428,7 +1428,7 @@ function INDEX()
     printf "$fmt\n" `SEQ 1 $N` | $SED 's/ 0//g'
   
     # Solvent atoms (including ions, etc, listed after 'SOL')
-    SOL=$(( $(sed -n '/'$SolName'/{=;q;}' $1) - 2 ))
+    SOL=$(( $($SED -n '/'$SolName'/{=;q;}' $1) - 2 ))
     echo "[ Solvent ]"
     printf "$fmt\n" `SEQ $SOL $N` | $SED 's/ 0//g'
 
@@ -1559,7 +1559,7 @@ function MDRUNNER ()
     local -i step=($($SED  -n -e '/^ *Step *Time *Lambda/{n;h;}' -e '${x;p;}' $last))
 
     # Check the number of steps for this cycle
-    local -i RUNSTEPS=$(sed -n '/nsteps/s/^.*=\([^;]*\).*$/\1/p' $fnMDP)
+    local -i RUNSTEPS=$($SED -n '/nsteps/s/^.*=\([^;]*\).*$/\1/p' $fnMDP)
 
     if [[ $step -gt 0 ]]
     then
@@ -1648,7 +1648,7 @@ function MDRUNNER ()
     echo
     # Mark the output
     # Make sure that the exit code from the monitor is exitcode of the process. 
-    ($MON | sed 's/^/MONITOR: /'; exit ${PIPESTATUS[0]}) &
+    ($MON | $SED 's/^/MONITOR: /'; exit ${PIPESTATUS[0]}) &
 
     local -i MONID=$!
     writeToLog "Monitor PID: $MONID"
@@ -1710,8 +1710,8 @@ function MDRUNNER ()
 
 
 # Macros to echo stuff only if the step is to be executed
-function SHOUT() { [[ $STEP == $NOW ]] && echo && L=$($SED -e 's/./-/g;s/^/#/;' <<< " $@ ") && echo $L && sed 's/^/#/' <<< "$@ " && echo $L ; }
-function LINE()  { [[ $STEP == $NOW ]] && echo && $SED -e 's/^/ /;s/$/ /p;s/./-/g;' <<< "$@" | sed 's/^/#/'; }
+function SHOUT() { [[ $STEP == $NOW ]] && echo && L=$($SED -e 's/./-/g;s/^/#/;' <<< " $@ ") && echo $L && $SED 's/^/#/' <<< "$@ " && echo $L ; }
+function LINE()  { [[ $STEP == $NOW ]] && echo && $SED -e 's/^/ /;s/$/ /p;s/./-/g;' <<< "$@" | $SED 's/^/#/'; }
 function ECHO()  { [[ $STEP == $NOW ]] && echo "$@"; }
 
 
@@ -1813,7 +1813,7 @@ then
         if $RMMOD
         then
             # Removing the MODEL records and replacing ENDMDL by TER
-            sed -i '' -e /^MODEL/d -e s/ENDMDL/TER/ $PDB
+            $SED -i '' -e /^MODEL/d -e s/ENDMDL/TER/ $PDB
         fi
 
 	[[ -n $SCRATCH ]] && cp $pdb $DIR
@@ -1837,7 +1837,7 @@ then
     # Remove HETATM records
     if ! $HETATM
     then
-        sed -i'.het' /^HETATM/d $pdb
+        $SED -i'.het' /^HETATM/d $pdb
     fi
 fi
 
@@ -2357,18 +2357,18 @@ fi
 if [[ -n $TOP ]]
 then
     # Add atomtypes and moleculetypes if given
-    sed /^#include.*forcefield.itp/q $TOP > $base-usr.top
+    $SED /^#include.*forcefield.itp/q $TOP > $base-usr.top
     for atp in ${AtomTypes[@]}
     do
 	echo
-	sed -n -e '/\[ *atomtypes *\]/p' -e '/\[ *atomtypes *\]/,/^ *\[/{/^ *\[/d;p;}' $atp
+	$SED -n -e '/\[ *atomtypes *\]/p' -e '/\[ *atomtypes *\]/,/^ *\[/{/^ *\[/d;p;}' $atp
     done >> $base-usr.top
     for mtp in ${MoleculeTypes[@]}
     do
 	echo
-	sed -n -e '/\[ *moleculetype *\]/,/\[ *system *\]/{/\[ *system *\]/d;p;}' $mtp
+	$SED -n -e '/\[ *moleculetype *\]/,/\[ *system *\]/{/\[ *system *\]/d;p;}' $mtp
     done >> $base-usr.top
-    sed -n -e 'H' -e '/^#include.*forcefield.itp/{n;x;}' -e '${x;p;}' $TOP >> $base-usr.top
+    $SED -n -e 'H' -e '/^#include.*forcefield.itp/{n;x;}' -e '${x;p;}' $TOP >> $base-usr.top
     TOP=$DIR/$base-usr.top
 fi
 
@@ -2583,18 +2583,18 @@ Box of solvent, maybe with ions
 __TOP__
 
     # Add atomtypes and moleculetypes if given
-    sed /^#include.*forcefield.itp/q $TOP > $base-usr.top
+    $SED /^#include.*forcefield.itp/q $TOP > $base-usr.top
     for atp in ${AtomTypes[@]}
     do
 	echo
-	sed -n -e '/\[ *atomtypes *\]/p' -e '/\[ *atomtypes *\]/,/^ *\[/{/^ *\[/d;p;}' $atp
+	$SED -n -e '/\[ *atomtypes *\]/p' -e '/\[ *atomtypes *\]/,/^ *\[/{/^ *\[/d;p;}' $atp
     done >> $base-usr.top
     for mtp in ${MoleculeTypes[@]}
     do
 	echo
-	sed -n -e '/\[ *moleculetype *\]/,/\[ *system *\]/{/\[ *system *\]/d;p;}' $mtp
+	$SED -n -e '/\[ *moleculetype *\]/,/\[ *system *\]/{/\[ *system *\]/d;p;}' $mtp
     done >> $base-usr.top
-    sed -n -e 'H' -e '/^#include.*forcefield.itp/{n;x;}' -e '${x;p;}' $TOP >> $base-usr.top
+    $SED -n -e 'H' -e '/^#include.*forcefield.itp/{n;x;}' -e '${x;p;}' $TOP >> $base-usr.top
     TOP=$DIR/$base-usr.top
 fi
 
@@ -2711,7 +2711,7 @@ then
 	# Of course, this only makes sense if we have something other than ligand
 	if [[ -n $Ligenv ]]
 	then
-	    printf "%5d %5d %5d %5d %5d\n" $(SEQ ${Ligenv[@]}) | sed $'s/ 0//g;1s/^/[ check ]\\\n/' > charge.ndx
+	    printf "%5d %5d %5d %5d %5d\n" $(SEQ ${Ligenv[@]}) | $SED $'s/ 0//g;1s/^/[ check ]\\\n/' > charge.ndx
 	    NDX="-n charge.ndx"
 	    [[ $GMXVERSION -gt 4 ]] && TPRCONV="$GMXBIN/gmx tpr-convert" || TPRCONV="$GMXBIN/tpbconv"
 	    $TPRCONV -s $base-sol-b4ions.tpr -o $base-sol-b4ions-noligand.tpr -n charge.ndx >/dev/null 2>&1
@@ -2807,7 +2807,7 @@ then
     then
         # - Then call genion
 	#   Earlier versions of GMX use a -random flag. Check if this one does.
-	RND=$(genion -h 2>&1 | sed -n 's/^\(-random\) .*/\1/p')
+	RND=$(genion -h 2>&1 | $SED -n 's/^\(-random\) .*/\1/p')
         GENION="${GMX}genion -s $base-sol-b4ions.tpr -o $base-sol.gro -n sol.ndx"
         GENION="$GENION -pname $PNAM -nname $NNAM -np $U -nn $V -pq $m -nq $n -rmin 0.5 $RND"
 
@@ -3265,7 +3265,7 @@ __NOTES__
 
 
 # Convert the array of analyses into a string for matching
-ANALYSIS=$(sed 's/ /./g' <<< .${ANALYSIS[@]}.)
+ANALYSIS=$($SED 's/ /./g' <<< .${ANALYSIS[@]}.)
 
 
 if [[ $ANALYSIS =~ .LIE. ]]
@@ -3283,7 +3283,7 @@ then
 	0
     )
     # Process with sed to add newlines
-    terms=$(sed $'s/ /\\\n/g' <<< ${terms[@]})
+    terms=$($SED $'s/ /\\\n/g' <<< ${terms[@]})
 
     # The production MD is run in parts; Process each part
     ls $base-MD.*edr >/dev/null 2>&1 || exit_error "LIE ANALYSIS ERROR: No energy \(.edr\) files found."
@@ -3291,7 +3291,7 @@ then
     for edr in *-MD.part*.edr 
     do
         [[ $GMXVERSION -gt 4 ]] && ENE="$GMXBIN/gmx energy" || ENE=$GMXBIN/g_energy
-	echo $terms | $ENE -f $edr -o ${edr%.edr}.xvg 2>/dev/null | sed '/^Energy/,/^ *$/{/^ *$/q}' > ${edr%.edr}.lie
+	echo $terms | $ENE -f $edr -o ${edr%.edr}.xvg 2>/dev/null | $SED '/^Energy/,/^ *$/{/^ *$/q}' > ${edr%.edr}.lie
     done
 fi
 

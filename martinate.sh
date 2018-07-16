@@ -677,12 +677,12 @@ echo Gromacs RC file: $GMXRC
 [[ $GMXRC ]] && source $GMXRC 
 
 # Find out which Gromacs version this is
-GMXVERSION=$(mdrun -h 2>&1 | sed -n '/^.*VERSION \([^ ]*\).*$/{s//\1/p;q;}')
+GMXVERSION=$(mdrun -h 2>&1 | $SED -n '/^.*VERSION \([^ ]*\).*$/{s//\1/p;q;}')
 # From version 5.0.x on, the commands are gathered in one 'gmx' program
 # The original commands are aliased, but there is no guarantee they will always remain
-[[ -z $GMXVERSION ]] && GMXVERSION=$(gmx -h 2>&1 | sed -n '/^.*VERSION \([^ ]*\).*$/{s//\1/p;q;}')
+[[ -z $GMXVERSION ]] && GMXVERSION=$(gmx -h 2>&1 | $SED -n '/^.*VERSION \([^ ]*\).*$/{s//\1/p;q;}')
 # Version 2016 uses lower case "version", which is potentially ambiguous, so match carefully
-[[ -z $GMXVERSION ]] && GMXVERSION=$(gmx -h 2>&1 | sed -n '/^GROMACS:.*gmx, version \([^ ]*\).*$/{s//\1/p;q;}')
+[[ -z $GMXVERSION ]] && GMXVERSION=$(gmx -h 2>&1 | $SED -n '/^GROMACS:.*gmx, version \([^ ]*\).*$/{s//\1/p;q;}')
 ifs=$IFS; IFS="."; GMXVERSION=($GMXVERSION); IFS=$ifs
 
 # Set the directory for binaries
@@ -781,11 +781,6 @@ then
     fi
 fi
 
-## 5. Set the correct sed version for multi-platform use
-# Also try to avoid GNU specific sed statements for the
-# poor bastards that are stuck with one of those Mac things
-SED=$(which gsed || which sed)
-
 
 #--------------------------------------------------------------------
 #---TIMING
@@ -837,7 +832,7 @@ echo Will run from step ${STEPS[$STEP]} until ${STEPS[$STOP]}
 DO() { [[ $STEP == $NOW ]] && echo "$@" && $@; }
 
 # Sed wrapper - echo the command line before running it
-SED() { echo sed "$@" 1>&2; sed "$@"; }
+SED() { echo $SED "$@" 1>&2; $SED "$@"; }
 
 # Sequence generation; seq might not be available
 SEQ() { for ((i=$1; i<=$2; i++)); do echo $i; done; }
@@ -902,7 +897,7 @@ then
 
     #     d. UPDATE martini.itp FOR DUMMIES
     #        Replace the #include statement for ff_dum.itp for atomistic force fields by the contents of it
-    $M && sed -i -e "/#include \"ff_dum.itp\"/r$GMXLIB/$ForceField.ff/ff_dum.itp" -e "/#include \"ff_dum.itp\"/d" martini.itp
+    $M && $SED -i -e "/#include \"ff_dum.itp\"/r$GMXLIB/$ForceField.ff/ff_dum.itp" -e "/#include \"ff_dum.itp\"/d" martini.itp
 else
     cp $FFITP martini.itp
 fi
@@ -975,7 +970,7 @@ then
 	if $NOHETATM -a $(grep -q HETATM $PDB)
 	then
 	    NOTE Removing HETATM entries from PDB file
-	    sed -i '' -e /^HETATM/d $PDB
+	    $SED -i '' -e /^HETATM/d $PDB
 	fi
 
         # Extract a list of chains from PDB file
@@ -987,7 +982,7 @@ then
         # Residues defined in martinize.py
         AA=(ALA CYS ASP GLU PHE GLU HIS ILE LYS LEU MET ASN PRO GLN ARG SER THR VAL TRP TYR)
         # Sed query for residues (separated by \|):
-	SED_AA=$(sed 's/ \+/\\\|/g' <<< ${AA[@]})
+	SED_AA=$($SED 's/ \+/\\\|/g' <<< ${AA[@]})
         # ATOM selection (martinizable residues)
 	ATOM='/^\(ATOM  \|HETATM\)/{/.\{17\} *'$SED_AA' */p;}'
         # HETATM selection (non-martinizable residues)
@@ -1006,7 +1001,7 @@ then
         # removed and then all embedded newlines are replaced by '\|'
         FORMAT='${x;s/\n...\n//;s/\n/\\\|/g;p;}'
         # Finally sed is called processing all rtp files of the force field
-        DEF=$(sed -n -e "$RTPENTRIES" -e "$FORMAT" $GMXLIB/$ForceField.ff/*.rtp)
+        DEF=$($SED -n -e "$RTPENTRIES" -e "$FORMAT" $GMXLIB/$ForceField.ff/*.rtp)
  
         # Now we can split the input PDB file into a processable and a non-processable part
 	echo $DEF
@@ -1030,7 +1025,7 @@ echo Done checking
 
 
 
-SED() { echo sed "$@" 1>&2; sed "$@"; }
+SED() { echo $SED "$@" 1>&2; $SED"$@"; }
 
 
 ## SED stuff
@@ -1355,7 +1350,7 @@ program_options()
     do
         if [[ $opt =~ --$1 ]]
         then
-            OPTS="$OPTS $(sed 's/--[^-]*//;s/=/ /' <<< $opt)"
+            OPTS="$OPTS $($SED 's/--[^-]*//;s/=/ /' <<< $opt)"
         fi
     done
     echo $OPTS
@@ -1554,7 +1549,7 @@ function MDRUNNER ()
     local -i step=($($SED  -n -e '/^ *Step *Time *Lambda/{n;h;}' -e '${x;p;}' $last))
 
     # Check the number of steps for this cycle
-    local -i RUNSTEPS=$(sed -n '/nsteps/s/^.*=\([^;]*\).*$/\1/p' $fnMDP)
+    local -i RUNSTEPS=$($SED -n '/nsteps/s/^.*=\([^;]*\).*$/\1/p' $fnMDP)
 
     if [[ $step -gt 0 ]]
     then
@@ -1643,7 +1638,7 @@ function MDRUNNER ()
     echo
     # Mark the output
     # Make sure that the exit code from the monitor is exitcode of the process. 
-    ($MON | sed 's/^/MONITOR: /'; exit ${PIPESTATUS[0]}) &
+    ($MON | $SED 's/^/MONITOR: /'; exit ${PIPESTATUS[0]}) &
 
     local -i MONID=$!
     writeToLog "Monitor PID: $MONID"
@@ -1706,7 +1701,7 @@ function MDRUNNER ()
 
 TABLE ()
 {
-    ARGS=$(sed 's/ /,/g' <<< $@)
+    ARGS=$($SED 's/ /,/g' <<< $@)
 
     # Create a table for the Coulomb/RF interaction
     python - << __PYTHON__ 
@@ -1834,7 +1829,7 @@ then
     # II. Atomistic force field for multiscaling
 
     #    1. List force fields available
-    AAFF=($(ls -d $GMXLIB/*.ff | sed 's#.*/\(.*\)\.ff#\1#'))
+    AAFF=($(ls -d $GMXLIB/*.ff | $SED 's#.*/\(.*\)\.ff#\1#'))
 
     #    2. Try complete matching
     for i in ${AAFF[@]}; do [[ "$i" == "$ForceField" ]] && ForceFieldAA=$i; done
@@ -1891,8 +1886,8 @@ then
 	NTER='/NTER/{s/.*\+\s*$/0/;s/.*0\s*$/1/;s/.*N\s*/2/}'
         # C-terminal
 	CTER='/CTER/{s/.*\-\s*$/0/;s/.*0\s*$/1/;s/.*N\s*/2/}'
-    
-	sed -e "$NTER" -e "$CTER" -e "$ACID" -e "$LYS" -e "$HIS"  $dirn/$TITR > pdb2gmx.query
+	
+	$SED -e "$NTER" -e "$CTER" -e "$ACID" -e "$LYS" -e "$HIS" $dirn/$TITR > pdb2gmx.query
 	trash pdb2gmx.query
     fi
 
@@ -1948,7 +1943,7 @@ then
                     # 2. rename the moleculetype under [ system ]
                     SED -i -e "/${ITP[$i]}/d" -e "/[\s*system\s*]/,\$s/${MTP[$i]}/${MTP[$j]}/" $base-aa.top
                     # List the file for removal
-                    trash ${ITP[$i]} $(sed 's/_/-posre_/' <<< ${ITP[$i]})
+                    trash ${ITP[$i]} $($SED 's/_/-posre_/' <<< ${ITP[$i]})
                     break
 		fi
             done
@@ -1963,7 +1958,7 @@ then
         #  3 'C'     8     67  
         #
         # In case there is one chain without identifier, set the identifier
-	CHAINS=(`sed -n '/chain  #res #atoms/,/^\s*$/s/^\s\+[0-9]\+..\(.\).*$/\1/p' 01-TOPOLOGY-AA.log`)
+	CHAINS=($($SED -n '/chain  #res #atoms/,/^\s*$/s/^\s\+[0-9]\+..\(.\).*$/\1/p' 01-TOPOLOGY-AA.log))
 	[[ -n $CHAINS ]] || CHAINS=(A)
 	MS=()
 	N=0;
@@ -2019,7 +2014,7 @@ then
         #    - at lines starting with #include and not containing a slash in the file name
         #      substitute the line with the name of the included file and print
 	sedexpr='/^#include .*"\([^/]*\)"/s//\1/p'
-	ITPFILES=($(sed -n -e "$sedexpr" $base-aa.top))
+	ITPFILES=($($SED -n -e "$sedexpr" $base-aa.top))
 
 
         # h. Get the list of moleculetypes from the itp files
@@ -2050,7 +2045,7 @@ then
     fi 
 
     #     7. Set multiscale arguments for Martinize
-    $ALL && M_MULTI="-multi all" || M_MULTI=$(sed 's/\(^\| \)/ -multi /g' <<< ${MULTI[@]})	
+    $ALL && M_MULTI="-multi all" || M_MULTI=$($SED 's/\(^\| \)/ -multi /g' <<< ${MULTI[@]})	
 
     PDB=$OUT
 fi
@@ -2131,12 +2126,12 @@ then
         # 4. stdout is parsed by sed, extracting moleculetype names for each chain
         # 5. The result is stored as array MARMOLS
         #          |-1-| |------2-----|  |-------3------|   |--------------------------4---------------------|
-	MARMOLS=($($MARTINIZE 3>&1 1>&2 2>&3 | tee /dev/stderr | sed -n '/^INFO *[0-9]\+-> \+\([^ ]\+\).*$/s//\1/p'))
+	MARMOLS=($($MARTINIZE 3>&1 1>&2 2>&3 | tee /dev/stderr | $SED -n '/^INFO *[0-9]\+-> \+\([^ ]\+\).*$/s//\1/p'))
 
         # If we use polarizable or BMW water, we need to change AC1/AC2 to C1/C2
 	if $POLARIZABLE
 	then
-	    sed -i -e 's/AC[12]/ C[12]/' $base-mart.pdb
+	    $SED -i -e 's/AC[12]/ C[12]/' $base-mart.pdb
 	fi
 
         # Check for chains to multiscale
@@ -2210,7 +2205,7 @@ then
             echo MOLECULES: ${MOLECULES[@]}
 
             sedexpr='/^#include .*"\([^/]*\)"/s//\1/p'
-            ITPFILES=($(sed -n -e "$sedexpr" $base-cg.top))
+            ITPFILES=($($SED -n -e "$sedexpr" $base-cg.top))
 
             # We only take the FIRST moleculetype from the itp file
             awkexpr='/moleculetype/{getline; while ($0 ~ /^ *;/) getline; print $1; exit}'
@@ -2234,14 +2229,14 @@ then
 			for ((k=0; k<${MOLECULES[$((i+1))]}; k++))
 			do
                             EnergyGroups[${#EnergyGroups[@]}]=${MOLECULES[$i]}_$K
-                            echo -e "[ ${MOLECULES[$i]}_$K ]\n$(printf "$fmt\n" `SEQ $COUNT $((COUNT+N-1))` | sed 's/ 0//g')" >> EnergyGroups.ndx
+                            echo -e "[ ${MOLECULES[$i]}_$K ]\n$(printf "$fmt\n" `SEQ $COUNT $((COUNT+N-1))` | $SED 's/ 0//g')" >> EnergyGroups.ndx
                             : $((COUNT+=N)) $((K++))
 			done
                     fi
 		done
 		printf "    %20s : %20s\n" ${MOLECULES[$i]}: ${MOLITP[$((i/2))]}
             done  	                   
-            __mdp_cg__energygrps=$(sed 's/ /,/g' <<< "${EnergyGroups[@]} Membrane Solvent")
+            __mdp_cg__energygrps=$($SED 's/ /,/g' <<< "${EnergyGroups[@]} Membrane Solvent")
             echo @@ $__mdp_cg__energygrps
 	fi
 
@@ -2405,7 +2400,7 @@ then
         # Uncomment the include topology for lipids
 	cp $SDIR/martini_${FFTAG}_lipids.itp ./ || touch martini_${FFTAG}_lipids.itp
 	# Check which lipids are defined and which (custom) lipid topologies to add
-	lipids=($(sed -n '/^ *\[ *moleculetype/{n;/^ *;/n;p;}' martini_${FFTAG}_lipids.itp))
+	lipids=($($SED -n '/^ *\[ *moleculetype/{n;/^ *;/n;p;}' martini_${FFTAG}_lipids.itp))
 	for lip in ${alname[@]}
 	do
 	    isdefined=false
@@ -2476,18 +2471,18 @@ then
 	# Add membrane and solvent to CG list in $base-mart.ndx
 	# The structure has Protein/DNA/RNA Membrane Solvent Ions
 	cp $base-mart.ndx $base-cg.ndx
-	echo -e "$(printf "$fmt\n" `SEQ $((NPROT + 1)) $((NPROT + NMEM + NSOL))` | sed 's/ 0//g')" >> $base-cg.ndx
+	echo -e "$(printf "$fmt\n" `SEQ $((NPROT + 1)) $((NPROT + NMEM + NSOL))` | $SED 's/ 0//g')" >> $base-cg.ndx
 
 	# Add the ions to the CG group of we do not want hybrid ions
 	if ! $HybridIons && [[ $NION -gt 0 ]]
 	then
-	    echo -e "$(printf "$fmt\n" `SEQ $((NPROT+NMEM+NSOL+1)) $((NPROT+NMEM+NSOL+NION))` | sed 's/ 0//g')" >> $base-cg.ndx
+	    echo -e "$(printf "$fmt\n" `SEQ $((NPROT+NMEM+NSOL+1)) $((NPROT+NMEM+NSOL+NION))` | $SED 's/ 0//g')" >> $base-cg.ndx
 	fi
 
-	echo -e "[ Solute ]\n$(printf "$fmt\n" `SEQ 1 $NPROT` | sed 's/ 0//g')" >> $base-cg.ndx
+	echo -e "[ Solute ]\n$(printf "$fmt\n" `SEQ 1 $NPROT` | $SED 's/ 0//g')" >> $base-cg.ndx
     else
 	# Everything is in the CG group
-	echo -e "[ CG ]\n$(printf "$fmt\n" `SEQ 1 $NTOT`      | sed 's/ 0//g')"  > $base-cg.ndx
+	echo -e "[ CG ]\n$(printf "$fmt\n" `SEQ 1 $NTOT`      | $SED 's/ 0//g')"  > $base-cg.ndx
         # And we have an empty Solute group
         echo '[ Solute ]' >> $base-cg.ndx
     fi
@@ -2496,20 +2491,20 @@ then
     echo '[ Membrane ]' >> $base-cg.ndx
     if [[ $NMEM -gt 0 ]] 
     then
-	echo -e "$(printf "$fmt\n" `SEQ $((NPROT+1)) $((NPROT+NMEM))` | sed 's/ 0//g')" >> $base-cg.ndx
+	echo -e "$(printf "$fmt\n" `SEQ $((NPROT+1)) $((NPROT+NMEM))` | $SED 's/ 0//g')" >> $base-cg.ndx
     fi
 
     # Solvent 
-    echo -e "[ Solvent ]\n$(printf "$fmt\n" `SEQ $((NPROT+NMEM+1)) $((NPROT+NMEM+NSOL+NION))` | sed 's/ 0//g')" >> $base-cg.ndx
+    echo -e "[ Solvent ]\n$(printf "$fmt\n" `SEQ $((NPROT+NMEM+1)) $((NPROT+NMEM+NSOL+NION))` | $SED 's/ 0//g')" >> $base-cg.ndx
 
     if $HybridIons && [[ $NION -gt 0 ]]
     then
 	# Make ions group (hybrid character) for multiscaling
-	echo -e "[ Ions ]\n$(printf "$fmt\n" `SEQ $((NPROT+NMEM+NSOL+1)) $((NPROT+NMEM+NSOL+NION))` | sed 's/ 0//g')" >> $base-cg.ndx
+	echo -e "[ Ions ]\n$(printf "$fmt\n" `SEQ $((NPROT+NMEM+NSOL+1)) $((NPROT+NMEM+NSOL+NION))` | $SED 's/ 0//g')" >> $base-cg.ndx
     fi
 
     # The whole system... easy.
-    echo -e "[ System ] \n$(printf "$fmt\n" `SEQ 1 $NTOT` | sed 's/ 0//g')" >> $base-cg.ndx
+    echo -e "[ System ] \n$(printf "$fmt\n" `SEQ 1 $NTOT` | $SED 's/ 0//g')" >> $base-cg.ndx
 
     # Energy groups, if we have them
     [[ -n $DAFT ]] && [[ -f $DAFT ]] && cat $DAFT >> $base-cg.ndx
@@ -2525,7 +2520,7 @@ then
     # We need to change the moleculetype names for 
     # the ions. CG names are NA+, CL-, etc, whereas AA names
     # are NA, CL, etc
-    sed -i '/\[ *molecules *\]/,$s/\(NA\|K\|CA\|ZN\|CU\|CL\)2*[+-]/\1 /' $base-cg.top
+    $SED -i '/\[ *molecules *\]/,$s/\(NA\|K\|CA\|ZN\|CU\|CL\)2*[+-]/\1 /' $base-cg.top
 fi
 
 
@@ -2565,8 +2560,8 @@ if [[ -f $DAFT ]]
 then
     NDX=$DAFT
     cp $SDIR/martini_${FFTAG}_{ions,lipids}.itp .
-    grps=($(sed '/^ *[^[]/d;s/\[ *\(.*\) *\]/\1/;/Solute/d;/System/d;' $DAFT))
-    __mdp_cg__energygrps=$(sed 's/ /,/g' <<< ${grps[@]})
+    grps=($($SED '/^ *[^[]/d;s/\[ *\(.*\) *\]/\1/;/Solute/d;/System/d;' $DAFT))
+    __mdp_cg__energygrps=$($SED 's/ /,/g' <<< ${grps[@]})
 fi
 
 trash $base-EM.{tpr,edr,trr} em-out.mdp
@@ -2708,7 +2703,7 @@ do
     OUT=$base-NPT-$__mdp_equil__dt-$run.gro
     MDP=md-init-$__mdp_equil__dt-$run.mdp
     mdp_options ${OPT[@]} > $MDP
-    nsteps=$(sed -n '/nsteps/s/.*=//p' $MDP)
+    nsteps=$($SED -n '/nsteps/s/.*=//p' $MDP)
     before=$(date +%s)
     echo ==--- $GRO $OUT
     MD="MDRUNNER -f $MDP -c $GRO -p $TOP -o $OUT -n $NDX -np $NP -l $LOG -force $FORCE $TABLES $MONALL"
@@ -2764,7 +2759,7 @@ echo @@@ $OUT
 
 mdp_options ${OPT[@]} > $MDP
 
-mdsteps=$(sed -n '/nsteps/s/.*=//p' $MDP)
+mdsteps=$($SED -n '/nsteps/s/.*=//p' $MDP)
 estimate=$(( (timing*(1000*mdsteps)/nsteps)/1000 ))
 estfin=$(( $(date +%s) + estimate ))
 echo "Expected runtime for $mdsteps step: $(( estimate/3600 ))H:$(( (estimate%3600)/60 ))M:$(( estimate%60 ))S (until $(date -r $estfin))"
