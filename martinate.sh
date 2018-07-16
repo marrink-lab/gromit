@@ -3,7 +3,7 @@
 PROGRAM=martinate.sh
 VERSION=0.99
 VERSTAG=devel-180428-1200-TAW
-AUTHOR="Tsjerk A. Wassenaar, PhD"
+AUTHORS="Tsjerk A. Wassenaar, PhD"
 YEAR="2018"
 AFFILIATION="
 University of Groningen
@@ -152,8 +152,8 @@ PROGEVAR=(     DSSP  GMXRC)
 #  - Ions
 # All groups are optional (as long as there are some)
 amino_acids=(ALA CYS ASP GLU PHE GLY HIS HIH ILE LYS LEU MET ASN PRO HYP GLN ARG SER THR VAL TRP TYR)
-nucleic_acids=(DG DA DC DT)
-solvent_names=(W WF PW BMW SOL)
+nucleic_acids=(DG DA DC DT G A C U)
+solvent_names=(W WF PW BMW SOL HOH)
 
 
 # Run control
