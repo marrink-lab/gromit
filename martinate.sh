@@ -237,16 +237,24 @@ LJRP=12
 LJSW=-1
 RC=1.4
 
-# - other
-DIR=.
-NP=1
-FORCE=false
-MAXH=-1       # Maximum duration of run
-NOEXEC=
-JUNK=()
+# - run control and files
+DIR="."       # Directory to run and write           
+TPR=          # Run input file... skip to production or to STEP
+NAME=         # Run name
+FETCH=        # Try to fetch PDB file from web
+MSGFILE=/dev/stdout      # Master log file (stdout)
+ERRFILE=/dev/stderr      # Error log file (stderr)
+EXEC=         # Execute run
+NP=1          # Number of processors
+MDP=          # User-provided MDP file
+MDARGS=       # User-provided arguments to mdrun
 DAFT=
+MAXH=-1       # Maximum duration of run
+JUNK=()       # Garbage collection
 SCRATCH=      # Scratch directory
-KEEP=false
+ARCHIVE=      # Archive file name
+FORCE=false   # Overwrite existing run data
+KEEP=false    # Keep intermediate rubbish (except junk)
 
 # - group definitions
 NATOMS=0                 # Total number of atoms
@@ -404,7 +412,7 @@ while [ -n "$1" ]; do
     -np      ) NP=$2                                ; shift 2; continue ;; #==1 Number of cores (processes) to use
     -maxh    ) MAXH=$2                              ; shift 2; continue ;; #==2 Maximum run time
     -force   ) FORCE=true                           ; shift 1; continue ;; #==2 Whether or not to force redoing parts already run
-    -noexec  ) NOEXEC=echo                          ; shift 1; continue ;; #==2 Whether or not to actually execute the commands
+    -noexec  ) EXEC=echo                          ; shift 1; continue ;; #==2 Whether or not to actually execute the commands
 
     #=1
     #=1 Forcefield control options
@@ -1835,7 +1843,7 @@ then
     fi
 
     #     6. Process
-    if [[ -n $NOEXEC ]] || $(all_exist ${OUTPUT[@]})
+    if [[ -z $EXEC ]] || $(all_exist ${OUTPUT[@]})
     then
         # Skipping verbosely; showing what would have been run
 	echo -e "Skipping: \n$PDB2GMX"   
@@ -2049,9 +2057,9 @@ then
 	echo $MARTINIZE
     fi
 
-    # Only if we have a pdb file and we actually run (NOEXEC is not set) 
+    # Only if we have a pdb file and we actually run (EXEC is not set) 
     # then this block is executed
-    if [[ -n $pdb && -z $NOEXEC ]]
+    if [[ -n $pdb && -z $EXEC ]]
     then
         # Executing the command. 
         # We need to know the moleculetype names (and itp files) after martinizing
@@ -2277,9 +2285,9 @@ then
     then
 	# Add a comment at the end of the TOP file to avoid adding stuff to existing lines 
 	echo ';' >> $TOP
-	$NOEXEC $INSANE 2>&1 | tee -a $TOP
+	$EXEC $INSANE 2>&1 | tee -a $TOP
     else
-	$NOEXEC $INSANE 2>insane.stderr
+	$EXEC $INSANE 2>insane.stderr
 	cat insane.stderr | tee -a $TOP
     fi
 
@@ -2510,7 +2518,7 @@ mdp_options ${OPT[@]} > $MDP
 MD="MDRUNNER -f $MDP -c $GRO -p $TOP -o $OUT -n $NDX -np 1 -l $LOG -force $FORCE $TABLES"
 echo $MD
 
-[[ $STEP ==   $NOW     ]] && $NOEXEC $MD && : $((STEP++)) && GRO=$OUT && archive
+[[ $STEP ==   $NOW     ]] && $EXEC $MD && : $((STEP++)) && GRO=$OUT && archive
 [[ $STOP == $((NOW++)) ]] && exit_clean
 
 # Here we check whether energy minimization was successful. If not, the potential energy or
@@ -2553,7 +2561,7 @@ then
     MDP=pr-nvt.mdp
     mdp_options ${OPT[@]} > $MDP
     MD="MDRUNNER -f $MDP -c $GRO -p $TOP -o $OUT -n $NDX -np $PRNP -l $LOG -force $FORCE $TABLES $MONALL"
-    $NOEXEC $MD 
+    $EXEC $MD 
     GRO=$OUT
     trash $base-PR-NVT.{cpt,tpr} 
 fi
@@ -2597,7 +2605,7 @@ do
     MDP=pr-npt-$__mdp_equil__dt-$run.mdp
     mdp_options ${OPT[@]} > $MDP
     MD="MDRUNNER -f $MDP -c $GRO -p $TOP -o $OUT -n $NDX -np $NP -l $LOG -force $FORCE $TABLES $MONALL"
-    $NOEXEC $MD 
+    $EXEC $MD 
     GRO=$OUT
     : $((run++))
     trash $base-PR-NPT-$__mdp_equil__dt.{cpt,tpr} 
@@ -2642,7 +2650,7 @@ do
     before=$(date +%s)
     echo ==--- $GRO $OUT
     MD="MDRUNNER -f $MDP -c $GRO -p $TOP -o $OUT -n $NDX -np $NP -l $LOG -force $FORCE $TABLES $MONALL"
-    $NOEXEC $MD 
+    $EXEC $MD 
     timing=$(( $(date +%s) - before ))
     echo "Ran $nsteps steps in $timing seconds"
     GRO=$OUT
@@ -2700,7 +2708,7 @@ estfin=$(( $(date +%s) + estimate ))
 echo "Expected runtime for $mdsteps step: $(( estimate/3600 ))H:$(( (estimate%3600)/60 ))M:$(( estimate%60 ))S (until $(date -r $estfin))"
 
 MD="MDRUNNER -f $MDP -c $GRO -p $TOP -o $OUT -n $NDX -np $NP -l $LOG -split -force $FORCE $TABLES -monitor"
-$NOEXEC $MD 
+$EXEC $MD 
 
 # : $((STEP++))
 
