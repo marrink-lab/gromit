@@ -719,21 +719,8 @@ __METHOD__
 )
 
 #--------------------------------------------------------------------
-#---TIMING (GRID STUFF)
+#---TIMING
 #--------------------------------------------------------------------
-
-# If UNTIL is not set, then we run until all work is done, or until we crash
-UNTIL=
-
-
-# If we have a proxy, then we adhere to it, assuming to be running on the GRID
-# The allowed runtime is set slightly lower to allow the script to finish
-$GRID && which voms-proxy-info && LEFT=$(( $(voms-proxy-info -timeleft &> /dev/null) - 300 )) || LEFT=
-
-
-# If LEFT is set, MAXH may not be set negative
-[[ $LEFT ]] && (( MAXH < 0 )) && MAXH=48
-
 
 # Maximum time in seconds
 if [[ $MAXH =~ ":" ]]
@@ -743,16 +730,8 @@ then
     MAXS=$((3600*MAXS[0] + 60*MAXS[1] + MAXS[2]))
 else
     # Format x.y HH
-    # BASH floating point arithmetics
-    int=${MAXH%.*}
-    frac=${MAXH#$int}
-    frac=${frac/./}
-    MAXS=$(( ${MAXH/./} * 3600 / (10**${#frac})  ))
+    MAXS=$(awk '{printf "%d\n", $1*3600}' <<< $MAXH )
 fi
-
-
-[[ -n $LEFT ]] && (( MAXS > LEFT )) && MAXS=$LEFT
-
 
 if (( MAXS > 0 ))
 then
@@ -761,7 +740,6 @@ then
 else
     echo "# No maximum runtime set. Will run until finished or until crash."
 fi
-
 
 # This variable will be reset to the time needed for the last run run
 # A following run will usually take longer.

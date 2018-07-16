@@ -156,15 +156,6 @@ nucleic_acids=(DG DA DC DT)
 solvent_names=(W WF PW BMW SOL)
 
 
-# The Gromacs RC file for use on the WeNMR GRID
-# The existence of this file is checked later to
-# to see if this is a GRID run.
-# Note that the GMXRC file can also be specified with -gmxrc
-# This is just a convenience hack.
-GRIDRC="${VO_ENMR_EU_SW_DIR}/BCBR/gromacs/4.5.3-rtc/bin/GMXRC.bash"
-GRID=false
-
-
 # Run control
 MONALL=       # Monitor all steps
 CONTROL=
@@ -622,12 +613,6 @@ GMXBIN=${GMXBIN%/*}
 # Set the directory to SCRIPTDIR if GMXBIN is empty 
 GMXBIN=${GMXBIN:-$SCRIPTDIR}
 
-# Make binaries executable if they are not
-# (This may be required for Grid processing)
-[[ -f $GMXBIN/grompp && ! -x $GMXBIN/grompp ]] && chmod +x $GMXBIN/grompp
-[[ -f $GMXBIN/mdrun  && ! -x $GMXBIN/mdrun  ]] && chmod +x $GMXBIN/mdrun
-[[ -f $GMXBIN/gmx    && ! -x $GMXBIN/gmx    ]] && chmod +x $GMXBIN/gmx
-
 # Set the command prefix
 [[ $GMXVERSION -gt 4 ]] && GMX="$GMXBIN/gmx " || GMX=$GMXBIN/
 
@@ -719,21 +704,8 @@ SED=$(which gsed || which sed)
 
 
 #--------------------------------------------------------------------
-#---TIMING (GRID STUFF)
+#---TIMING
 #--------------------------------------------------------------------
-
-# If UNTIL is not set, then we run until all work is done, or until we crash
-UNTIL=
-
-
-# If we have a proxy, then we adhere to it, assuming to be running on the GRID
-# The allowed runtime is set slightly lower to allow the script to finish
-which voms-proxy-info && LEFT=$(( $(voms-proxy-info -timeleft &> /dev/null) - 300 )) || LEFT=
-
-
-# If LEFT is set, MAXH may not be set negative
-[[ $LEFT ]] && (( MAXH < 0 )) && MAXH=48
-
 
 # Maximum time in seconds
 if [[ $MAXH =~ ":" ]]
@@ -745,9 +717,6 @@ else
     # Format x.y HH
     MAXS=$(awk '{printf "%d\n", $1*3600}' <<< $MAXH )
 fi
-
-[[ -n $LEFT ]] && (( MAXS > LEFT )) && MAXS=$LEFT
-
 
 if (( MAXS > 0 ))
 then
