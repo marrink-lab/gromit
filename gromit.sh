@@ -144,6 +144,20 @@ PROGEXEC=(     GMXRC squeeze)
 PROGEVAR=(     GMXRC)
 
 
+# Residue groups used for classifying atoms in the structure file.
+# Ions are typically considered positioned after solvent.
+# Membrane is the complementary group to the rest.
+# The structure file is assumed to have the following composition:
+#  - Protein
+#  - Nucleic acids
+#  - Membrane
+#  - Solvent
+#  - Ions
+# All groups are optional (as long as there are some)
+amino_acids=(ALA CYS ASP GLU PHE GLY HIS HIH ILE LYS LEU MET ASN PRO HYP GLN ARG SER THR VAL TRP TYR)
+nucleic_acids=(DG DA DC DT G A C U)
+solvent_names=(W WF PW BMW SOL HOH)
+
 # Run control and files
 DIR="."       # Directory to run and write           
 fnIN=         # Input file name
