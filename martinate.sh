@@ -11,9 +11,6 @@ Nijenborgh 7
 9747AG Groningen
 The Netherlands"
 
-CMD="$0 $@"
-echo "$CMD"
-
 
 : << __NOTES_FOR_USE_AND_EDITING__
 
@@ -112,6 +109,11 @@ __DESCRIPTION__
 
 
 
+
+#--------------------------------------------------------------------
+#---EXTERNAL/USER STUFF
+#--------------------------------------------------------------------
+
 # Structure databases
 RCSB=(http://files.rcsb.org/download/ pdb.gz)
 BIO=(http://www.rcsb.org/pdb/files/ pdb1.gz)
@@ -121,6 +123,9 @@ OPM=(http://opm.phar.umich.edu/pdb/ pdb)
 #--------------------------------------------------------------------
 #---Parsing COMMAND LINE ARGUMENTS AND DEPENDENCIES--
 #--------------------------------------------------------------------
+
+CMD="$0 $@"
+echo "$CMD"
 
 # Directory where this script is
 SDIR=$( [[ $0 != ${0%/*} ]] && cd ${0%/*}; pwd )
@@ -284,7 +289,7 @@ help_fun()
 # Function for displaying USAGE information
 function USAGE ()
 {
-    cat << __USAGE__
+  cat << __USAGE__
 
 $PROGRAM version $VERSION:
 
@@ -295,9 +300,9 @@ $AFFILIATION
 
 __USAGE__
 
-help_fun
+  help_fun
 
-exit $1
+  [[ $1 -lt 0 ]] || exit $1
 }
 
 
@@ -310,18 +315,18 @@ fi
 
 BAD_OPTION ()
 {
-    echo
-    echo "Unknown option "$1" found on command-line"
-    echo "It may be a good idea to read the usage:"
+  echo
+  echo "Unknown option "$1" found on command-line"
+  echo "It may be a good idea to read the usage:"
 
-    USAGE 1
+  USAGE -1
 
-    echo " /\                                               /\ " 
-    echo "/||\  Unknown option "$1" found on command-line  /||\ "
-    echo " ||   It may be a good idea to read the usage     || "
-    echo " ||                                               || "
+  echo " /\                                               /\ " 
+  echo "/||\  Unknown option "$1" found on command-line  /||\ "
+  echo " ||   It may be a good idea to read the usage     || "
+  echo " ||                                               || "
 
-    exit 1
+  exit 1
 }
 
 
@@ -347,7 +352,7 @@ store_note_fun() { a=$@; notes_array+=(${x// /QQQ}); NOTE "$@"; }
 
 ##>> OPTIONS
 while [ -n "$1" ]; do
-  echo '---------->' $1
+
   # Check for program option
   depset=false
   NDEP=${#DEPENDENCIES[@]}
@@ -365,159 +370,151 @@ while [ -n "$1" ]; do
 
   # Check for other options
   case $1 in
-	#=0
-	#=0 OPTIONS
-        #=0 =======
-        #=0
-	-h       ) USAGE 0                              ; exit 0 ;; #==0 Display help
-	--help   ) USAGE 0                              ; exit 0 ;; #==1 Display help
-	-hlevel  ) hlevel=$2                            ; shift 2; continue ;; #==1 Set level of help (use before -h/--help)
-	-olevel  ) olevel=$2                            ; shift 2; continue ;; #==1 Set level of options to display
+    #=0
+    #=0 OPTIONS
+    #=0 =======
+    #=0
+    -h       ) USAGE 0                              ; exit 0 ;; #==0 Display help
+    --help   ) USAGE 0                              ; exit 0 ;; #==1 Display help
+    -hlevel  ) hlevel=$2                            ; shift 2; continue ;; #==1 Set level of help (use before -h/--help)
+    -olevel  ) olevel=$2                            ; shift 2; continue ;; #==1 Set level of options to display
 
-	#=1
-        #=1 File options
-	#=1 ------------
-        #=1
-        -f       ) PDB=$2                               ; shift 2; continue ;; #==0 Input PDB file
-        -top     ) TOP=$2                               ; shift 2; continue ;; #==1 Input topology file 
-        -ndx     ) NDX=$2                               ; shift 2; continue ;; #==1 Input index file
-        -hetatm  ) NOHETATM=false                       ; shift 1; continue ;; #==1 Keep HETATM records
+    #=1
+    #=1 File options
+    #=1 ------------
+    #=1
+    -f       ) PDB=$2                               ; shift 2; continue ;; #==0 Input PDB file
+    -top     ) TOP=$2                               ; shift 2; continue ;; #==1 Input topology file 
+    -ndx     ) NDX=$2                               ; shift 2; continue ;; #==1 Input index file
+    -hetatm  ) NOHETATM=false                       ; shift 1; continue ;; #==1 Keep HETATM records
 
-	#=1
-	#=1 Overall control options
-	#=1 -----------------------
-	#=1
-        -step    ) STEP=$2                              ; shift 2; continue ;; #==1 Step to start protocol
-        -stop    ) STOP=$2                              ; shift 2; continue ;; #==1 Step to stop protocol
-        -keep    ) KEEP=true                            ; shift 1; continue ;; #==2 Whether or not to keep intermediate data
-        -dir     ) DIR=$2                               ; shift 2; continue ;; #==2 Directory for running simulation
-        -np      ) NP=$2                                ; shift 2; continue ;; #==1 Number of cores (processes) to use
-        -maxh    ) MAXH=$2                              ; shift 2; continue ;; #==2 Maximum run time
-        -force   ) FORCE=true                           ; shift 1; continue ;; #==2 Whether or not to force redoing parts already run
-        -noexec  ) NOEXEC=echo                          ; shift 1; continue ;; #==2 Whether or not to actually execute the commands
+    #=1
+    #=1 Overall control options
+    #=1 -----------------------
+    #=1
+    -step    ) STEP=$2                              ; shift 2; continue ;; #==1 Step to start protocol
+    -stop    ) STOP=$2                              ; shift 2; continue ;; #==1 Step to stop protocol
+    -keep    ) KEEP=true                            ; shift 1; continue ;; #==2 Whether or not to keep intermediate data
+    -dir     ) DIR=$2                               ; shift 2; continue ;; #==2 Directory for running simulation
+    -np      ) NP=$2                                ; shift 2; continue ;; #==1 Number of cores (processes) to use
+    -maxh    ) MAXH=$2                              ; shift 2; continue ;; #==2 Maximum run time
+    -force   ) FORCE=true                           ; shift 1; continue ;; #==2 Whether or not to force redoing parts already run
+    -noexec  ) NOEXEC=echo                          ; shift 1; continue ;; #==2 Whether or not to actually execute the commands
 
-        #=1
-        #=1 Forcefield control options
-        #=1 --------------------------
-        #=1
-        -cg      ) MARTINI=$2                           ; shift 2; continue ;; #==1 Coarse grain force field
-        -sol     ) SOL=$2                               ; shift 2; continue ;; #==1 Solvent type to use 
-        -ffitp   ) FFITP=$2                             ; shift 2; continue ;; #==2 Coarse-grain force field definition
-        -fftag   ) FFTAG=$2                             ; shift 2; continue ;;
-        -itp     ) USRITP+=($2)                         ; shift 2; continue ;; #==2 User-provided ITP file
-        -dry     ) DRY=$2                               ; shift 2; continue ;; #==2 Use dry martini from file definition
+    #=1
+    #=1 Forcefield control options
+    #=1 --------------------------
+    #=1
+    -cg      ) MARTINI=$2                           ; shift 2; continue ;; #==1 Coarse grain force field
+    -sol     ) SOL=$2                               ; shift 2; continue ;; #==1 Solvent type to use 
+    -ffitp   ) FFITP=$2                             ; shift 2; continue ;; #==2 Coarse-grain force field definition
+    -fftag   ) FFTAG=$2                             ; shift 2; continue ;;
+    -itp     ) USRITP+=($2)                         ; shift 2; continue ;; #==2 User-provided ITP file
+    -dry     ) DRY=$2                               ; shift 2; continue ;; #==2 Use dry martini from file definition
 
-	#=1
-	#=1 Simulation control options
-	#=1 --------------------------
-	#=1
-        -T       ) Temperature=$2                       ; shift 2; continue ;; #==1 Temperature
-        -P       ) Pressure=$2                          ; shift 2; continue ;; #==1 Pressure
-        -salt    ) Salinity=$2                          ; shift 2; continue ;; #==1 Salt concentration
-        -dt      ) DELT=$2                              ; shift 2; continue ;; #==2 Integration time step
-        -time    ) TIME=$2                              ; shift 2; continue ;; #==1 Production simulation time
-        -at      ) AT=$2                                ; shift 2; continue ;; #==1 Output sampling frequency
-        -em      ) EMSTEPS=$2                           ; shift 2; continue ;; #==2 Number of steps for EM
-#       -gmxrc   ) GMXRC=$2                             ; shift 2; continue ;; 
-#       -dssp    ) DSSP=$2                              ; shift 2; continue ;;
-	-rtc     ) RotationalConstraints=rtc            ; shift  ; continue ;; #==2 Whether or not to use rotational constraints
+    #=1
+    #=1 Simulation control options
+    #=1 --------------------------
+    #=1
+    -T       ) Temperature=$2                       ; shift 2; continue ;; #==1 Temperature
+    -P       ) Pressure=$2                          ; shift 2; continue ;; #==1 Pressure
+    -salt    ) Salinity=$2                          ; shift 2; continue ;; #==1 Salt concentration
+    -dt      ) DELT=$2                              ; shift 2; continue ;; #==2 Integration time step
+    -time    ) TIME=$2                              ; shift 2; continue ;; #==1 Production simulation time
+    -at      ) AT=$2                                ; shift 2; continue ;; #==1 Output sampling frequency
+    -em      ) EMSTEPS=$2                           ; shift 2; continue ;; #==2 Number of steps for EM
+#   -gmxrc   ) GMXRC=$2                             ; shift 2; continue ;; 
+#   -dssp    ) DSSP=$2                              ; shift 2; continue ;;
+    -rtc     ) RotationalConstraints=rtc            ; shift  ; continue ;; #==2 Whether or not to use rotational constraints
 
-        #=2
-        #=2 Multiscale options
-        #=2 ------------------
-        #=2
-        -m       ) MULTI[$((NCH++))]=$2; M=true         ; shift 2; continue ;; #==2 Chains for multiscaling
-        -M       ) ALL=true; M=true                     ; shift 1; continue ;; #==2 Multiscale all chains
-        -ff      ) ForceField=$2                        ; shift 2; continue ;; #==2 Atomistic force field for multiscaling
-        -vsite   ) VSITE=true                           ; shift 1; continue ;; #==2 Use virtual sites in multiscaling
-        -epsr    ) EPSR=$2                              ; shift 2; continue ;; #==2 Dielectric constant of vacuum
-        -epsrf   ) EPSRF=$2                             ; shift 2; continue ;; #==2 Dielectric constant of Reaction-Field
-        -ljdp    ) LJDP=$2                              ; shift 2; continue ;; #==2 Lennard-Jones dispersion
-        -ljrp    ) LJRP=$2                              ; shift 2; continue ;; #==2 Lennard-Jones repulsion
-        -ljsw    ) LJSW=$2                              ; shift 2; continue ;; #==2 Lennard-Jones switch radius
-        -rc      ) RC=$2                                ; shift 2; continue ;; #==2 Cut-off for non-bonded terms
+    #=2
+    #=2 Multiscale options
+    #=2 ------------------
+    #=2
+    -m       ) MULTI[$((NCH++))]=$2; M=true         ; shift 2; continue ;; #==2 Chains for multiscaling
+    -M       ) ALL=true; M=true                     ; shift 1; continue ;; #==2 Multiscale all chains
+    -ff      ) ForceField=$2                        ; shift 2; continue ;; #==2 Atomistic force field for multiscaling
+    -vsite   ) VSITE=true                           ; shift 1; continue ;; #==2 Use virtual sites in multiscaling
+    -epsr    ) EPSR=$2                              ; shift 2; continue ;; #==2 Dielectric constant of vacuum
+    -epsrf   ) EPSRF=$2                             ; shift 2; continue ;; #==2 Dielectric constant of Reaction-Field
+    -ljdp    ) LJDP=$2                              ; shift 2; continue ;; #==2 Lennard-Jones dispersion
+    -ljrp    ) LJRP=$2                              ; shift 2; continue ;; #==2 Lennard-Jones repulsion
+    -ljsw    ) LJSW=$2                              ; shift 2; continue ;; #==2 Lennard-Jones switch radius
+    -rc      ) RC=$2                                ; shift 2; continue ;; #==2 Cut-off for non-bonded terms
 
-	#=1
-	#=1 Monitor options
-	#=1 ---------------
-	#=1
-	-monall  ) MONALL=-monitor                      ; shift 1; continue ;; #==2 Monitor all steps using control script
-	-control )                                                             #==2 Simulation monitor script
-		while [[ -n $2 && $2 != ';' ]]
-		do
-			CONTROL="$CONTROL $2"
-			shift
-		done
-                shift 2
-                echo MONITOR COMMAND: $CONTROL 
-		continue;; 
-	-ctime   ) CHECKTIME=$2                         ; shift 2; continue ;; #==2 Time for running monitor
+    #=1
+    #=1 Monitor options
+    #=1 ---------------
+    #=1
+    -monall  ) MONALL=-monitor                      ; shift 1; continue ;; #==2 Monitor all steps using control script
+    -control )                                                             #==2 Simulation monitor script
+      while [[ -n $2 && $2 != ';' ]]
+      do
+        CONTROL="$CONTROL $2"
+        shift
+      done
+      shift 2
+      echo MONITOR COMMAND: $CONTROL 
+      continue;; 
+    -ctime   ) CHECKTIME=$2                         ; shift 2; continue ;; #==2 Time for running monitor
 
-	#=2
-	#=2 A control process is either a program, script or command 
-        #=2 that monitors the production run and terminates it
-        #=2 upon a certain condition, indicated by a zero exit code.
-        #=2 The control process gets the following command-line
-        #=2 options added from mdrun:
-	#=2
-        #=2         -s ${NAME}-MD.tpr 
-        #=2         -f ${NAME}-MD.part#.trr 
-        #=2         -x ${NAME}-MD.part#.xtc 
-        #=2         -e ${NAME}-MD.part#.edr
-        #=2         -g ${NAME}-MD.part#.log 
+    #=2
+    #=2 A control process is either a program, script or command 
+    #=2 that monitors the production run and terminates it
+    #=2 upon a certain condition, indicated by its exit code.
 
-        #=2 
-        #=2 Protocol options
-        #=2 ----------------
-        #=2 
-        -daft    ) DAFT=$2; NDX=$2                      ; shift 2; continue ;; #==2 Run martinate in DAFT pipeline
+    #=2 
+    #=2 Protocol options
+    #=2 ----------------
+    #=2 
+    -daft    ) DAFT=$2; NDX=$2                      ; shift 2; continue ;; #==2 Run martinate in DAFT pipeline
 
-	#=1
-	#=1 Advanced control options
-	#=1 ------------------------
-	#=1
-	#=2 This program allows specifying options for advanced control of 
-	#=2 program invocation and simulation parameters. These options are 
-	#=2 described below.
-	#=2
+    #=1
+    #=1 Advanced control options
+    #=1 ------------------------
+    #=1
+    #=2 This program allows specifying options for advanced control of 
+    #=2 program invocation and simulation parameters. These options are 
+    #=2 described below.
+    #=2
 
-        # The first one is the template/dummy for the help system
-        --mdp-option=value) olevel=2; hlevel=2; USAGE 1; continue;; #==2 Command-line specified simulation parameters
-        --mdp-*  ) MDPOPTS+=(${1#--mdp-})               ; shift  ; continue ;; 
-	#=2
-	#=2 This will add 'option = value' to the MDP file for all simulations 
-	#=2 following energy minimization. MDP options specified on the command line
-	#=2 take precedence over those specified in an input file (-mdp), which take
-	#=2 precedence over parameters defined in this script. 
-	#=2 If the option takes multiple arguments, then 'value' should be a 
-	#=2 comma separated list.
-	#=2 The STEP/STOP controls can be used to set parameters for (pre)production
-	#=2 simulations selectively.
-	#=2
+    # The first one is the template/dummy for the help system
+    --mdp-option=value) olevel=2; hlevel=2; USAGE 1; continue;; #==2 Command-line specified simulation parameters
+    --mdp-*  ) MDPOPTS+=(${1#--mdp-})               ; shift  ; continue ;; 
+    #=2
+    #=2 This will add 'option = value' to the MDP file for all simulations 
+    #=2 following energy minimization. MDP options specified on the command line
+    #=2 take precedence over those specified in an input file (-mdp), which take
+    #=2 precedence over parameters defined in this script. 
+    #=2 If the option takes multiple arguments, then 'value' should be a 
+    #=2 comma separated list.
+    #=2 The STEP/STOP controls can be used to set parameters for (pre)production
+    #=2 simulations selectively.
+    #=2
 
-        # Options for downstream programs
-        # If the options are given on the command line, they are expanded and each
-        # option will be formatted as --program-opt=val
-        --martinize-option=value) olevel=2; hlevel=2; USAGE 1; continue;; #==2 Parameters for martinize
-        --martinize-*) MARTINIZE+=(${1#--martinize})    ; shift  ; continue;;
-         
-        --insane-option=value) olevel=2; hlevel=2; USAGE 1; continue;; #==2 Parameters for insane
-        --insane-*)       INSANE+=(${1#--insane})       ; shift  ; continue;;
+    # Options for downstream programs
+    # If the options are given on the command line, they are expanded and each
+    # option will be formatted as --program-opt=val
+    --martinize-option=value) olevel=2; hlevel=2; USAGE 1; continue;; #==2 Parameters for martinize
+    --martinize-*) MARTINIZE+=(${1#--martinize})    ; shift  ; continue;;
 
-        # If the options are passed by another program, they will be formatted like
-        #   --program{-opt1=val1,-opt2=val2\,val3}
-        # In this case the option needs to be parsed explicitly:
-        --martinize*)  MARTINIZE+=($(readOptList $1))    ; shift  ; continue;;
-        --insane*)        INSANE+=($(readOptList $1))    ; shift  ; continue;;
+    --insane-option=value) olevel=2; hlevel=2; USAGE 1; continue;; #==2 Parameters for insane
+    --insane-*)       INSANE+=(${1#--insane})       ; shift  ; continue;;
 
-        # Other program-specific options
-        --*)   PROGOPTS[${#PROGOPTS[@]}]=$1              ; shift 1; continue ;;
+    # If the options are passed by another program, they will be formatted like
+    #   --program{-opt1=val1,-opt2=val2\,val3}
+    # In this case the option needs to be parsed explicitly:
+    --martinize*)  MARTINIZE+=($(readOptList $1))    ; shift  ; continue;;
+    --insane*)        INSANE+=($(readOptList $1))    ; shift  ; continue;;
 
-	#=0 
-	#=0 
+    # Other program-specific options
+    --*)   PROGOPTS[${#PROGOPTS[@]}]=$1              ; shift 1; continue ;;
 
-        # All options should be covered above. Anything else raises an error here.
-        *)         BAD_OPTION "$1";;
+    #=0 
+    #=0 
+
+    # All options should be covered above. Anything else raises an error here.
+    *)         BAD_OPTION "$1";;
 
   esac
 done
