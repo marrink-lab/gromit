@@ -125,7 +125,7 @@ OPM=(http://opm.phar.umich.edu/pdb/ pdb)
 #--------------------------------------------------------------------
 
 CMD="$0 $@"
-echo "$CMD"
+echo "$CMD" | tee CMD
 
 # Directory where this script is
 SDIR=$( [[ $0 != ${0%/*} ]] && cd ${0%/*}; pwd )
@@ -244,26 +244,40 @@ FORCE=false
 MAXH=-1       # Maximum duration of run
 NOEXEC=
 JUNK=()
-PROGOPTS=()
-MDPOPTS=()
 DAFT=
 SCRATCH=      # Scratch directory
 KEEP=false
 
+# - group definitions
+NATOMS=0                 # Total number of atoms
+Biomol=()                # Biomolecules (protein, nucleic acid, lipid)
+Solute=()                # Solute molecule (protein or so)
+Membrane=()              # Lipids, excluding protein
+Solvent=()               # Solvent, including ions
+Ligand=()                # Ligands
+Ligenv=()                # Ligand environment to consider for LIE contributions
+CoupleGroups=()          # Groups for temperature coupling
+EnergyGroups=()          # Groups for energy calculations
+LIE=false                # LIE run
+
+
 # - simulation parameters
+TIME=0           # Production run time (ns)
+AT=0.5           # Output frequency for positions, energy and log (ns)
 DELT=0.020       # Time step in picoseconds
-TIME=0           # Nanoseconds
-AT=0.5           # Write output every 0.5 ns
 EMSTEPS=500      # Number of steps for EM
 Temperature=310  # Degree Kelvin
-Pressure=1       # Bar
+Tau_T=0.1                # ps
+Pressure=1               # Bar
+Tau_P=1.0                # ps
 Salinity=0.1536  # Concentration NaCl
-SEED=$$
+SEED=$$                  # Random seed for velocity generation
 RotationalConstraints=   # Use rotational constraints, which is mandatory with NDLP
 
-# Directories and executables
-# This gives the directory where the script is located
-SDIR=$( [[ $0 != ${0%/*} ]] && cd ${0%/*}; pwd )
+
+# User defined gromacs program options and simulation parameters (way flexible!)
+PROGOPTS=()              # User-defined program options (--program-option=value)
+MDPOPTS=()               # User-defined mdp parametesrs (--mdp-option=value)
 
 
 hlevel=1
