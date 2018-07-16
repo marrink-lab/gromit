@@ -281,7 +281,7 @@ olevel=1
 help_fun()
 {
   local desc='/^.*#=[0-'${hlevel}']/s//    /p'
-  local item='/#==[0-'${olevel}']/{s/).*#==./  /p;d;}'
+  local item='/#==[0-'${olevel}']/{s/^ */        /;s/).*#==./  /p;d;}'
   sed -n '/##>> OPTIONS/,/##<< OPTIONS/{'"${item};${desc};}" $SDIR/$PROGRAM
 }
 
