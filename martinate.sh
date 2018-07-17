@@ -2831,6 +2831,20 @@ $EXEC $MD
 # : $((STEP++))
 
 [[ $STEP ==   $NOW     ]] && : $((STEP++)) && archive
+
+#--------------------------------------------------------------------
+SHOUT "---DONE SIMULATING"
+#--------------------------------------------------------------------
+
+# We stop here if this was the last bit to do
 [[ $STOP == $((NOW++)) ]] && exit_clean
 
+# Otherwise we just continue with some more fun stuff
+# If we have stuff to do, actually.
+
+#-----------------------------------------------------------------------------------
+SHOUT "Huh!? You made it all the way to the end of the script. This can't be right."
+#-----------------------------------------------------------------------------------
+
+archive
 exit_clean
