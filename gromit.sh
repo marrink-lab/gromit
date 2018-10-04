@@ -612,8 +612,8 @@ find_program_function()
     [[ -n $envvar ]] && [[ -f ${!envvar} ]] && echo ${!envvar} && return 0
 
     # Check if the program is in the directory of this script
-    [[ -f $SDIR/$progr ]] && echo $SDIR/$progr && return 0
-
+    [[ -f $progr ]] && echo $progr && return 0
+    
     # Check if the program is in the PATH
     which $progr 2>/dev/null && return 0 || return 1
 }
@@ -2635,9 +2635,8 @@ then
     ## 1. Solvation
 
     # a. Basic stuff
-    SolFile=${SolFile:-$SolModel}
     [[ $GMXVERSION -gt 4 ]] && SOLVATE="$GMXBIN/gmx solvate" || SOLVATE=$GMXBIN/genbox
-    SOLVATE="$SOLVATE -cp $GRO -cs $SolFile -o $base-sol-b4ions.gro"
+    SOLVATE="$SOLVATE -cp $GRO -cs -o $base-sol-b4ions.gro"
 
     # b. Add program specific options from command line
     SOLVATE="$SOLVATE $(program_options genbox)"
