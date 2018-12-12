@@ -377,8 +377,8 @@ while [ -n "$1" ]; do
     #=0 OPTIONS
     #=0 =======
     #=0
-    -h       ) USAGE 0                              ; exit 0 ;; #==0 Display help
-    --help   ) USAGE 0                              ; exit 0 ;; #==1 Display help
+    -h       ) USAGE 0                              ; exit 0 ;; #==0 Display basic help
+    --help   ) hlevel=9; olevel=9; USAGE 0          ; exit 0 ;; #==1 Display all help (advanced users)
     -hlevel  ) hlevel=$2                            ; shift 2; continue ;; #==1 Set level of help (use before -h/--help)
     -olevel  ) olevel=$2                            ; shift 2; continue ;; #==1 Set level of options to display
 
@@ -1389,21 +1389,25 @@ function program_options()
 function SEQ(){ for ((i=$1; i<=$2; i++)); do echo $i; done };
 
 
-# Routine for extracting the charge from a TPR file
-# a. Extract and set the active molecule name 
-AWK_TPR_MOLNAME='/^ *name=/{sub(".*=","",$0); T=$0}'
-# b. Extract the moleculetype name
-AWK_TPR_MOLTYPE='/^ *moltype *=/{M=$4}'
-# c. Extract the number of instances of the current moleculetype
-#    and initialize charge for moleculetype  
-AWK_TPR_MOLNUM='/#molecules *=/{N[M]=$3; C[M]=0}'
-# d. Extract and accumulate charge
-AWK_TPR_CHARGE='/^ *atom.*q=/{sub(".*q=","",$0); sub(",.*","",$0); C[T]+=$0}'
-# e. Finalize
-AWK_TPR_END='END{S=0; for (i in C) {S+=N[i]*C[i]}; if (S<0) S-=0.5; else S+=0.5; printf "%d\n", S}'
 function getCharge ()
 {
-  gmxdump -s $1 2>&1 | awk "$AWK_TPR_MOLNAME $AWK_TPR_MOLTYPE $AWK_TPR_MOLNUM $AWK_TPR_CHARGE $AWK_TPR_END"
+  # Routine for extracting the charge from a TPR file
+  # a. Extract and set the active molecule name 
+  AWK_TPR_MOLNAME='/^ *name=/{sub(".*=","",$0); T=$0}'
+  # b. Extract the moleculetype name
+  AWK_TPR_MOLTYPE='/^ *moltype *=/{M=$4}'
+  # c. Extract the number of instances of the current moleculetype
+  #    and initialize charge for moleculetype  
+  AWK_TPR_MOLNUM='/#molecules *=/{N[M]=$3; C[M]=0}'
+  # d. Extract and accumulate charge
+  AWK_TPR_CHARGE='/^ *atom.*q=/{sub(".*q=","",$0); sub(",.*","",$0); C[T]+=$0}'
+  # e. Finalize
+  AWK_TPR_END='END{S=0; for (i in C) {S+=N[i]*C[i]}; if (S<0) S-=0.5; else S+=0.5; printf "%d\n", S}'
+
+  dump=$(which gmxdump)
+  [[ -n ${dump} ]] || dump=$(which gmx)
+  [[ -n ${dump} ]] || FATAL gmx and gmxdump not found, cannot determine charge of system from tpr file
+  ${dump} -s $1 2>&1 | awk "$AWK_TPR_MOLNAME $AWK_TPR_MOLTYPE $AWK_TPR_MOLNUM $AWK_TPR_CHARGE $AWK_TPR_END"
 }
 
 
