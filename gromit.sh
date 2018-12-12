@@ -1579,7 +1579,7 @@ function MDRUNNER ()
     # Build command
     # The warnings are pretty much controlled. We usually get a warning because of using a plain cut-off for EM.
     # With custom ligand topologies we may get warnings about overriding parameters. This should be fine? :S
-    GROMPP="${GMX}grompp $fnMDP -c $fnIN -p $fnTOP $fnNDX -o $baseOUT.tpr $(program_options grompp) -maxwarn -1"
+    GROMPP="${GMX}grompp $fnMDP -c $fnIN -r $fnIN -p $fnTOP $fnNDX -o $baseOUT.tpr $(program_options grompp) -maxwarn -1"
 
     echo "$GROMPP" | tee $LOG
     echo ": << __GROMPP__" >>$LOG
@@ -2686,7 +2686,7 @@ then
     #    Combine the topology and structure, yielding a full listing of atoms and charges
     echo nsteps=1 > empty.mdp
     tag="sol-b4ions"
-    GROMPP="${GMX}grompp -v -f empty.mdp -c $base-$tag.gro -p $base-$tag.top -o $base-$tag.tpr -po defaults.mdp -maxwarn -1"
+    GROMPP="${GMX}grompp -v -f empty.mdp -c $base-$tag.gro -r $base-$tag.gro -p $base-$tag.top -o $base-$tag.tpr -po defaults.mdp -maxwarn -1"
 
 
     # b. Tell what is happening
