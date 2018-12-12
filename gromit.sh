@@ -1134,12 +1134,26 @@ __mdp_gromos__rcoulomb=1.4
 __mdp_gromos__epsilon_rf=54
 
 # CHARMM
-__mdp_charmm__coulombtype=Switch
-__mdp_charmm__rcoulomb_switch=1.0
-__mdp_charmm__rcoulomb=1.2
-__mdp_charmm__vdwtype=Switch
-__mdp_charmm__rvdw_switch=1.0
-__mdp_charmm__rvdw=1.2
+if [[ $GMXVERSION -gt 4 ]]
+then
+  __mdp_charmm__constraints=h-bonds
+  __mdp_charmm__cutoff_scheme=Verlet
+  __mdp_charmm__vdwtype=cutoff
+  __mdp_charmm__vdw_modifier=force-switch
+  __mdp_charmm__rlist=1.2
+  __mdp_charmm__rvdw=1.2
+  __mdp_charmm__rvdw_switch=1.0
+  __mdp_charmm__coulombtype=PME
+  __mdp_charmm__rcoulomb=1.2
+  __mdp_charmm__DispCorr=no
+else
+  __mdp_charmm__coulombtype=Switch
+  __mdp_charmm__rcoulomb_switch=1.0
+  __mdp_charmm__rcoulomb=1.2
+  __mdp_charmm__vdwtype=Switch
+  __mdp_charmm__rvdw_switch=1.0
+  __mdp_charmm__rvdw=1.2
+fi
 
 # OPLS/AA
 __mdp_opls__coulombtype=PME
