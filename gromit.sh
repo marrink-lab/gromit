@@ -1167,7 +1167,7 @@ __mdp_equil__define=-DPOSRES
 __mdp_equil__nsteps=$TIME
 __mdp_equil__nstlog=10
 __mdp_equil__nstenergy=10
-__mdp_equil__nstxtcout=0
+[[ $GMXVERSION -gt 4 ]] && __mdp_equil__nstxout_compressed=0 || __mdp_equil__nstxtcout=0
 
 # Velocities are only generated once
 # After the first NVT/PR cycle 'genvel' is set to no
