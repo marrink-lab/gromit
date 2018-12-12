@@ -3026,8 +3026,13 @@ do
 
     # Specify temperature for each group (Solute/Solvent/Membrane)
     # Note that this (re)sets the master temperature control
-    __mdp_md__ref_t=$($SED 's/ /,/g' <<< $(for i in ${CoupleGroups[@]}; do echo $T;   done))
-    __mdp_md__tau_t=$($SED 's/ /,/g' <<< $(for i in ${CoupleGroups[@]}; do echo $tau; done))
+    __mdp_md__ref_t=$($SED 's/ /,/g' <<< $(echo $(for i in ${CoupleGroups[@]}; do echo $T; done)))
+    if [[ $GMXVERSION -gt 4 ]]
+    then
+        __mdp_md__tau_t=$tau
+    else
+        __mdp_md__tau_t=$($SED 's/ /,/g' <<< $(echo $(for i in ${CoupleGroups[@]}; do echo $tau; done)))
+    fi
 
     if [[ $STEP == $NOW ]]
     then
