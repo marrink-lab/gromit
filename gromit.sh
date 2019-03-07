@@ -110,7 +110,7 @@ __DESCRIPTION__
 # Structure databases
 RCSB=(http://files.rcsb.org/download/ pdb.gz)
 BIO=(http://www.rcsb.org/pdb/files/ pdb1.gz)
-OPM=(http://opm.phar.umich.edu/pdb/ pdb)
+OPM=(http://opm-assets.storage.googleapis.com/pdb/ pdb)
 
 # Automated topology builder
 ATB=http://atb.uq.edu.au
