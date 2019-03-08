@@ -1787,6 +1787,8 @@ then
     fi
     PDB=$dirn/$pdb
 
+    RMMOD=false
+    RMDUM=false
     if [[ -f $PDB ]]
     then
         [[ -n $SCRATCH ]] && cp $PDB .
@@ -1798,17 +1800,16 @@ then
         case $FETCH in
             pdb  | PDB)  
                 GET=${RCSB[0]}${pdb%%.*}.${RCSB[1]}
-                RMMOD=false 
                 ;;
             bio* | BIO*)
                 # Check if a number is given for selecting the BIO assembly
                 [[ $FETCH =~ : ]] && BIO[1]=pdb${FETCH##*:} 
                 GET=${BIO[0]}${pdb%%.*}.${BIO[1]}
-                RMMOD=true  
+                RMMOD=true		
                 ;;
             opm  | OPM)  
                 GET=${OPM[0]}${pdb%%.*}.${OPM[1]}
-                RMMOD=false
+                RMDUM=true
                 ;;
         esac
 
@@ -1828,6 +1829,12 @@ then
             $SED -i '' -e /^MODEL/d -e s/ENDMDL/TER/ $PDB
         fi
 
+	if $RMDUM
+	then
+	    # Removing DUM particles, which are added by OPM to mark the membrane
+	    $SED -i '' -e '/^HETATM.\{11\}DUM/d' $PDB
+	fi
+	
 	[[ -n $SCRATCH ]] && cp $pdb $DIR
     else
 	echo "# Input file $dirn/$pdb specified, but not found."
