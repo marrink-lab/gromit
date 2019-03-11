@@ -732,7 +732,7 @@ SOLSTEP=$(get_step_fun CG)
 if [[ $STEP -le $SOLSTEP && $STOP -ge $SOLSTEP ]]
 then
   echo -n 'Checking DSSP binary (for martinizing proteins)... '
-  DSSP=$(find_program_fun dssp)
+  DSSP=$(find_program_function dssp)
   if [[ $? == 1 ]]
   then
     warn="DSSP binary not found - Will martinize without secondary structure :S"
@@ -773,7 +773,7 @@ fi
 SOLSTEP=$(get_step_fun SOLVENT)
 if [[ $STEP -le $SOLSTEP && $STOP -ge $SOLSTEP ]]
 then
-    INSA=$(find_program_fun insane)
+    INSA=$(find_program_function insane)
     if [[ $? != 0 ]]
     then
 	STEP=$NOW
@@ -1024,7 +1024,7 @@ echo Done checking
 
 
 
-SED() { echo $SED "$@" 1>&2; $SED"$@"; }
+SED() { echo $SED "$@" 1>&2; $SED "$@"; }
 
 
 ## SED stuff
@@ -2160,7 +2160,7 @@ then
     if [[ -n $pdb ]]
     then
         # Convert structure to coarse grained and build topology using martinize.py
-	MART=$(find_program_fun martinize)
+	MART=$(find_program_function martinize)
 	if [[ $? != 0 ]]
 	then
 	    FATAL "Coarse graining PDB file ($pdb), but martinize was not found."
@@ -2411,7 +2411,7 @@ then
 
 
     # For each lipid built with insane (-al* options), make a topology:
-    LIPTOP=$(find_program_fun liptop)
+    LIPTOP=$(find_program_function liptop)
     [[ $? != 0 ]] && NOLIPTOP=true || NOLIPTOP=false
     INS=($INSANE)
     USRDEF=()
