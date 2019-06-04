@@ -587,12 +587,6 @@ fi
 #---Sed and awk
 #--------------------------------------------------------------------
 
-# Set the correct sed version for multi-platform use
-# Also try to avoid GNU specific sed statements for the
-# poor bastards that are stuck with one of those Mac things
-SED=$(which gsed || which sed)
-
-
 # Awk expression for extracting moleculetype
 #    - at the line matching 'moleculetype' 
 #      read in the next line
@@ -1454,22 +1448,8 @@ function INDEX()
   return 0
 }
 
-
+# Load the MDRUNNER routine 
 source "$SDIR"/_mdrunner.sh
-
-# Macros to echo stuff only if the step is to be executed
-function SHOUT() { [[ $STEP == $NOW ]] && echo && L=$($SED -e 's/./-/g;s/^/#/;' <<< " $@ ") && echo $L && $SED 's/^/#/' <<< "$@ " && echo $L ; }
-function LINE()  { [[ $STEP == $NOW ]] && echo && $SED -e 's/^/ /;s/$/ /p;s/./-/g;' <<< "$@" | $SED 's/^/#/'; }
-function ECHO()  { [[ $STEP == $NOW ]] && echo "$@"; }
-
-
-# Macro to do stuff only if the step is to be executed
-function DO() { [[ $STEP == $NOW ]] && echo "$@" && $@; }
-
-
-# Sed wrapper (loud sed) - echo the command line before running it
-function LSED() { echo $SED "$@" 1>&2; $SED "$@"; }
-
 
 # Always ECHO the first line
 NOW=$STEP

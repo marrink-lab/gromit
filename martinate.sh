@@ -606,12 +606,6 @@ fi
 #---Sed and awk
 #--------------------------------------------------------------------
 
-# Set the correct sed version for multi-platform use
-# Also try to avoid GNU specific sed statements for the
-# poor bastards that are stuck with one of those Mac things
-SED=$(which gsed || which sed)
-
-
 # Awk expression for extracting moleculetype
 #    - at the line matching 'moleculetype' 
 #      read in the next line
@@ -817,12 +811,6 @@ SRCDIR=$(pwd)
 NOW=$STEP
 echo Will run from step ${STEPS[$STEP]} until ${STEPS[$STOP]}
 
-# Macro to do stuff only if the step is to be executed
-DO() { [[ $STEP == $NOW ]] && echo "$@" && $@; }
-
-# Sed wrapper - echo the command line before running it
-SED() { echo $SED "$@" 1>&2; $SED "$@"; }
-
 # Sequence generation; seq might not be available
 SEQ() { for ((i=$1; i<=$2; i++)); do echo $i; done; }
 
@@ -1010,10 +998,6 @@ fi
 
 
 echo Done checking
-
-
-
-SED() { echo $SED "$@" 1>&2; $SED "$@"; }
 
 
 ## SED stuff
@@ -1741,7 +1725,7 @@ then
                     echo Removing duplicate moleculetype definition in ${ITP[$i]}
                     # 1. remove the #include statement for that itp file
                     # 2. rename the moleculetype under [ system ]
-                    SED -i -e "/${ITP[$i]}/d" -e "/[\s*system\s*]/,\$s/${MTP[$i]}/${MTP[$j]}/" $base-aa.top
+                    LSED -i -e "/${ITP[$i]}/d" -e "/[\s*system\s*]/,\$s/${MTP[$i]}/${MTP[$j]}/" $base-aa.top
                     # List the file for removal
                     trash ${ITP[$i]} $($SED 's/_/-posre_/' <<< ${ITP[$i]})
                     break
@@ -1788,7 +1772,7 @@ then
                 # Ahh, sed magic. Removing lines from one file, 
 	        # while writing them to another.
 		#@@@
-		SED -i.bck \
+		LSED -i.bck \
 		    -e "/^ *\[ *moleculetype *\] */{h;s/.*/#include \"$ITP\"/p;x;}" \
 		    -e '/moleculetype/,/^#endif/w'$ITP \
 		    -e '/moleculetype/,/^#endif/d' \
@@ -1947,11 +1931,11 @@ then
 		S_S='S      S       1    0.2040'
 		NR_FE='NR     FE      1    0.1980'
 		S_CR1='S      CR1     1    0.1830'
-		SED -i -e "/angletypes/s/^/[ constrainttypes ]\n${S_S}\n${NR_FE}\n${S_CR1}\n\n/" martini.itp
+		LSED -i -e "/angletypes/s/^/[ constrainttypes ]\n${S_S}\n${NR_FE}\n${S_CR1}\n\n/" martini.itp
 	    fi
 
             # #include the constraintsfile in the master topology if it is not already
-	    grep -q '#include *"constraints.itp"' $TOP || SED -i '/#include *"martini.itp"/s/$/\n\n#include "constraints.itp"\n\n/' $TOP
+	    grep -q '#include *"constraints.itp"' $TOP || LSED -i '/#include *"martini.itp"/s/$/\n\n#include "constraints.itp"\n\n/' $TOP
 
 	    for ((i=0,j=0; i<${#MOLECULES[@]}; i+=2,j++))
 	    do
@@ -1981,7 +1965,7 @@ then
 		    cat ${MARMOLS[$j]}.itp >> ${MARMOLS[$j]}_MS.itp
 
     		    # Update the moleculetype #include file in the master topology
-		    SED -i -e '/^\(#include \+"\)'${MARMOLS[$j]}.itp'/s//\1'${MARMOLS[$j]}_MS.itp'/' $TOP
+		    LSED -i -e '/^\(#include \+"\)'${MARMOLS[$j]}.itp'/s//\1'${MARMOLS[$j]}_MS.itp'/' $TOP
 		fi
 	    done
 	elif [[ -n $DAFT ]]
@@ -2065,7 +2049,7 @@ fi
 
 # NPROT may be set, but if we skipped this step it's not
 # If it is not set, then the input could be solute (prot/nucl) and/or membrane
-NPROT=$(SED -n '2{p;q;}' $GRO)
+NPROT=$(LSED -n '2{p;q;}' $GRO)
 
 # END OF COARSE GRAINING
 [[ $STOP ==   $NOW     ]] && exit_clean
@@ -2183,7 +2167,7 @@ then
     done
     if [[ -n $USRFIX ]]
     then
-	SED -i"" -e '/\[ *system *\]/{s/^/'"$USRFIX"'/;}' $TOP
+	LSED -i"" -e '/\[ *system *\]/{s/^/'"$USRFIX"'/;}' $TOP
     fi
 
     # Sugar hack
@@ -2192,7 +2176,7 @@ then
         # Uncomment the include topology for sugars
 	cp $SDIR/martini_${FFTAG}_sugars.itp ./ || touch martini_${FFTAG}_sugars.itp
 	grep -q sugars.itp $TOP && CARBFIX='/sugars.itp/s/^; //' || CARBFIX='/\[ *system *\]/{s/^/#include "martini_'$FFTAG'_sugars.itp"'"$N$N"'/;}'
-	SED -i"" -e "$CARBFIX" $TOP
+	LSED -i"" -e "$CARBFIX" $TOP
     fi
 
     if [[ $INSANE =~ "-l " ]]
@@ -2210,7 +2194,7 @@ then
 	    cat $lip.itp >> martini_${FFTAG}_lipids.itp
 	done
 	grep -q lipids.itp $TOP && LIPFIX='/lipids.itp/s/^; //' || LIPFIX='/\[ *system *\]/{s/^/#include "martini_'$FFTAG'_lipids.itp"'"$N$N"'/;}'
-	SED -i"" -e "$LIPFIX" $TOP
+	LSED -i"" -e "$LIPFIX" $TOP
     else
 	echo "$INSANE"
     fi
@@ -2225,7 +2209,7 @@ then
     fi
 
     grep -q ions.itp $TOP && IONFIX='/ions.itp/s/^; //' || IONFIX='/\[ *system *\]/{s,^,#include "'$IONSITP'"'"$N$N"',;}'
-    SED -i -e "$IONFIX" $TOP 
+    LSED -i -e "$IONFIX" $TOP 
 
     # Include user defined topologies 
     USRFIX=
@@ -2234,7 +2218,7 @@ then
 	USRFIX="${USRFIX}"'#include "'$itp'"'"$N"
     done
     USRFIX='/\[ *system *\]/{s,^,'${USRFIX}"$N"',;}'
-    SED -i -e "$USRFIX" $TOP
+    LSED -i -e "$USRFIX" $TOP
 
     # We made a topology... extract groups
     NSOL=($(grep '; NDX Solvent' $TOP))
@@ -2250,16 +2234,16 @@ then
     GRO=$OUT
 else
     # We did not make a topology, but there should be an index file.
-    NPROT=$(SED -n '/\[ *Solute/,/\[/{/\[/d;p;}' $NDX | wc -w)
-    NMEM=$(SED -n '/\[ *Membrane/,/\[/{/\[/d;p;}' $NDX | wc -w)
-    NSOL=$(SED -n '/\[ *Solvent/,/\[/{/\[/d;p;}' $NDX | wc -w)
+    NPROT=$(LSED -n '/\[ *Solute/,/\[/{/\[/d;p;}' $NDX | wc -w)
+    NMEM=$(LSED -n '/\[ *Membrane/,/\[/{/\[/d;p;}' $NDX | wc -w)
+    NSOL=$(LSED -n '/\[ *Solvent/,/\[/{/\[/d;p;}' $NDX | wc -w)
 fi
 
 [[ $NMEM -gt 0 ]] && MEMBRANE=true || MEMBRANE=false
 
-NTOT=$(SED -n '2{p;q;}' $GRO)
+NTOT=$(LSED -n '2{p;q;}' $GRO)
 # Assuming that ions come after solvent
-NION=$(( NTOT - $(SED -n $(sed_solvent '{p;d;}') $GRO | wc -l) - NMEM - NPROT ))
+NION=$(( NTOT - $(LSED -n $(sed_solvent '{p;d;}') $GRO | wc -l) - NMEM - NPROT ))
 NSOL=$(( NSOL - NION ))
 echo $GRO: NTOT=$NTOT NPROT=$NPROT NSOL=$NSOL NMEM=$NMEM NION=$NION
 
