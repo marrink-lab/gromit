@@ -1099,58 +1099,6 @@ function INDEX()
 # Load the MDRUNNER routine 
 source "$SRCDIR"/_mdrunner.sh
 
-
-TABLE ()
-{
-    ARGS=$($SED 's/ /,/g' <<< $@)
-
-    # Create a table for the Coulomb/RF interaction
-    python - << __PYTHON__ 
-
-epsR, epsRF, RC, LD, LR, LC, LS = $ARGS
-
-Krf = (epsRF-epsR)/(2*epsRF+epsR)/(RC**3)
-Crf = 3*epsRF/(2*epsRF+epsR)/RC
-
-# Shifted power
-def vf_fun(a,rc,rs):
-    if rs < 0: 
-        return lambda r: r**-a, lambda r: a*r**-(a+1)
-    A, B = -((a+4)*rc-(a+1)*rs)/((rc-rs)**2)/(rc**(a+2)), ((a+3)*rc-(a+1)*rs)/((rc-rs)**3)/(rc**(a+2))
-    C    = (rc**-a)-(a*A*(rc-rs)**3/3)-(a*B*(rc-rs)**4/4)
-    V    = lambda r: r**-a - C - (r>rs and a*(A*(r-rs)**3/3+B*(r-rs)**4/4))
-    F    = lambda r: a*r**-(a+1) + (r>rs and a*(A*(r-rs)**2+B*(r-rs)**3))
-    return V, F
-
-VD,FD = vf_fun(LD,LC,LS)
-VR,FR = vf_fun(LR,LC,LS)
-
-r  = [ i/1e3 or 0 for i in range(2,3001,2)]
-print """#
-# Coulomb cut-off/reaction-field: epsRF = %f, epsR = %f, RC = %f
-# Lennard-Jones dispersion: power=%f, cutoff=%f, %sshifted %s
-# Lennard-Jones repulsion:  power=%f, cutoff=%f, %sshifted %s
-""" % (epsRF, epsR, RC, 
-       LD, LC, LS<0 and "not " or "", LS>=0 and "(rshift=%f)"% LS or "",
-       LR, LC, LS<0 and "not " or "", LS>=0 and "(rshift=%f)"% LS or ""),
-
-f0 = [ (1/i+Krf*i*i-Crf)/epsR for i in r ]
-f1 = [ (1/(i*i)-2*Krf*i)/epsR for i in r ]
-
-g0 = [ i<LC and -VD(i) for i in r ]
-g1 = [ i<LC and -FD(i) for i in r ]
-
-h0 = [ i<LC and  VR(i) for i in r ]
-h1 = [ i<LC and  FR(i) for i in r ]
-
-table = [(0,0,0,0,0,0,0)]+zip(r,f0,f1,g0,g1,h0,h1)
-
-print "\n".join([(7*"%.10e ")%i for i in table])
-__PYTHON__
-}
-
-
-
 # Always ECHO the first line
 NOW=$STEP
 
@@ -1308,7 +1256,7 @@ SHOUT "---STEP 1A: GENERATE ATOMISTIC STRUCTURE AND TOPOLOGY"
 
 
 # Skip the atomistic topology if we do not multiscale
-if [[ $STEP == $NOW ]]
+if ! $M && [[ $STEP == $NOW ]]
 then
     echo "Skipping step... (not multiscaling)"
     $M  || : $((STEP++))
@@ -1376,14 +1324,16 @@ then
     fi
   
     
-    # III. Interaction tables   
+    # III. Interaction tables
+    TABLE="${SRCDIR}"/_table.py
+
     #      epsilon_r epsilon_rf cutoff LJ_dispersion LJ_repulsion LJ_cutoff LJ_switch
-    TABLE  $EPSR_CG   $EPSRF     $RC      $LJDP         $LJRP         1.2       0.9   > table.xvg
-    TABLE  1          $EPSRF     $RC      6             12            $RC      -1     > table_AA_AA.xvg 
-    TABLE  1          $EPSRF     $RC      6             12            $RC      -1     > tablep.xvg 
+    $TABLE  $EPSR_CG   $EPSRF     $RC      $LJDP         $LJRP         1.2       0.9   > table.xvg
+    $TABLE  1          $EPSRF     $RC      6             12            $RC      -1     > table_AA_AA.xvg 
+    $TABLE  1          $EPSRF     $RC      6             12            $RC      -1     > tablep.xvg 
     if $POLARIZABLE
     then
-	TABLE $EPSR_AA $EPSRF    $RC      6             12            $RC      -1     > table_AA_CG.xvg 
+	$TABLE $EPSR_AA $EPSRF    $RC      6             12            $RC      -1     > table_AA_CG.xvg 
     fi
 
     
@@ -1647,53 +1597,7 @@ then
         # Check for chains to multiscale
 	if $ALL -o [[ -n $MULTI ]]
 	then
-            # Have to have constraints.itp for multiscale topologies to work
-	    if [[ ! -e $GMXLIB/$ForceField.ff/constraints.itp && ! -e ./constraints.itp ]]
-	    then
-                # Generate from ffbonded.itp
-		awk '/#define *gb_/{sub("gb_","gc_"); print $1, $2, $3}' $GMXLIB/$ForceField.ff/ffbonded.itp > constraints.itp 
-
-                # Add specific constrainttypes:
-		S_S='S      S       1    0.2040'
-		NR_FE='NR     FE      1    0.1980'
-		S_CR1='S      CR1     1    0.1830'
-		LSED -i -e "/angletypes/s/^/[ constrainttypes ]\n${S_S}\n${NR_FE}\n${S_CR1}\n\n/" martini.itp
-	    fi
-
-            # #include the constraintsfile in the master topology if it is not already
-	    grep -q '#include *"constraints.itp"' $TOP || LSED -i '/#include *"martini.itp"/s/$/\n\n#include "constraints.itp"\n\n/' $TOP
-
-	    for ((i=0,j=0; i<${#MOLECULES[@]}; i+=2,j++))
-	    do
-		if ${MS[$j]}
-		then
-   		    # Adapt the atomistic topology for multiscaling
-		    awk '/^\[ *bonds *\]/{print "#ifdef FLEXIBLE"; bonds=1} 
-                         sub("^ *"P,M) || 1
-                         bonds {
-                             B[N++]=$0 
-                             if ($0 ~ /^ *$/) {
-                                 print "#else\n[ constraints ]"
-                                 bonds=0
-                                 for (i=1; i<N-1; i++) {
-                                     if (split(B[i],Q)==3) 
-                                         printf "%5d %5d\n", Q[1], Q[2]
-                                     else {
-                                         sub(/2 *gb_/,"1 gc_",B[i])
-                                         print B[i]
-                                     }
-                                 } 
-                                 print "#endif\n"
-                             }
-                         }' P=${MOLECULES[$i]} M=${MARMOLS[$j]} ${MOLITP[$j]} > ${MARMOLS[$j]}_MS.itp
-
-      		    # Add the virtual sites generated by martinize.py
-		    cat ${MARMOLS[$j]}.itp >> ${MARMOLS[$j]}_MS.itp
-
-    		    # Update the moleculetype #include file in the master topology
-		    LSED -i -e '/^\(#include \+"\)'${MARMOLS[$j]}.itp'/s//\1'${MARMOLS[$j]}_MS.itp'/' $TOP
-		fi
-	    done
+	    source "${SRCDIR}"/_martinate_multiscale.sh
 	elif [[ -n $DAFT ]]
 	then
 	    source "${SRCDIR}"/_martinate_daft.sh
