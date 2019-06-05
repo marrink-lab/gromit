@@ -1649,13 +1649,7 @@ then
 	ITP=($(ls ${base}-aa_*.itp 2>/dev/null) ${base}-aa.top)
 
         # b. Extract the moleculetype names from the itp files
-        #    awk expression:
-        #    - at the line matching 'moleculetype' 
-        #      read in the next line
-	#      continue reading next lines until one is not beginning with ;
-        #      print the first field
-	awkexpr='/moleculetype/{getline; while ($0 ~ /^ *;/) getline; print $1}'
-	MTP=($(for i in ${ITP[@]}; do awk "$awkexpr" $i; done))
+	MTP=($(for i in ${ITP[@]}; do awk "${awk_itp_get_moleculetypes}" $i; done))
 
         # c. Compare each pair of itp files
 	for ((i=1; i<${#ITP[@]}; i++))
@@ -1726,15 +1720,8 @@ then
 	fi
 
         # f. Get the current list of molecules from the top file 
-        #    and find the corresponding itp files
-        #    Some of these may have been changed to remove duplicate listings
-        #    This list should match the list of chains
-	#    awk expression
-	#    - if M is nonzero and the line does not start with ';', print
-	#    - at the line with the tag [ molecules ] set M to 1
-        #   Following each molecule name is the number of instances
 	awkexpr='(M && ! /^ *;/); /\[ *molecules *\]/{M=1}'
-	MOLECULES=($(awk "$awkexpr" $base-aa.top))
+	MOLECULES=($(awk "${awk_top_get_moleculelist}" $base-aa.top))
 	echo MOLECULES: ${MOLECULES[@]}	
 
 
@@ -1743,17 +1730,12 @@ then
         #    - at lines starting with #include and not containing a slash in the file name
         #      substitute the line with the name of the included file and print
 	sedexpr='/^#include .*"\([^/]*\)"/s//\1/p'
-	ITPFILES=($($SED -n -e "$sedexpr" $base-aa.top))
+	ITPFILES=($($SED -n -e "${sed_top_get_includes}" $base-aa.top))
 
 
         # h. Get the list of moleculetypes from the itp files
-        #    One awk expression:
-        #    - at the line matching 'moleculetype' 
-        #      read in the next line
-	#      continue reading next lines until one is not beginning with ;
-        #      print the first field
 	awkexpr='/moleculetype/{getline; while ($0 ~ /^ *;/) getline; print $1}'
-	MOLTYPES=($(for i in  ${ITPFILES[@]}; do awk "$awkexpr" $i; done))
+	MOLTYPES=($(for i in  ${ITPFILES[@]}; do awk "${awk_itp_get_moltypes}" $i; done))
 
 
         # i. Match the molecules with the itp files
@@ -1929,16 +1911,13 @@ then
             #  a. Identify molecules (reusing code from above, STEP 1A, section IV.6.f-i)
             #  b. Make an index group for it
             #  c. List it
-            awkexpr='(M && ! /^ *;/); /\[ *molecules *\]/{M=1}'
-            MOLECULES=($(awk "$awkexpr" $base-cg.top))
+            MOLECULES=($(awk "${awk_top_get_moleculelist}" $base-cg.top))
             echo MOLECULES: ${MOLECULES[@]}
 
-            sedexpr='/^#include .*"\([^/]*\)"/s//\1/p'
-            ITPFILES=($($SED -n -e "$sedexpr" $base-cg.top))
+            ITPFILES=($($SED -n -e "${sed_top_get_includes}" $base-cg.top))
 
             # We only take the FIRST moleculetype from the itp file
-            awkexpr='/moleculetype/{getline; while ($0 ~ /^ *;/) getline; print $1; exit}'
-            MOLTYPES=($(for i in  ${ITPFILES[@]}; do awk "$awkexpr" $i; done))
+            MOLTYPES=($(for i in  ${ITPFILES[@]}; do awk "${awk_itp_get_moltype}" $i; done))
 
             MOLITP=()
             COUNT=1

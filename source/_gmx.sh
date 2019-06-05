@@ -1,3 +1,15 @@
+
+## Contents:
+##
+##  I. Determining the gromacs version
+## II. Expressions for sed and awk to handle topologies and structures
+##
+
+
+#------------------------------#
+# I. Determine gromacs version #
+#------------------------------#
+
 echo
 echo "# GROMACS "
 echo "#========="
@@ -12,17 +24,21 @@ echo "# Gromacs RC file: $GMXRC"
 
 # Find out which Gromacs version this is
 GMXVERSION=$(mdrun -h 2>&1 | $SED -n '/^.*VERSION \([^ ]*\).*$/{s//\1/p;q;}')
+
 # From version 5.0.x on, the commands are gathered in one 'gmx' program
 # The original commands are aliased, but there is no guarantee they will always remain
 [[ -z $GMXVERSION ]] && GMXVERSION=$(gmx -h 2>&1 | $SED -n '/^.*VERSION \([^ ]*\).*$/{s//\1/p;q;}')
+
 # Version 2016 uses lower case "version", which is potentially ambiguous, so match carefully
 [[ -z $GMXVERSION ]] && GMXVERSION=$(gmx -h 2>&1 | $SED -n '/^GROMACS:.*gmx, version \([^ ]*\).*$/{s//\1/p;q;}')
 ifs=$IFS; IFS="."; GMXVERSION=($GMXVERSION); IFS=$ifs
 
 # Set the directory for binaries
 [[ $GMXVERSION -gt 4 ]] && GMXBIN=$(which gmx) || GMXBIN=$(which mdrun)
+
 # Extract the directory
 GMXBIN=${GMXBIN%/*}
+
 # Set the directory to SCRIPTDIR if GMXBIN is empty 
 GMXBIN=${GMXBIN:-$SCRIPTDIR}
 
@@ -61,3 +77,40 @@ echo "# - binaries:  $GMXBIN"
 echo "# - data:      $GMXDATA"
 echo "# - libraries: $GMXLIB"
 echo 
+
+
+
+#---------------------------------------------------------------------#
+# II. Expressions for sed and awk to handle topologies and structures #
+#---------------------------------------------------------------------#
+
+# Extract the moleculetype names from an itp file (or only the first)
+#    - at the line matching 'moleculetype' 
+#      read in the next line
+#      continue reading next lines until one is not beginning with ;
+#      print the first field
+awk_itp_get_moltype='/moleculetype/{getline; while ($0 ~ /^ *;/) getline; print $1; exit}'
+awk_itp_get_moltypes='/moleculetype/{getline; while ($0 ~ /^ *;/) getline; print $1}'
+# Usage: MTP=($(for i in ${ITP[@]}; do awk "${awk_itp_get_moltypes}" $i; done))
+
+
+# Get the current list of molecules from a top file 
+#    and find the corresponding itp files
+#    Some of these may have been changed to remove duplicate listings
+#    This list should match the list of chains
+#    awk expression
+#    - if M is nonzero and the line does not start with ';', print
+#    - at the line with the tag [ molecules ] set M to 1
+#   Following each molecule name is the number of instances
+awk_top_get_moleculelist='(M && ! /^ *;/); /\[ *molecules *\]/{M=1}'
+# Usage: MOLECULES=($(awk "${awk_top_get_moleculelist}" $base-aa.top))
+
+
+# Get the list of (itp) files #included in a top file
+#    - at lines starting with #include and not containing a slash in the file name
+#      substitute the line with the name of the included file and print
+sed_top_get_includes='/^#include .*"\([^/]*\)"/s//\1/p'
+# Usage: ITPFILES=($($SED -n -e "${sed_top_get_includes}" $base-aa.top))
+
+
+
