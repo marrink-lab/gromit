@@ -125,6 +125,8 @@ echo "$CMD" | tee CMD
 
 # Directory where this script is
 SDIR=$( [[ $0 != ${0%/*} ]] && cd ${0%/*}; pwd )
+SRCDIR="$SDIR/source"
+FFDIR="$SDIR/forcefield"
 
 # These will be looked for before running, and can be set from the cmdline, e.g.:
 #    -gmxrc /usr/local/gromacs-5.1/bin/GMXRC
@@ -132,8 +134,8 @@ SDIR=$( [[ $0 != ${0%/*} ]] && cd ${0%/*}; pwd )
 #    1. the environment (if PROGEVAR is given)
 #    2. the directory where this calling script (martinate) is located
 #    3. the PATH 
-DEPENDENCIES=( dssp  gmxrc  martinize     insane     liptop    squeeze)
-PROGEXEC=(     dssp  GMXRC  martinize.py  insane.py  liptop.py squeeze)
+DEPENDENCIES=( dssp  gmxrc  martinize     insane     liptop           squeeze)
+PROGEXEC=(     dssp  GMXRC  martinize.py  insane.py  $FFDIR/liptop.py squeeze)
 PROGEVAR=(     DSSP  GMXRC)
 
 
@@ -166,7 +168,7 @@ STOP=PRODUCTION
 
 
 # Sourcing stuff
-source "$SDIR"/_logging.sh
+source "$SRCDIR"/_logging.sh
 
 # MARTINI Force field parameters
 MARTINI=martini22
@@ -647,7 +649,7 @@ find_program_function()
 
 ##  1. GROMACS  ##
 
-source "${SDIR}"/_gmx.sh
+source "${SRCDIR}"/_gmx.sh
 
 
 ## 2. DSSP ##
@@ -746,7 +748,7 @@ fmt=" %5d %5d %5d %5d %5d %5d %5d %5d %5d %5d %5d %5d %5d %5d %5d"
 
 
 ## 2. WORKING DIRECTORY AND SOURCE DIRECTORY ##
-SRCDIR=$(pwd)
+# SRCDIR=$(pwd)
 [[ ! -d $DIR ]] && mkdir -p $DIR; pushd $DIR >/dev/null
 
 
@@ -793,17 +795,17 @@ $M && ffbn=$GMXLIB/$ForceField.ff/ffbonded.itp    || ffbn=
 #        (of the form: martini_2.1.py or martini_2.1_P.py)
 if [[ -z $FFITP ]]
 then
-  FFMARTINIPY=$SDIR/${MARTINI}${SOLVFF[$SID]}.py
+  FFMARTINIPY=$FFDIR/${MARTINI}${SOLVFF[$SID]}.py
   if [[ ! -f $FFMARTINIPY ]]
   then
-	if [[ -f $SDIR/${MARTINI}.py ]]
+	if [[ -f $FFDIR/${MARTINI}.py ]]
 	then
       # If martini22p was specified in stead of martini22 with PW,
       # then we end up here, setting the script to martini22p.py
-      FFMARTINIPY=$SDIR/${MARTINI}.py
+      FFMARTINIPY=$FFDIR/${MARTINI}.py
     else
       # Unclear dependency, but shipped with the scripts...
-      FATAL Forcefield script $FFMARTINIPY does not exist, nor does $SDIR/${MARTINI}.py
+      FATAL Forcefield script $FFMARTINIPY does not exist, nor does $FFDIR/${MARTINI}.py
     fi
   fi
 
@@ -1296,7 +1298,7 @@ function INDEX()
 
 
 # Load the MDRUNNER routine 
-source "$SDIR"/_mdrunner.sh
+source "$SRCDIR"/_mdrunner.sh
 
 
 TABLE ()
@@ -1361,7 +1363,7 @@ SHOUT "---= THIS IS WHERE WE START =---"
 #---INPUT CHECKING, SPLITTING, TRIMMING, GROOMING
 #--------------------------------------------------------------------
 
-source "$SDIR"/_pdb.sh
+source "$SRCDIR"/_pdb.sh
 
 if [[ -n $PDB ]]
 then
@@ -2117,7 +2119,7 @@ then
     if true
     then
         # Uncomment the include topology for sugars
-	cp $SDIR/martini_${FFTAG}_sugars.itp ./ || touch martini_${FFTAG}_sugars.itp
+	cp $FFDIR/martini_${FFTAG}_sugars.itp ./ || touch martini_${FFTAG}_sugars.itp
 	grep -q sugars.itp $TOP && CARBFIX='/sugars.itp/s/^; //' || CARBFIX='/\[ *system *\]/{s/^/#include "martini_'$FFTAG'_sugars.itp"'"$N$N"'/;}'
 	LSED -i"" -e "$CARBFIX" $TOP
     fi
@@ -2125,7 +2127,7 @@ then
     if [[ $INSANE =~ "-l " ]]
     then
         # Uncomment the include topology for lipids
-	cp $SDIR/martini_${FFTAG}_lipids.itp ./ || touch martini_${FFTAG}_lipids.itp
+	cp $FFDIR/martini_${FFTAG}_lipids.itp ./ || touch martini_${FFTAG}_lipids.itp
 	# Check which lipids are defined and which (custom) lipid topologies to add
 	lipids=($($SED -n '/^ *\[ *moleculetype/{n;/^ *;/n;p;}' martini_${FFTAG}_lipids.itp))
 	for lip in ${alname[@]}
@@ -2148,7 +2150,7 @@ then
 	IONSITP=$ForceField.ff/ions.itp
     else
 	IONSITP=martini_${FFTAG}_ions.itp
-	cp $SDIR/$IONSITP ./ || touch martini_${FFTAG}_ions.itp
+	cp $FFDIR/$IONSITP ./ || touch martini_${FFTAG}_ions.itp
     fi
 
     grep -q ions.itp $TOP && IONFIX='/ions.itp/s/^; //' || IONFIX='/\[ *system *\]/{s,^,#include "'$IONSITP'"'"$N$N"',;}'
@@ -2286,7 +2288,7 @@ SHOUT "---STEP 2: ENERGY MINIMIZATION"
 if [[ -f $DAFT ]]
 then
     NDX=$DAFT
-    cp $SDIR/martini_${FFTAG}_{ions,lipids}.itp .
+    cp $FFDIR/martini_${FFTAG}_{ions,lipids}.itp .
     grps=($($SED '/^ *[^[]/d;s/\[ *\(.*\) *\]/\1/;/Solute/d;/System/d;' $DAFT))
     __mdp_cg__energygrps=$($SED 's/ /,/g' <<< ${grps[@]})
 fi

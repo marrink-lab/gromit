@@ -127,6 +127,9 @@ echo "$CMD" | tee CMD
 
 # Directory where this script is
 SDIR=$( [[ $0 != ${0%/*} ]] && cd ${0%/*}; pwd )
+SRCDIR="$SDIR"/source
+FFDIR="$SDIR"/forcefield
+
 
 # These will be looked for before running, and can be set from the cmdline, e.g.:
 #    -gmxrc /usr/local/gromacs-5.1/bin/GMXRC
@@ -167,7 +170,7 @@ STEP=
 STOP=PRODUCTION
 
 # Sourcing stuff
-source "$SDIR"/_logging.sh
+source "$SRCDIR"/_logging.sh
 
 # Force field
 ForceFieldFamilies=(gromos  charmm  amber   opls )
@@ -627,7 +630,7 @@ find_program_function()
 
 ##  1. GROMACS  ##
 
-source "${SDIR}"/_gmx.sh
+source "${SRCDIR}"/_gmx.sh
 
 
 # 2. SQUEEZE/NDLP for minimal-volume simulation.
@@ -1383,7 +1386,7 @@ function INDEX()
 }
 
 # Load the MDRUNNER routine 
-source "$SDIR"/_mdrunner.sh
+source "$SRCDIR"/_mdrunner.sh
 
 # Always ECHO the first line
 NOW=$STEP
@@ -1423,7 +1426,7 @@ then
 fi
 
 
-source "$SDIR"/_pdb.sh
+source "$SRCDIR"/_pdb.sh
 
 # If we are still at this step, do some checking of input and 
 # maybe fetch a file from the PDB.
