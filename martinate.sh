@@ -114,10 +114,6 @@ __DESCRIPTION__
 #---EXTERNAL/USER STUFF
 #--------------------------------------------------------------------
 
-# Structure databases
-RCSB=(http://files.rcsb.org/download/ pdb.gz)
-BIO=(http://www.rcsb.org/pdb/files/ pdb1.gz)
-OPM=(http://opm.phar.umich.edu/pdb/ pdb)
 
 
 #--------------------------------------------------------------------
@@ -834,133 +830,6 @@ EPSR_AA=${EPSR:-${EPSR_AA[$SID]}}
 $M && TABLES=-tables || TABLES=
 
 
-#--------------------------------------------------------------------
-#---INPUT CHECKING, SPLITTING, TRIMMING, GROOMING
-#--------------------------------------------------------------------
-
-if [[ -n $PDB ]]
-then
-  # If the input file is not found, check whether it was given without extension.
-  # If that is not the case, then fetch the file from the PDB repository.
-  if [[ ! -f $PDB ]]
-  then
-    if [[ ! -f $PDB.pdb ]]
-    then
-      echo Input file $PDB not found... Trying server
-
-      # Try fetching it from the PDB    
-      pdb=$(tr [A-Z] [a-z] <<< ${PDB%.pdb})
-      RCSB="http://files.rcsb.org/download/${pdb%%.*}.pdb.gz"
-      echo "# Input file not found, but will try fetching it from the PDB ($RCSB)"
-      # Use wget or curl; one of them should work
-      wget $RCSB 2>/dev/null || curl -O "$RCSB" 
-	  gunzip $pdb.pdb.gz
-      [[ -n $SCRATCH ]] && cp $pdb.pdb $DIR
-	  PDB=$pdb
-    fi
-    PDB=$PDB.pdb
-  fi
-
-
-  # If the input file is missing now, raise an errorr
-  if [[ ! -f $PDB ]]
-  then
-    echo Input file $PDB not found and fetching from PDB server failed.
-    exit 1
-  fi
-
-
-  # Check whether the input file is here or in another directory.
-  # In the latter case, copy it here
-  [[ $PDB == ${PDB##*/} || $PDB == ./${PDB##*/} ]] || cp $PDB .   
-
-
-  pdb=${PDB##*/}          # Filename
-  base=${pdb%.*}          # Basename
-  ext=${pdb##*.}          # Extension
-  dirn=${PDB%$pdb}        # Directory
-  [[ $dirn ]] || dirn="." 
-  dirn=`cd $dirn && pwd`  # Full path to input file directory
-
-
-  if [ $dirn != `pwd` ]
-  then
-    NOTE "The run is performed here (`pwd`), while the input file is elsewhere ($dirn)."
-  fi
-
-  if [[ -z $TOP && $ext == "pdb" ]]
-  then
-    if $NOHETATM -a $(grep -q HETATM $PDB)
-    then
-      NOTE Removing HETATM entries from PDB file
-      $SED -i '' -e /^HETATM/d $PDB
-    fi
-
-    # Extract a list of chains from PDB file
-    CHAINS=( $(grep '^\(ATOM\|HETATM\)' $PDB | cut -b 22 | uniq) )
-
-    # Unpack lists of chains to multiscale separated by commas
-    MULTI=( $(for i in ${MULTI[@]}; do echo ${i//,/ }; done) )
-
-    # Residues defined in martinize.py
-    AA=(ALA CYS ASP GLU PHE GLU HIS ILE LYS LEU MET ASN PRO GLN ARG SER THR VAL TRP TYR)
-    # Sed query for residues (separated by \|):
-    SED_AA=$($SED 's/ \+/\\\|/g' <<< ${AA[@]})
-    # ATOM selection (martinizable residues)
-    ATOM='/^\(ATOM  \|HETATM\)/{/.\{17\} *'$SED_AA' */p;}'
-    # HETATM selection (non-martinizable residues)
-    HETATM='/^\(ATOM  \|HETATM\)/{/.\{17\} *'$SED_AA' */!p;}'
-
-    # Split the pdb file in stuff that can be processed with pdb2gmx 
-    # and stuff that cannot be processed with it
-    #  Extract the names of building blocks defined in the rtp file 
-    # of the force field used. These blocks are defined as '[ ALA ]',
-    # so we match a name in square brackets at the start of a line.
-    # The name is appended to the hold space.
-    RTPENTRIES='/^\[ *\(...\).*\].*/{s//\1/;H;}'
-    # At the end of the list, the building block names are reformatted
-    # to make a regular expression string matching each word. First,
-    # the hold space is swapped with the pattern space, the first bit is 
-    # removed and then all embedded newlines are replaced by '\|'
-    FORMAT='${x;s/\n...\n//;s/\n/\\\|/g;p;}'
-    # Finally sed is called processing all rtp files of the force field
-    DEF=$($SED -n -e "$RTPENTRIES" -e "$FORMAT" $GMXLIB/$ForceField.ff/*.rtp)
- 
-    # Now we can split the input PDB file into a processable and a non-processable part
-    echo $DEF
-    #sed -e '/^\(TER\|MODEL\|ENDMDL\)/p' -e '/^\(ATOM  \|HETATM\)/{/.\{17\} *\('$DEF'\) */p;}' $dirn/$base.pdb  > $base-def.pdb
-    #sed -e '/^\(TER\|MODEL\|ENDMDL\)/p' -e '/^\(ATOM  \|HETATM\)/{/.\{17\} *\('$DEF'\) */!p;}' $dirn/$base.pdb > $base-ndef.pdb  
-  fi
-else
-  base=
-fi
-
-
-if [[ $PBC == retain && -n $PDB ]]
-then
-  PBC="-pbc keep"
-else
-  PBC="-pbc $PBC"
-fi
-
-
-echo Done checking
-
-
-## SED stuff
-
-# Extract the moleculetype name
-SED_MOLECULETYPE='/moleculetype/{
-:a
-n
-/^;/ba
-s/\s\+.*$//p
-q
-}
-'
-
-echo Done gymnastics
-
 
 #--------------------------------------------------------------------
 #---SIMULATION PARAMETERS--          
@@ -1487,6 +1356,133 @@ NOW=$STEP
 #--------------------------------------------------------------------
 SHOUT "---= THIS IS WHERE WE START =---"
 #--------------------------------------------------------------------
+
+#--------------------------------------------------------------------
+#---INPUT CHECKING, SPLITTING, TRIMMING, GROOMING
+#--------------------------------------------------------------------
+
+source "$SDIR"/_pdb.sh
+
+if [[ -n $PDB ]]
+then
+  # If the input file is not found, check whether it was given without extension.
+  # If that is not the case, then fetch the file from the PDB repository.
+  if [[ ! -f $PDB ]]
+  then
+    PDB=$PDB.pdb
+    if [[ ! -f $PDB ]]
+    then
+      # Try fetching it from the PDB    
+      echo Input file $PDB not found... Trying server
+      pdb=$(tr [A-Z] [a-z] <<< ${PDB%.pdb})
+
+      fetch_structure $pdb $FETCH
+      
+      [[ -n $SCRATCH ]] && cp $pdb.pdb $DIR
+    fi
+  fi
+
+
+  # If the input file is missing now, raise an errorr
+  if [[ ! -f $PDB ]]
+  then
+    echo Input file $PDB not found and fetching from PDB server failed.
+    exit 1
+  fi
+
+
+  # Check whether the input file is here or in another directory.
+  # In the latter case, copy it here
+  [[ $PDB == ${PDB##*/} || $PDB == ./${PDB##*/} ]] || cp $PDB .   
+
+
+  pdb=${PDB##*/}          # Filename
+  base=${pdb%.*}          # Basename
+  ext=${pdb##*.}          # Extension
+  dirn=${PDB%$pdb}        # Directory
+  [[ $dirn ]] || dirn="." 
+  dirn=`cd $dirn && pwd`  # Full path to input file directory
+
+
+  if [ $dirn != `pwd` ]
+  then
+    NOTE "The run is performed here (`pwd`), while the input file is elsewhere ($dirn)."
+  fi
+
+  if [[ -z $TOP && $ext == "pdb" ]]
+  then
+    if $NOHETATM -a $(grep -q HETATM $PDB)
+    then
+      NOTE Removing HETATM entries from PDB file
+      $SED -i '' -e /^HETATM/d $PDB
+    fi
+
+    # Extract a list of chains from PDB file
+    CHAINS=( $(grep '^\(ATOM\|HETATM\)' $PDB | cut -b 22 | uniq) )
+
+    # Unpack lists of chains to multiscale separated by commas
+    MULTI=( $(for i in ${MULTI[@]}; do echo ${i//,/ }; done) )
+
+    # Residues defined in martinize.py
+    AA=(ALA CYS ASP GLU PHE GLU HIS ILE LYS LEU MET ASN PRO GLN ARG SER THR VAL TRP TYR)
+    # Sed query for residues (separated by \|):
+    SED_AA=$($SED 's/ \+/\\\|/g' <<< ${AA[@]})
+    # ATOM selection (martinizable residues)
+    ATOM='/^\(ATOM  \|HETATM\)/{/.\{17\} *'$SED_AA' */p;}'
+    # HETATM selection (non-martinizable residues)
+    HETATM='/^\(ATOM  \|HETATM\)/{/.\{17\} *'$SED_AA' */!p;}'
+
+    # Split the pdb file in stuff that can be processed with pdb2gmx 
+    # and stuff that cannot be processed with it
+    #  Extract the names of building blocks defined in the rtp file 
+    # of the force field used. These blocks are defined as '[ ALA ]',
+    # so we match a name in square brackets at the start of a line.
+    # The name is appended to the hold space.
+    RTPENTRIES='/^\[ *\(...\).*\].*/{s//\1/;H;}'
+    # At the end of the list, the building block names are reformatted
+    # to make a regular expression string matching each word. First,
+    # the hold space is swapped with the pattern space, the first bit is 
+    # removed and then all embedded newlines are replaced by '\|'
+    FORMAT='${x;s/\n...\n//;s/\n/\\\|/g;p;}'
+    # Finally sed is called processing all rtp files of the force field
+    DEF=$($SED -n -e "$RTPENTRIES" -e "$FORMAT" $GMXLIB/$ForceField.ff/*.rtp)
+ 
+    # Now we can split the input PDB file into a processable and a non-processable part
+    echo $DEF
+    #sed -e '/^\(TER\|MODEL\|ENDMDL\)/p' -e '/^\(ATOM  \|HETATM\)/{/.\{17\} *\('$DEF'\) */p;}' $dirn/$base.pdb  > $base-def.pdb
+    #sed -e '/^\(TER\|MODEL\|ENDMDL\)/p' -e '/^\(ATOM  \|HETATM\)/{/.\{17\} *\('$DEF'\) */!p;}' $dirn/$base.pdb > $base-ndef.pdb  
+  fi
+else
+  base=
+fi
+
+
+if [[ $PBC == retain && -n $PDB ]]
+then
+  PBC="-pbc keep"
+else
+  PBC="-pbc $PBC"
+fi
+
+
+echo Done checking
+
+
+## SED stuff
+
+# Extract the moleculetype name
+SED_MOLECULETYPE='/moleculetype/{
+:a
+n
+/^;/ba
+s/\s\+.*$//p
+q
+}
+'
+
+echo Done gymnastics
+
+
 
 NOW=0
 
