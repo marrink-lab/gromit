@@ -1259,15 +1259,15 @@ SHOUT "---STEP 1A: GENERATE ATOMISTIC STRUCTURE AND TOPOLOGY"
 if ! $M && [[ $STEP == $NOW ]]
 then
     echo "Skipping step... (not multiscaling)"
-    $M  || : $((STEP++))
+    : $((STEP++))
 fi
 
 
 # Skip this step if we run DAFT
-if [[ $STEP == $NOW ]]
+if [[ -n $DAFT ]] && [[ $STEP == $NOW ]]
 then
     echo DAFT run. Skipping step.
-    [[ -n $DAFT  ]] && : $((STEP++))
+    : $((STEP++))
 fi
 
 
@@ -1378,7 +1378,7 @@ then
     fi
 
     #     6. Process
-    if [[ -z $EXEC ]] || $(all_exist ${OUTPUT[@]})
+    if [[ -n $EXEC ]] || $(all_exist ${OUTPUT[@]})
     then
         # Skipping verbosely; showing what would have been run
 	echo -e "Skipping: \n$PDB2GMX"   

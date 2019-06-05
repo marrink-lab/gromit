@@ -5,7 +5,8 @@
 if [[ ! -e $GMXLIB/$ForceField.ff/constraints.itp && ! -e ./constraints.itp ]]
 then
     # Generate from ffbonded.itp
-    awk '/#define *gb_/{sub("gb_","gc_"); print $1, $2, $3}' $GMXLIB/$ForceField.ff/ffbonded.itp > constraints.itp 
+    FFBON= $GMXLIB/$ForceField.ff/ffbonded.itp
+    awk '/#define *gb_/{sub("gb_","gc_"); print $1, $2, $3}' "$FFBON" > constraints.itp 
 
     # Add specific constrainttypes:
     S_S='S      S       1    0.2040'
