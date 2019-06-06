@@ -659,7 +659,7 @@ source "${SRCDIR}"/_gmx.sh
 SOLSTEP=$(get_step_fun CG)
 if [[ $STEP -le $SOLSTEP && $STOP -ge $SOLSTEP ]]
 then
-  echo -n 'Checking DSSP binary (for martinizing proteins)... '
+  echo -n '# Checking DSSP binary (for martinizing proteins)... '
   DSSP=$(find_program_function dssp)
   if [[ $? == 1 ]]
   then
@@ -754,7 +754,7 @@ fmt=" %5d %5d %5d %5d %5d %5d %5d %5d %5d %5d %5d %5d %5d %5d %5d"
 
 ## 3. START/STOP FLOW CONTROL ##
 NOW=$STEP
-echo Will run from step ${STEPS[$STEP]} until ${STEPS[$STOP]}
+echo "# Will run from step ${STEPS[$STEP]} until ${STEPS[$STOP]}"
 
 # Sequence generation; seq might not be available
 SEQ() { for ((i=$1; i<=$2; i++)); do echo $i; done; }
@@ -1122,11 +1122,8 @@ then
     if [[ ! -f $PDB ]]
     then
       # Try fetching it from the PDB    
-      echo Input file $PDB not found... Trying server
       pdb=$(tr [A-Z] [a-z] <<< ${PDB%.pdb})
-
       fetch_structure $pdb $FETCH
-      
       [[ -n $SCRATCH ]] && cp $pdb.pdb $DIR
     fi
   fi
@@ -1162,8 +1159,8 @@ then
   then
     if $NOHETATM -a $(grep -q HETATM $PDB)
     then
-      NOTE Removing HETATM entries from PDB file
-      $SED -i '' -e /^HETATM/d $PDB
+      NOTE Removing HETATM entries from PDB file $PDB
+      $SED -i'' -e "/^HETATM/d" "$PDB"
     fi
 
     # Extract a list of chains from PDB file
@@ -1197,7 +1194,8 @@ then
     DEF=$($SED -n -e "$RTPENTRIES" -e "$FORMAT" $GMXLIB/$ForceField.ff/*.rtp)
  
     # Now we can split the input PDB file into a processable and a non-processable part
-    echo $DEF
+    echo "# Defined building blocks in $ForceField RTP files:"
+    echo "# $DEF"
     #sed -e '/^\(TER\|MODEL\|ENDMDL\)/p' -e '/^\(ATOM  \|HETATM\)/{/.\{17\} *\('$DEF'\) */p;}' $dirn/$base.pdb  > $base-def.pdb
     #sed -e '/^\(TER\|MODEL\|ENDMDL\)/p' -e '/^\(ATOM  \|HETATM\)/{/.\{17\} *\('$DEF'\) */!p;}' $dirn/$base.pdb > $base-ndef.pdb  
   fi
@@ -1214,7 +1212,7 @@ else
 fi
 
 
-echo Done checking
+echo "# Done checking"
 
 
 ## SED stuff
@@ -1229,7 +1227,7 @@ q
 }
 '
 
-echo Done gymnastics
+echo "# Done gymnastics"
 
 
 
@@ -1468,24 +1466,10 @@ then
 	    fi
 	fi
 
-        # f. Get the current list of molecules from the top file 
-	awkexpr='(M && ! /^ *;/); /\[ *molecules *\]/{M=1}'
 	MOLECULES=($(awk "${awk_top_get_moleculelist}" $base-aa.top))
-	echo MOLECULES: ${MOLECULES[@]}	
-
-
-        # g. Get the list of itp files #included in the top file
-        #    One sed expression:
-        #    - at lines starting with #include and not containing a slash in the file name
-        #      substitute the line with the name of the included file and print
-	sedexpr='/^#include .*"\([^/]*\)"/s//\1/p'
 	ITPFILES=($($SED -n -e "${sed_top_get_includes}" $base-aa.top))
-
-
-        # h. Get the list of moleculetypes from the itp files
-	awkexpr='/moleculetype/{getline; while ($0 ~ /^ *;/) getline; print $1}'
 	MOLTYPES=($(for i in  ${ITPFILES[@]}; do awk "${awk_itp_get_moltypes}" $i; done))
-
+	echo MOLECULES: ${MOLECULES[@]}	
 
         # i. Match the molecules with the itp files
         #    For each molecule in the list, check which moleculetype it is and 
@@ -1569,8 +1553,6 @@ then
 	[[ -n $M_MULTI ]] && MNDX="-n $base-mart.ndx"
 	MARTINIZE="$MART $(expandOptList ${MARTINIZE[@]})"
 	MARTINIZE="$MARTINIZE -f $pdb -o $TOP -x $base-mart.pdb $MNDX -ff $MARTINI $M_MULTI"
-	# If martinize did not generate the index file, we need to do it now
-	[[ -z $M_MULTI ]] && { echo "[ CG ]"; seq $(grep -c "^ATOM" $base-mart.pdb); } > $base-mart.ndx
 	echo $MARTINIZE
     fi
 
@@ -1587,6 +1569,9 @@ then
         # 5. The result is stored as array MARMOLS
         #          |-1-| |------2-----|  |-------3------|   |--------------------------4---------------------|
 	MARMOLS=($($MARTINIZE 3>&1 1>&2 2>&3 | tee /dev/stderr | $SED -n '/^INFO *[0-9]\+-> \+\([^ ]\+\).*$/s//\1/p'))
+
+	# If martinize did not generate the index file, we need to do it now
+	[[ -z $M_MULTI ]] && { echo "[ CG ]"; seq $(grep -c "^ATOM" $base-mart.pdb); } > $base-mart.ndx
 
         # If we use polarizable or BMW water, we need to change AC1/AC2 to C1/C2
 	if $POLARIZABLE
@@ -1605,7 +1590,7 @@ then
 
 	touch residuetypes.dat elements.dat
 	trash residuetypes.dat elements.dat
-	${GMX}editconf -f $base-mart.pdb -o $base-mart.gro -d 100 -noc >/dev/null 2>&1
+	${GMX}editconf -f $base-mart.pdb -o $base-mart.gro -box 100 100 100 -noc >/dev/null 2>&1
 
         # Have to energy minimize output structure for stability
 	#__mdp_mart__pbc=no
@@ -1615,7 +1600,7 @@ then
 	
 	mdp_options ${OPT[@]} > $MDP
 	MDRUNNER -f $MDP -c $base-mart.gro -p $TOP -o $OUT -n $base-mart.ndx -np 1 -l $LOG -force $FORCE $TABLES
-	echo 0 | ${GMX}trjconv -s $base-mart.gro -f $OUT -pbc nojump -o $base-mart-nj.gro
+	echo 0 | ${GMX}trjconv -s $base-mart.gro -f $OUT -pbc nojump -o $base-mart-nj.gro >/dev/null 2>&1
 	mv $base-mart-nj.gro $OUT
 
         # trash $base-mart.gro
