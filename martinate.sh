@@ -617,23 +617,13 @@ fi
 export PATH="${PATH}:${SDIR}"
 
 
-## 4. Echo mdp options specified on the command line
+## 4. Echo mdp/program options specified on the command line
 
-# These options are formatted like --mdp-param=value
-# This will add 'param = value' to the MDP file for 
-# all runs following energy minimization. 
-# *NOTE*: Options specified on the command line take
-# precedence over internal parameters and over those
-# read from an mdp file, provided as value to option
-# -mdp 
+MSG="Program options specified on command line:"
+echo_additional_options ${PROGOPTS[@]}
 
-if [[ -n $MDPOPTS ]]
-then
-  echo 'Simulation parameters specified on command line (note how flexible!):'
-  for ((i=0; i<${#MDPOPTS[@]}; i++)); do echo ${MDPOPTS[$i]}; done
-  echo ===
-fi
-
+MSG="MDP options specified on command line (note how flexible!):"
+echo_additional_options ${MDPOPTS[@]}
 
 ## 5. Locate insane if STEP lies before SOLVENT and STOP lies after.
 

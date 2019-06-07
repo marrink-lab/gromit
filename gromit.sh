@@ -264,7 +264,7 @@ PROGOPTS=()              # User-defined program options (--program-option=value)
 MDPOPTS=()               # User-defined mdp parametesrs (--mdp-option=value)
 
 
-source "{$SRCDIR}"/_optionhandling.sh
+source "${SRCDIR}"/_optionhandling.sh
 
 
 # Collect errors, warnings and notes to (re)present to user at the end
@@ -279,6 +279,14 @@ store_note_fun() { a=$@; notes_array+=(${x// /QQQ}); NOTE "$@"; }
 
 
 ##>> OPTIONS
+
+if [[ -z "$1" ]]; then
+  echo "No command line arguments give. Please read the program usage:"
+  USAGE 1
+  exit
+fi
+
+
 while [ -n "$1" ]; do
 
   # Check for program option
@@ -658,39 +666,11 @@ IFS=$ifs
 
 ## 2. Echo options for direct modulation of program calls
 
-# These options are formatted like --program-option=value
-# This will add '-option value' on the command line of the 
-# specific program. If an option takes multiple arguments
-# then these should be given comma separated. The commas 
-# will be replaced by spaces.
-# *NOTE*: Some options are defined internally and can not be 
-# overriden. Attempting to do so will result in an error, as
-# options will be doubly specified.
+MSG="Program options specified on command line:"
+echo_additional_options ${PROGOPTS[@]}
 
-if [[ -n $PROGOPTS ]]
-then
-   echo "# Program options specified on command line:"
-  for ((i=0; i<${#PROGOPTS[@]}; i++)); do echo "#     ${PROGOPTS[$i]}"; done
-    echo "#==="
-fi
-
-
-## 3. Echo mdp options specified on the command line
-
-# These options are formatted like --mdp-param=value
-# This will add 'param = value' to the MDP file for 
-# all runs following energy minimization. 
-# *NOTE*: Options specified on the command line take
-# precedence over internal parameters and over those
-# read from an mdp file, provided as value to option
-# -mdp 
-
-if [[ -n $MDPOPTS ]]
-then
-  echo "# Simulation parameters specified on command line (note how flexible!):"
-  for ((i=0; i<${#MDPOPTS[@]}; i++)); do echo "#     ${MDPOPTS[$i]}"; done
-  echo "#==="
-fi
+MSG="MDP options specified on command line (note how flexible!):"
+echo_additional_options ${MDPOPTS[@]}
 
 
 #--------------------------------------------------------------------
