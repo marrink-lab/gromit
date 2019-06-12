@@ -107,15 +107,6 @@ the objectives of the study.
 __DESCRIPTION__
 )
 
-
-
-
-#--------------------------------------------------------------------
-#---EXTERNAL/USER STUFF
-#--------------------------------------------------------------------
-
-
-
 #--------------------------------------------------------------------
 #---Parsing COMMAND LINE ARGUMENTS AND DEPENDENCIES--
 #--------------------------------------------------------------------
@@ -123,10 +114,12 @@ __DESCRIPTION__
 CMD="$0 $@"
 echo "$CMD" | tee CMD
 
+
 # Directory where this script is
 SDIR=$( [[ $0 != ${0%/*} ]] && cd ${0%/*}; pwd )
 SRCDIR="$SDIR/source"
 FFDIR="$SDIR/forcefield"
+
 
 # These will be looked for before running, and can be set from the cmdline, e.g.:
 #    -gmxrc /usr/local/gromacs-5.1/bin/GMXRC
@@ -501,14 +494,6 @@ for ((i=0; i<${#STEPS[@]}; i++)); do [[ ${STEPS[$i]} == ${STEP}* ]] && STEP=$i &
 for ((i=0; i<${#STEPS[@]}; i++)); do [[ ${STEPS[$i]} == ${STOP}* ]] && STOP=$i && break; done
 
 
-# Set the script directory
-SCRIPTDIR=$(cd ${0%${0##*/}}; pwd)
-
-
-# Directory where command was issued
-BDIR=$(pwd)
-
-
 # Set the scratch directory, if any:
 #    scratch directory, user name, random number
 if [[ -n $SCRATCH ]]
@@ -611,11 +596,6 @@ then
 fi
 
 
-## 3. PATH ##
-
-# Add the script location to the PATH
-export PATH="${PATH}:${SDIR}"
-
 
 ## 4. Echo mdp/program options specified on the command line
 
@@ -684,9 +664,6 @@ fmt=" %5d %5d %5d %5d %5d %5d %5d %5d %5d %5d %5d %5d %5d %5d %5d"
 ## 3. START/STOP FLOW CONTROL ##
 NOW=$STEP
 echo "# Will run from step ${STEPS[$STEP]} until ${STEPS[$STOP]}"
-
-# Sequence generation; seq might not be available
-SEQ() { for ((i=$1; i<=$2; i++)); do echo $i; done; }
 
 
 ## 4. SET THE SOLVENT  ##
@@ -901,22 +878,7 @@ fi
 
 
 echo "# Done checking"
-
-
-## SED stuff
-
-# Extract the moleculetype name
-SED_MOLECULETYPE='/moleculetype/{
-:a
-n
-/^;/ba
-s/\s\+.*$//p
-q
-}
-'
-
 echo "# Done gymnastics"
-
 
 
 NOW=0

@@ -40,7 +40,7 @@ ifs=$IFS; IFS="."; GMXVERSION=($GMXVERSION); IFS=$ifs
 GMXBIN=${GMXBIN%/*}
 
 # Set the directory to SCRIPTDIR if GMXBIN is empty 
-GMXBIN=${GMXBIN:-$SCRIPTDIR}
+GMXBIN=${GMXBIN:-$SDIR}
 
 # Set the command prefix and set the GMXLIB variable to point to 
 # the force field data and such.
