@@ -490,14 +490,6 @@ echo $CMD > cmd.log
 START=$(date +%s)
 
 
-# Set the script directory
-SCRIPTDIR=$(cd ${0%${0##*/}}; pwd)
-
-
-# Directory where command was issued
-BDIR=$(pwd)
-
-
 # Set the scratch directory, if any:
 #    scratch directory, user name, random number
 if [[ -n $SCRATCH ]]
