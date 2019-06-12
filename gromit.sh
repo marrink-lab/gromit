@@ -101,23 +101,6 @@ __DESCRIPTION__
 )
 
 
-
-
-#--------------------------------------------------------------------
-#---EXTERNAL/USER STUFF
-#--------------------------------------------------------------------
-
-# Automated topology builder
-ATB=http://atb.uq.edu.au
-ATBSEARCHPDB="$ATB/search.py?"
-ATBSEARCHMOL="$ATB/search.py?"
-ATBGET="$ATB/download.py?outputType=top&ffVersion=54a7"
-ATBITP="$ATBGET&file=rtp_uniatom&molid"
-ATBPDB="$ATBGET&file=pdb_uniatom_optimised&molid"
-ATBPDBU="$ATBGET&file=pdb_uniatom_unoptimised&molid"
-ATBGROMOS=https://atb.uq.edu.au/forcefield_files/atb_gromacs/5/gromos54a7_atb.ff.tar.gz
-
-
 #--------------------------------------------------------------------
 #---Parsing COMMAND LINE ARGUMENTS AND DEPENDENCIES--
 #--------------------------------------------------------------------
