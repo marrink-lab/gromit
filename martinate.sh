@@ -286,6 +286,14 @@ store_note_fun() { a=$@; notes_array+=(${x// /QQQ}); NOTE "$@"; }
 
 
 ##>> OPTIONS
+
+if [[ -z "$1" ]]; then
+  echo "No command line arguments give. Please read the program usage:"
+  USAGE 1
+  exit
+fi
+
+
 while [ -n "$1" ]; do
 
   # Check for program option
