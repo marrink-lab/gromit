@@ -1071,12 +1071,10 @@ OUTPUT=($base.top $base.gro)
 [[ $STEP == $NOW ]] && TOP=$base.top
 
 
-## I. Build command 
-
+## I. pdb2gmx
 
 # 1. Basic stuff
 PDB2GMX="${GMX}pdb2gmx -v -f $dirn/$pdb -o $base.gro -p $base.top -ignh -ff $ForceField -water $WaterModel"
-
 
 # 2. Position restraints
 #    * The position restraint fc (-posrefc) is bogus and 
@@ -1084,14 +1082,11 @@ PDB2GMX="${GMX}pdb2gmx -v -f $dirn/$pdb -o $base.gro -p $base.top -ignh -ff $For
 #      These will be placed under control of a #define
 PDB2GMX="$PDB2GMX -i $base-posre.itp -posrefc 999"
 
-
 # 3. Virtual sites
 $VirtualSites && PDB2GMX="$PDB2GMX -vsite hydrogens" 
 
-
 # 4. Add program options specified on command line (--pdb2gmx-option=value)
 PDB2GMX="$PDB2GMX $(program_options pdb2gmx)"
-
 
 # 5. Specification of protonation states
 if [[ $STEP == $NOW ]]
@@ -1114,7 +1109,8 @@ then
 	$SED -e "$NTER" -e "$CTER" -e "$ACID" -e "$LYS" -e "$HIS" $dirn/$TITR > pdb2gmx.query
 	trash pdb2gmx.query
     fi
-    
+
+    #     5. Check for gmxquery and, if found, set interactive mode 
     if [ -e "$dirn/pdb2gmx.query" ]; then
 	GMXQUERY=$(cat $dirn/pdb2gmx.query)
 	PDB2GMX="$PDB2GMX -ter -lys -asp -glu -his"

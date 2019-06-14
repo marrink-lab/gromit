@@ -183,7 +183,7 @@ PDB=
 TOP=
 NDX=
 NOHETATM=true
-VSITE=false
+VirtualSites=false
 
 # - multiscaling
 ForceField=gromos45a3
@@ -368,7 +368,7 @@ while [ -n "$1" ]; do
     -m       ) MULTI[$((NCH++))]=$2; M=true         ; shift 2; continue ;; #==2 Chains for multiscaling
     -M       ) ALL=true; M=true                     ; shift 1; continue ;; #==2 Multiscale all chains
     -ff      ) ForceField=$2                        ; shift 2; continue ;; #==2 Atomistic force field for multiscaling
-    -vsite   ) VSITE=true                           ; shift 1; continue ;; #==2 Use virtual sites in multiscaling
+    -vsite   ) VirtualSites=true                    ; shift 1; continue ;; #==2 Use virtual sites in multiscaling
     -epsr    ) EPSR=$2                              ; shift 2; continue ;; #==2 Dielectric constant of vacuum
     -epsrf   ) EPSRF=$2                             ; shift 2; continue ;; #==2 Dielectric constant of Reaction-Field
     -ljdp    ) LJDP=$2                              ; shift 2; continue ;; #==2 Lennard-Jones dispersion
@@ -971,21 +971,31 @@ then
     then
 	$TABLE $EPSR_AA $EPSRF    $RC      6             12            $RC      -1     > table_AA_CG.xvg 
     fi
+fi
+
+
 
     
-    # IV. pdb2gmx
+## I. pdb2gmx
 
-    #     1. Basic stuff
-    PDB2GMX="${GMX}pdb2gmx -v -f $dirn/$base.pdb -o $OUT -p $TOP"
-    PDB2GMX="$PDB2GMX -i $base-posre.itp -posrefc 200 -ignh -ff $ForceFieldAA -water none"
+# 1. Basic stuff
+PDB2GMX="${GMX}pdb2gmx -v -f $dirn/$base.pdb -o $OUT -p $TOP"
 
-    #     2. Virtual sites
-    $VSITE && PDB2GMX="$PDB2GMX -vsite hydrogens" 
+# 2. Position restraints
+#    * The position restraint fc (-posrefc) is bogus and 
+#      intended to allow easy replacement with sed.
+#      These will be placed under control of a #define
+PDB2GMX="$PDB2GMX -i $base-posre.itp -posrefc 200 -ignh -ff $ForceFieldAA -water none"
 
-    #     3. Add program options specified on command line
-    PDB2GMX="$PDB2GMX $(program_options pdb2gmx)"
+# 3. Virtual sites
+$VirtualSites && PDB2GMX="$PDB2GMX -vsite hydrogens" 
 
-    #     4. Specification of protonation states
+# 4. Add program options specified on command line (--pdb2gmx-option=value)
+PDB2GMX="$PDB2GMX $(program_options pdb2gmx)"
+
+# 5. Specification of protonation states
+if [[ $STEP == $NOW ]]
+then
     if [[ -e $dirn/$base.tit || -e $dirn/titratables.dat ]]
     then
 	[[ -e $dirn/$base.tit ]] && TITR=$base.tit || TITR=titratables.dat
@@ -1625,7 +1635,7 @@ __mdp_cg__pcoupl=Berendsen
 if [[ -n $MDPMS ]]
 then
     # Multiscaled - Using virtual sites or not
-    $VSITE && DT=(0.0005 0.001 0.002 0.003 0.004) || DT=(0.0005 0.001 0.002)
+    $VirtualSites && DT=(0.0005 0.001 0.002 0.003 0.004) || DT=(0.0005 0.001 0.002)
 else
     # Coarsegrained 
     # "With DAFT runs, we just skip this step (PR-NpT)"
@@ -1675,7 +1685,7 @@ __mdp_equil__define=
 if [[ -n $MDPMS ]]
 then
     # Multiscaled - Using virtual sites or not
-    $VSITE && DT=(0.004 $DELT) || DT=(0.002 $DELT)
+    $VirtualSites && DT=(0.004 $DELT) || DT=(0.002 $DELT)
 else
     # Coarsegrained
     DT=(0.020 $DELT)
