@@ -126,8 +126,11 @@ source "${SRCDIR}"/_optionhandling.sh
 source "${SRCDIR}"/_functions.sh
 source "${SRCDIR}"/_mdp_martinate.sh
 source "${SRCDIR}"/_mdp.sh
+source "${SRCDIR}"/_martinate_index.sh
+source "$SRCDIR"/_mdrunner.sh
+source "$SRCDIR"/_pdb.sh
 
-trap "archive" 2 9 15
+trap "archive" 2 9 15 # function archive in _functions.sh
 
 
 # These will be looked for before running, and can be set from the cmdline, e.g.:
@@ -152,10 +155,6 @@ STEPS=(AA CG SOLVENT EM NVT-PR NPT PREPRODUCTION TPR PRODUCTION ANALYSIS END)
 get_step_fun() { for ((i=0; i<${#STEPS[@]}; i++)) do [[ ${STEPS[$i]} =~ ^$1 ]] && echo $i; done; }
 STEP=AA
 STOP=PRODUCTION
-
-
-# Sourcing stuff
-source "$SRCDIR"/_logging.sh
 
 # MARTINI Force field parameters
 MARTINI=martini22
@@ -263,9 +262,6 @@ RotationalConstraints=   # Use rotational constraints, which is mandatory with N
 # User defined gromacs program options and simulation parameters (way flexible!)
 PROGOPTS=()              # User-defined program options (--program-option=value)
 MDPOPTS=()               # User-defined mdp parametesrs (--mdp-option=value)
-
-
-source "${SRCDIR}"/_optionhandling.sh
 
 
 # Collect errors, warnings and notes to (re)present to user at the end
@@ -758,10 +754,6 @@ read_mdp_options
 
 ERROR=0
 
-source "${SRCDIR}"/_functions.sh
-source "${SRCDIR}"/_martinate_index.sh
-source "$SRCDIR"/_mdrunner.sh
-
 # Always ECHO the first line
 NOW=$STEP
 
@@ -772,8 +764,6 @@ SHOUT "---= THIS IS WHERE WE START =---"
 #--------------------------------------------------------------------
 #---INPUT CHECKING, SPLITTING, TRIMMING, GROOMING
 #--------------------------------------------------------------------
-
-source "$SRCDIR"/_pdb.sh
 
 if [[ -n $PDB ]]
 then
