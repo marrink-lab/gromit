@@ -1,7 +1,5 @@
-hlevel=1
-olevel=1
 # Function for parsing help from option list
-help_fun()
+function help_fun()
 {
   local desc='/^.*#=[0-'${hlevel}']/s//    /p'
   local item='/#==[0-'${olevel}']/{s/^ */        /;s/).*#==./  /p;d;}'
@@ -29,7 +27,7 @@ __USAGE__
 }
 
 
-BAD_OPTION ()
+function BAD_OPTION ()
 {
   echo
   echo "Unknown option "$1" found on command-line"
