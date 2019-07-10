@@ -119,6 +119,8 @@ source "${SRCDIR}"/_optionhandling.sh
 source "${SRCDIR}"/_functions.sh
 source "${SRCDIR}"/_mdp_gromit.sh
 source "${SRCDIR}"/_mdp.sh
+source "$SRCDIR"/_mdrunner.sh
+source "$SRCDIR"/_pdb.sh
 
 trap "archive" 2 9 15
 
@@ -928,9 +930,6 @@ function INDEX()
   return 0
 }
 
-# Load the MDRUNNER routine 
-source "$SRCDIR"/_mdrunner.sh
-
 # Always ECHO the first line
 NOW=$STEP
 
@@ -968,8 +967,6 @@ then
     : $(( STEP++ ))
 fi
 
-
-source "$SRCDIR"/_pdb.sh
 
 # If we are still at this step, do some checking of input and 
 # maybe fetch a file from the PDB.
