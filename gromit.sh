@@ -113,145 +113,11 @@ SDIR=$( [[ $0 != ${0%/*} ]] && cd ${0%/*}; pwd )
 SRCDIR="$SDIR"/source
 FFDIR="$SDIR"/forcefield
 
-# Sourcing 'modules'
+# Sourcing modules
 source "$SRCDIR"/_logging.sh
 source "${SRCDIR}"/_optionhandling.sh
-
-
-# These will be looked for before running, and can be set from the cmdline, e.g.:
-#    -gmxrc /usr/local/gromacs-5.1/bin/GMXRC
-# If not set, the default name will be searched for in
-#    1. the environment (if PROGEVAR is given)
-#    2. the directory where this calling script (gromit) is located
-#    3. the PATH 
-DEPENDENCIES=( gmxrc squeeze)
-PROGEXEC=(     GMXRC squeeze)
-PROGEVAR=(     GMXRC)
-
-
-# Residue groups used for classifying atoms in the structure file.
-# Ions are typically considered positioned after solvent.
-# Membrane is the complementary group to the rest.
-# The structure file is assumed to have the following composition:
-#  - Protein
-#  - Nucleic acids
-#  - Membrane
-#  - Solvent
-#  - Ions
-# All groups are optional (as long as there are some)
-amino_acids=(ALA CYS ASP GLU PHE GLY HIS HIH ILE LYS LEU MET ASN PRO HYP GLN ARG SER THR VAL TRP TYR)
-nucleic_acids=(DG DA DC DT G A C U)
-solvent_names=(W WF PW BMW SOL HOH)
-
-
-# Run control
-MONALL=       # Monitor all steps
-CONTROL=
-CHECKTIME=300 # Run control every five minutes
-
-
-# Stepping stuff
-STEPS=(TOPOLOGY LIGANDS BOX EMVACUUM SOLVATION EMSOLVENT NVT-PR NPT PREPRODUCTION TPR PRODUCTION ANALYSIS END)
-get_step_fun() { for ((i=0; i<${#STEPS[@]}; i++)) do [[ ${STEPS[$i]} =~ ^$1 ]] && echo $i; done; }
-STEP=
-STOP=PRODUCTION
-
-
-# Force field
-ForceFieldFamilies=(gromos  charmm  amber   opls )
-ForceFieldSolvents=(spc     tip3p   tip3p   tip4p)
-SolventFiles=(      spc216  spc216  spc216  tip4p)
-ForceField=gromos45a3
-WaterModel=
-SolModel=
-SolName=SOL
-SolFile=
-LIGANDS=()
-VirtualSites=false
-AtomTypes=()
-MoleculeTypes=()
-
-
-# Options:
-
-# Downstream programs:
-
-# This program:
-
-# - protein:
-fnIN=         # Input file name
-TOP=          # Topology file
-HETATM=true   # Keep HETATM records in input PDB file
-
-# - run control and files
-DIR="."       # Directory to run and write           
-TPR=          # Run input file... skip to production or to STEP
-NAME=         # Run name
-FETCH=        # Try to fetch PDB file from web
-MSGFILE=/dev/stdout      # Master log file (stdout)
-ERRFILE=/dev/stderr      # Error log file (stderr)
-EXEC=         # Execute run
-NP=1          # Number of processors
-MDP=          # User-provided MDP file
-MDARGS=       # User-provided arguments to mdrun
-MAXH=-1       # Maximum duration of run
-JUNK=()       # Garbage collection
-SCRATCH=      # Scratch directory
-ARCHIVE=      # Archive file name
-FORCE=false   # Overwrite existing run data
-KEEP=false    # Keep intermediate rubbish (except junk)
-GMXRC=        # File for loading GMX version
-SQUEEZE=      # Squeeze executable
-ANALYSIS=()   # Analysis tags 
-
-
-# - system setup
-PBCDIST=2.25             # Minimal distance between periodic images
-BOXTYPE=dodecahedron     # Box type
-Salt=NA,CL               # Salt species
-SaltCharge=1,-1          # Charges of salt species
-Salinity=0.1539976       # Salt concentration of solvent
-CHARGE=                  # Net charge to set on system
-NDLP=false               # Use optimal simulation cell (near-densest-lattice-packing)
-
-
-# - group definitions
-NATOMS=0                 # Total number of atoms
-Biomol=()                # Biomolecules (protein, nucleic acid, lipid)
-Solute=()                # Solute molecule (protein or so)
-Membrane=()              # Lipids, excluding protein
-Solvent=()               # Solvent, including ions
-Ligand=()                # Ligands
-Ligenv=()                # Ligand environment to consider for LIE contributions
-CoupleGroups=()          # Groups for temperature coupling
-EnergyGroups=()          # Groups for energy calculations
-LIE=false                # LIE run
-
-
-# - simulation parameters
-TIME=0                   # Production run time (ns)
-AT=0.05                  # Output frequency for positions, energy and log (ns)
-EquilTime=0.1            # Equilibration run time (ns)          
-PreTime=0.5              # Preproduction run time (ns)
-EMSteps=500              # Number of steps for EM
-Temperature=200,300      # Degree Kelvin
-Tau_T=0.1                # ps
-Pressure=1               # Bar
-Tau_P=1.0                # ps
-PosreFC=200,200          # Position restraint force constant(s)
-Electrostatics=          # Electrostatics scheme to use if not opting for default
-SEED=$$                  # Random seed for velocity generation
-RotationalConstraints=   # Use rotational constraints, which is mandatory with NDLP
-
-
-# User defined gromacs program options and simulation parameters (way flexible!)
-PROGOPTS=()              # User-defined program options (--program-option=value)
-MDPOPTS=()               # User-defined mdp parametesrs (--mdp-option=value)
-
-
-source "${SRCDIR}"/_optionhandling.sh
-source "${SRCDIR}"/_logging.sh
 source "${SRCDIR}"/_functions.sh
+trap "archive" 2 9 15
 
 
 # These will be looked for before running, and can be set from the cmdline, e.g.:
@@ -291,7 +157,6 @@ STEPS=(TOPOLOGY LIGANDS BOX EMVACUUM SOLVATION EMSOLVENT NVT-PR NPT PREPRODUCTIO
 get_step_fun() { for ((i=0; i<${#STEPS[@]}; i++)) do [[ ${STEPS[$i]} =~ ^$1 ]] && echo $i; done; }
 STEP=
 STOP=PRODUCTION
-
 
 # Force field
 ForceFieldFamilies=(gromos  charmm  amber   opls )
@@ -836,16 +701,16 @@ echo
 
 
 # Set a trap for signals
-function archive ()
-{
-  if [[ -n $ARCHIVE ]]
-  then
-    tar cfz $DIR/$ARCHIVE.tmp.tgz $(ls | grep -v $ARCHIVE)
-    mv $DIR/$ARCHIVE.tmp.tgz $DIR/$ARCHIVE
-  fi
-  exit
-}
-trap "archive" 2 9 15
+#function archive ()
+#{
+#  if [[ -n $ARCHIVE ]]
+#  then
+#    tar cfz $DIR/$ARCHIVE.tmp.tgz $(ls | grep -v $ARCHIVE)
+#    mv $DIR/$ARCHIVE.tmp.tgz $DIR/$ARCHIVE
+#  fi
+#  exit
+#}
+#trap "archive" 2 9 15
 
 
 # Set the forcefield tag
@@ -988,6 +853,7 @@ source "${SRCDIR}"/_mdp.sh
 
 
 ERROR=0
+
 
 function pdb2gmx_error()
 {

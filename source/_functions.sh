@@ -27,8 +27,6 @@ function archive()
         mv $ARCHIVE.tmp.tgz $ARCHIVE
     fi
 }
-trap "archive" 2 9 15
-
 
 function exit_clean()
 {
