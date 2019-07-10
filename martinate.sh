@@ -126,9 +126,12 @@ source "${SRCDIR}"/_optionhandling.sh
 source "${SRCDIR}"/_functions.sh
 source "${SRCDIR}"/_mdp_martinate.sh
 source "${SRCDIR}"/_mdp.sh
-source "${SRCDIR}"/_martinate_index.sh
 source "$SRCDIR"/_mdrunner.sh
 source "$SRCDIR"/_pdb.sh
+source "${SRCDIR}"/_martinate_index.sh
+source "${SRCDIR}"/_martinate_multiscale.sh
+source "${SRCDIR}"/_martinate_daft.sh
+
 
 trap "archive" 2 9 15 # function archive in _functions.sh
 
@@ -1230,10 +1233,10 @@ then
         # Check for chains to multiscale
 	if $ALL -o [[ -n $MULTI ]]
 	then
-	    source "${SRCDIR}"/_martinate_multiscale.sh
+            multiscale_topology
 	elif [[ -n $DAFT ]]
 	then
-	    source "${SRCDIR}"/_martinate_daft.sh
+            daft_groups
 	fi
 
 	touch residuetypes.dat elements.dat
