@@ -120,6 +120,15 @@ SDIR=$( [[ $0 != ${0%/*} ]] && cd ${0%/*}; pwd )
 SRCDIR="$SDIR/source"
 FFDIR="$SDIR/forcefield"
 
+# Sourcing modules
+source "$SRCDIR"/_logging.sh
+source "${SRCDIR}"/_optionhandling.sh
+source "${SRCDIR}"/_functions.sh
+source "${SRCDIR}"/_mdp_martinate.sh
+source "${SRCDIR}"/_mdp.sh
+
+trap "archive" 2 9 15
+
 
 # These will be looked for before running, and can be set from the cmdline, e.g.:
 #    -gmxrc /usr/local/gromacs-5.1/bin/GMXRC
@@ -735,8 +744,9 @@ $M && TABLES=-tables || TABLES=
 ## NOTE ## This is probably fine for equilibration, but check the defaults to be sure
 ## E OT ## The list as is was set up for gromacs 4.5 and 5.1
 
-source "${SRCDIR}"/_mdp_martinate.sh
-source "${SRCDIR}"/_mdp.sh
+init_mdp_parameters
+read_mdp_file
+read_mdp_options
 
 #--------------------------------------------------------------------
 
