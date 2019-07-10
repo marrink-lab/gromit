@@ -117,6 +117,9 @@ FFDIR="$SDIR"/forcefield
 source "$SRCDIR"/_logging.sh
 source "${SRCDIR}"/_optionhandling.sh
 source "${SRCDIR}"/_functions.sh
+source "${SRCDIR}"/_mdp_gromit.sh
+source "${SRCDIR}"/_mdp.sh
+
 trap "archive" 2 9 15
 
 
@@ -841,8 +844,9 @@ fi
 ## NOTE ## This is probably fine for equilibration, but check the defaults to be sure
 ## E OT ## The list as is was set up for gromacs 4.5 and 5.1
 
-source "${SRCDIR}"/_mdp_gromit.sh
-source "${SRCDIR}"/_mdp.sh
+init_mdp_parameters
+read_mdp_file
+read_mdp_options
 
 #--------------------------------------------------------------------
 

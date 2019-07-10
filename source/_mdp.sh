@@ -24,36 +24,39 @@ function mdp_options ()
 }
 
 
-if [[ -n $MDP ]]
-then
-  # Check if the MDP file specified exists and exit if not
-  [[ ! -f $MDP ]] && echo "MDP file $MDP specified, but not found" && exit
+function read_mdp_file() {
+    if [[ -n $MDP ]]
+    then
+        # Check if the MDP file specified exists and exit if not
+        [[ ! -f $MDP ]] && echo "MDP file $MDP specified, but not found" && exit
 
-  # Gather options
-  # 1. Delete empty lines
-  # 2. Delete comment lines
-  # 3. Remove whitespace on either side of the equality sign
-  # 4. Remove trailing whitespace
-  # 5. Replace spaces with commas
-  USER_MDP=( $( $SED '/^ *$/d;/^ *;/d;s/\s*=\s*/=/;s/\s*$//;s/ /,/g;' $MDP ) )
+        # Gather options
+        # 1. Delete empty lines
+        # 2. Delete comment lines
+        # 3. Remove whitespace on either side of the equality sign
+        # 4. Remove trailing whitespace
+        # 5. Replace spaces with commas
+        USER_MDP=( $( $SED '/^ *$/d;/^ *;/d;s/\s*=\s*/=/;s/\s*$//;s/ /,/g;' $MDP ) )
 
-  for i in ${USER_MDP[@]}
-  do
-    opt=${i%%=*}
-    val=${i#$opt}
-    eval "__mdp_usr__${opt//-/_}$val"
-  done
-fi
+        for i in ${USER_MDP[@]}
+        do
+            opt=${i%%=*}
+            val=${i#$opt}
+            eval "__mdp_usr__${opt//-/_}$val"
+        done
+    fi
+}
 
 
-if [[ -n $MDPOPTS ]]
-then
-  for i in ${MDPOPTS[@]}
-  do
-    # --mdp-energygrps=bla,bla,bla
-    opt=${i%%=*}
-    val=${i#$opt}
-    eval "__mdp_usr__${opt//-/_}$val"
-  done
-fi
-
+function read_mdp_options() {
+    if [[ -n $MDPOPTS ]]
+    then
+        for i in ${MDPOPTS[@]}
+        do
+            # --mdp-energygrps=bla,bla,bla
+            opt=${i%%=*}
+            val=${i#$opt}
+            eval "__mdp_usr__${opt//-/_}$val"
+        done
+    fi
+}
