@@ -119,8 +119,9 @@ source "${SRCDIR}"/_optionhandling.sh
 source "${SRCDIR}"/_functions.sh
 source "${SRCDIR}"/_mdp_gromit.sh
 source "${SRCDIR}"/_mdp.sh
-source "$SRCDIR"/_mdrunner.sh
-source "$SRCDIR"/_pdb.sh
+source "${SRCDIR}"/_mdrunner.sh
+source "${SRCDIR}"/_pdb.sh
+source "${SRCDIR}"/_gmx.sh
 
 trap "archive" 2 9 15
 
@@ -557,8 +558,7 @@ find_program_function()
 
 ##  1. GROMACS  ##
 
-source "${SRCDIR}"/_gmx.sh
-
+load_gromacs
 
 # 2. SQUEEZE/NDLP for minimal-volume simulation.
 # - Requires Gromacs with RTC support

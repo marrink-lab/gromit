@@ -126,12 +126,12 @@ source "${SRCDIR}"/_optionhandling.sh
 source "${SRCDIR}"/_functions.sh
 source "${SRCDIR}"/_mdp_martinate.sh
 source "${SRCDIR}"/_mdp.sh
-source "$SRCDIR"/_mdrunner.sh
-source "$SRCDIR"/_pdb.sh
+source "${SRCDIR}"/_mdrunner.sh
+source "${SRCDIR}"/_pdb.sh
 source "${SRCDIR}"/_martinate_index.sh
 source "${SRCDIR}"/_martinate_multiscale.sh
 source "${SRCDIR}"/_martinate_daft.sh
-
+source "${SRCDIR}"/_gmx.sh
 
 trap "archive" 2 9 15 # function archive in _functions.sh
 
@@ -266,6 +266,8 @@ RotationalConstraints=   # Use rotational constraints, which is mandatory with N
 PROGOPTS=()              # User-defined program options (--program-option=value)
 MDPOPTS=()               # User-defined mdp parametesrs (--mdp-option=value)
 
+hlevel=0
+olevel=0
 
 # Collect errors, warnings and notes to (re)present to user at the end
 # Spaces are replaced by the unlikely combination QQQ to keep the 
@@ -574,8 +576,7 @@ find_program_function()
 
 ##  1. GROMACS  ##
 
-source "${SRCDIR}"/_gmx.sh
-
+load_gromacs
 
 ## 2. DSSP ##
 
