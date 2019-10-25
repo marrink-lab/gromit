@@ -1265,7 +1265,7 @@ fi
 
 # NPROT may be set, but if we skipped this step it's not
 # If it is not set, then the input could be solute (prot/nucl) and/or membrane
-NPROT=$(LSED -n '2{p;q;}' $GRO)
+NPROT=$(LSED -n '2{p;q;}' "$GRO")
 
 # END OF COARSE GRAINING
 [[ $STOP ==   $NOW     ]] && exit_clean
@@ -1383,7 +1383,7 @@ then
     done
     if [[ -n $USRFIX ]]
     then
-	LSED -i"" -e '/\[ *system *\]/{s/^/'"$USRFIX"'/;}' $TOP
+	LSED -i"" -e '/\[ *system *\]/{s/^/'"$USRFIX"'/;}' "$TOP"
     fi
 
     # Sugar hack
@@ -1392,7 +1392,7 @@ then
         # Uncomment the include topology for sugars
 	cp $FFDIR/martini_${FFTAG}_sugars.itp ./ || touch martini_${FFTAG}_sugars.itp
 	grep -q sugars.itp $TOP && CARBFIX='/sugars.itp/s/^; //' || CARBFIX='/\[ *system *\]/{s/^/#include "martini_'$FFTAG'_sugars.itp"'"$N$N"'/;}'
-	LSED -i"" -e "$CARBFIX" $TOP
+	LSED -i"" -e "$CARBFIX" "$TOP"
     fi
 
     if [[ $INSANE =~ "-l " ]]
@@ -1410,7 +1410,7 @@ then
 	    cat $lip.itp >> martini_${FFTAG}_lipids.itp
 	done
 	grep -q lipids.itp $TOP && LIPFIX='/lipids.itp/s/^; //' || LIPFIX='/\[ *system *\]/{s/^/#include "martini_'$FFTAG'_lipids.itp"'"$N$N"'/;}'
-	LSED -i"" -e "$LIPFIX" $TOP
+	LSED -i"" -e "$LIPFIX" "$TOP"
     else
 	echo "$INSANE"
     fi
@@ -1425,7 +1425,7 @@ then
     fi
 
     grep -q ions.itp $TOP && IONFIX='/ions.itp/s/^; //' || IONFIX='/\[ *system *\]/{s,^,#include "'$IONSITP'"'"$N$N"',;}'
-    LSED -i -e "$IONFIX" $TOP 
+    LSED -i -e "$IONFIX" "$TOP" 
 
     # Include user defined topologies 
     USRFIX=
@@ -1434,7 +1434,7 @@ then
 	USRFIX="${USRFIX}"'#include "'$itp'"'"$N"
     done
     USRFIX='/\[ *system *\]/{s,^,'${USRFIX}"$N"',;}'
-    LSED -i -e "$USRFIX" $TOP
+    LSED -i -e "$USRFIX" "$TOP"
 
     # We made a topology... extract groups
     NSOL=($(grep '; NDX Solvent' $TOP))
@@ -1450,16 +1450,16 @@ then
     GRO=$OUT
 else
     # We did not make a topology, but there should be an index file.
-    NPROT=$(LSED -n '/\[ *Solute/,/\[/{/\[/d;p;}' $NDX | wc -w)
-    NMEM=$(LSED -n '/\[ *Membrane/,/\[/{/\[/d;p;}' $NDX | wc -w)
-    NSOL=$(LSED -n '/\[ *Solvent/,/\[/{/\[/d;p;}' $NDX | wc -w)
+    NPROT=$(LSED -n '/\[ *Solute/,/\[/{/\[/d;p;}' "$NDX" | wc -w)
+    NMEM=$(LSED -n '/\[ *Membrane/,/\[/{/\[/d;p;}' "$NDX" | wc -w)
+    NSOL=$(LSED -n '/\[ *Solvent/,/\[/{/\[/d;p;}' "$NDX" | wc -w)
 fi
 
 [[ $NMEM -gt 0 ]] && MEMBRANE=true || MEMBRANE=false
 
-NTOT=$(LSED -n '2{p;q;}' $GRO)
+NTOT=$(LSED -n '2{p;q;}' "$GRO")
 # Assuming that ions come after solvent
-NION=$(( NTOT - $(LSED -n $(sed_solvent '{p;d;}') $GRO | wc -l) - NMEM - NPROT ))
+NION=$(( NTOT - $(LSED -n $(sed_solvent '{p;d;}') "$GRO" | wc -l) - NMEM - NPROT ))
 NSOL=$(( NSOL - NION ))
 echo $GRO: NTOT=$NTOT NPROT=$NPROT NSOL=$NSOL NMEM=$NMEM NION=$NION
 
@@ -1703,7 +1703,7 @@ do
     OUT=$base-NPT-$__mdp_equil__dt-$run.gro
     MDP=md-init-$__mdp_equil__dt-$run.mdp
     mdp_options ${OPT[@]} > $MDP
-    nsteps=$($SED -n '/nsteps/s/.*=//p' $MDP)
+    nsteps=$($SED -n '/nsteps/s/.*=//p' "$MDP")
     before=$(date +%s)
     echo ==--- $GRO $OUT
     MD="MDRUNNER -f $MDP -c $GRO -p $TOP -o $OUT -n $NDX -np $NP -l $LOG -force $FORCE $TABLES $MONALL"
@@ -1759,7 +1759,7 @@ echo @@@ $OUT
 
 mdp_options ${OPT[@]} > $MDP
 
-mdsteps=$($SED -n '/nsteps/s/.*=//p' $MDP)
+mdsteps=$($SED -n '/nsteps/s/.*=//p' "$MDP")
 estimate=$(( (timing*(1000*mdsteps)/nsteps)/1000 ))
 estfin=$(( $(date +%s) + estimate ))
 echo "Expected runtime for $mdsteps step: $(( estimate/3600 ))H:$(( (estimate%3600)/60 ))M:$(( estimate%60 ))S (until $(date -r $estfin))"
