@@ -1534,7 +1534,7 @@ fi
 if [[ -n $TOP ]]
 then
     # Add atomtypes and moleculetypes if given
-    $SED /^#include.*forcefield.itp/q $TOP > $base-usr.top
+    $SED '/^#include.*forcefield.itp/q' $TOP > $base-usr.top
     for atp in ${AtomTypes[@]}
     do
 	echo
