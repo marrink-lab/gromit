@@ -352,7 +352,8 @@ while [ -n "$1" ]; do
     -cg      ) MARTINI=$2                           ; shift 2; continue ;; #==1 Coarse grain force field
     -sol     ) SOL=$2                               ; shift 2; continue ;; #==1 Solvent type to use
     -ffitp   ) FFITP=$2                             ; shift 2; continue ;; #==2 Coarse-grain force field definition
-    -fftag   ) FFTAG=$2                             ; shift 2; continue ;;
+    -ffdir   ) FFDIR=$2                             ; shift 2; continue ;; #==2 Directory for force field files
+    -fftag   ) FFTAG=$2                             ; shift 2; continue ;; #==2 Tag for force field files (v3.0 -> martini_v3.0_lipids.itp)
     -itp     ) USRITP+=($2)                         ; shift 2; continue ;; #==2 User-provided ITP file
     -dry     ) DRY=$2                               ; shift 2; continue ;; #==2 Use dry martini from file definition
 
