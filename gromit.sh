@@ -276,6 +276,8 @@ if [[ -z "$1" ]]; then
 fi
 
 
+hlevel=1
+olevel=1
 while [ -n "$1" ]; do
 
   # Check for program option
