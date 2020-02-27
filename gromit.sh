@@ -16,18 +16,18 @@ The Netherlands"
 IF YOU CHANGE THE PARAMETERS AND/OR WORKFLOW, PLEASE RENAME THE PROGRAM AND
 STATE THE NATURE AND PURPOSE OF THE CHANGES MADE.
 
-This has grown to be a rather complicated bash script. It is intended to 
+This has grown to be a rather complicated bash script. It is intended to
 work through the MD process as a person would, issuing shell commands and reading
-and editing files. Bash feels more natural for this than a Python/C wrapper. 
-It is advised to (get to) know about bash loops and variable substitution, as 
-these are used plenty. In addition, since there are many occassions where files 
-need to be read and edited, there are a lot of calls to sed, with quite a 
-few less ordinary commands. 
+and editing files. Bash feels more natural for this than a Python/C wrapper.
+It is advised to (get to) know about bash loops and variable substitution, as
+these are used plenty. In addition, since there are many occassions where files
+need to be read and edited, there are a lot of calls to sed, with quite a
+few less ordinary commands.
 
 To keep the code manageable, it is structured in sections and every section is
-ordered, preferrably by numbered chunks. In addition, there is extensive 
-documentation. Every statement should be clear, either by itself or by a 
-preceding explanation. In case advanced bash/sed/... features are used, they 
+ordered, preferrably by numbered chunks. In addition, there is extensive
+documentation. Every statement should be clear, either by itself or by a
+preceding explanation. In case advanced bash/sed/... features are used, they
 ought to be explained. That will keep the program manageable and make it a nice
 place for learning tricks :)
 
@@ -42,10 +42,10 @@ DESCRIPTION=$(cat << __DESCRIPTION__
 
 $PROGRAM $VERSION is a versatile wrapper for setting up and running
 molecular dynamics simulations of proteins and/or nucleic acids in solvent.
-The script contains a complete and flexible workflow, consisting of the 
+The script contains a complete and flexible workflow, consisting of the
 following steps:
 
-    1.   Generate topology from input structure 
+    1.   Generate topology from input structure
          A. Process structure against force field (TOPOLOGY)
          B. Add ligands                           (LIGANDS)
     2.   Set up periodic boundary conditions      (BOX)
@@ -55,22 +55,22 @@ following steps:
     6.   Position restrained NVT equilibration    (NVT-PR)
     7.   Unrestrained NpT equilibration           (NPT)
     8.   Equilibration under run conditions       (PREPRODUCTION)
-    9.   Production simulation                    
+    9.   Production simulation
          A. Run input file                        (TPR)
          B. Simulation (possibly in parts)        (PRODUCTION)
 
 The program allows running only part of the workflow by specifying the
-start and end step (-step/-stop), using an argument uniquely matching 
+start and end step (-step/-stop), using an argument uniquely matching
 one of the tags given between parentheses.
 
-This program requires a working installation of Gromacs. To link 
-the program to the correct version of Gromacs, it should be placed in the 
-Gromacs binaries directory or the Gromacs GMXRC file should be passed as 
+This program requires a working installation of Gromacs. To link
+the program to the correct version of Gromacs, it should be placed in the
+Gromacs binaries directory or the Gromacs GMXRC file should be passed as
 argument to the option -gmxrc
 
 The workflow contained within this program corresponds to a standard protocol
-that should suffice for routine molecular dynamics simulations of proteins 
-and/or nucleic acids in aqueous solution. It follows the steps that are 
+that should suffice for routine molecular dynamics simulations of proteins
+and/or nucleic acids in aqueous solution. It follows the steps that are
 commonly taken in MD tutorials (e.g. http://md.chem.rug.nl/~mdcourse/molmod2012/).
 
 This program is designed to enable high-throughput processing of molecular
@@ -78,19 +78,19 @@ dynamics simulations in which specific settings are varied systematically. These
 settings include protein/nucleic acid, ligand, temperature, and pressure, as well
 as many others.
 
-The program supports a number of specific protocols, including Linear Interaction 
+The program supports a number of specific protocols, including Linear Interaction
 Energy (LIE), Transition Path Sampling (TPS), and GRID-distributed MD.
 
 
 ## -- IMPORTANT -- ##
 
-Molecular dynamics simulations are complex, with many contributing factors. 
+Molecular dynamics simulations are complex, with many contributing factors.
 The workflow in this program has been tested extensively and used many times.
-Nonetheless, it should not be considered failsafe. No MD protocol ever is. 
+Nonetheless, it should not be considered failsafe. No MD protocol ever is.
 Despite careful set up, simulations may crash, and the possibility that a crash
 is encountered is larger when many simulations are run. If the run crashes,
 the intermediate results will be kept and can be investigated to identify the
-source of the problem. 
+source of the problem.
 
 If the run finishes to completion, this does not automatically imply that the
 results are good. The results from the simulations should always be subjected
@@ -131,7 +131,7 @@ trap "archive" 2 9 15
 # If not set, the default name will be searched for in
 #    1. the environment (if PROGEVAR is given)
 #    2. the directory where this calling script (gromit) is located
-#    3. the PATH 
+#    3. the PATH
 DEPENDENCIES=( gmxrc squeeze)
 PROGEXEC=(     GMXRC squeeze)
 PROGEVAR=(     GMXRC)
@@ -191,7 +191,7 @@ TOP=          # Topology file
 HETATM=true   # Keep HETATM records in input PDB file
 
 # - run control and files
-DIR="."       # Directory to run and write           
+DIR="."       # Directory to run and write
 TPR=          # Run input file... skip to production or to STEP
 NAME=         # Run name
 FETCH=        # Try to fetch PDB file from web
@@ -209,7 +209,7 @@ FORCE=false   # Overwrite existing run data
 KEEP=false    # Keep intermediate rubbish (except junk)
 GMXRC=        # File for loading GMX version
 SQUEEZE=      # Squeeze executable
-ANALYSIS=()   # Analysis tags 
+ANALYSIS=()   # Analysis tags
 
 
 # - system setup
@@ -238,7 +238,7 @@ LIE=false                # LIE run
 # - simulation parameters
 TIME=0                   # Production run time (ns)
 AT=0.05                  # Output frequency for positions, energy and log (ns)
-EquilTime=0.1            # Equilibration run time (ns)          
+EquilTime=0.1            # Equilibration run time (ns)
 PreTime=0.5              # Preproduction run time (ns)
 EMSteps=500              # Number of steps for EM
 Temperature=200,300      # Degree Kelvin
@@ -257,7 +257,7 @@ MDPOPTS=()               # User-defined mdp parametesrs (--mdp-option=value)
 
 
 # Collect errors, warnings and notes to (re)present to user at the end
-# Spaces are replaced by the unlikely combination QQQ to keep the 
+# Spaces are replaced by the unlikely combination QQQ to keep the
 # messages together.
 errors_array=()
 store_error_fun() { a="$@"; errors_array+=(${x// /QQQ}); FATAL "$@"; }
@@ -313,15 +313,15 @@ while [ -n "$1" ]; do
     -f       ) fnIN=$2                              ; shift 2; continue ;; #==0 Input coordinate file (PDB)
     -g       ) MSGFILE=$2                           ; shift 2; continue ;; #==1 Standard output log file (default: /dev/stdout)
     -e       ) ERRFILE=$2                           ; shift 2; continue ;; #==1 Standard error log file (default: /dev/stderr)
-    -tpr     ) TPR=$2                               ; shift 2; continue ;; #==1 Run input file 
+    -tpr     ) TPR=$2                               ; shift 2; continue ;; #==1 Run input file
     -name    ) NAME=$2                              ; shift 2; continue ;; #==1 Name of project
     -top     ) TOP=$2                               ; shift 2; continue ;; #==1 Input topology file
     -atp     ) AtomTypes+=($2)                      ; shift 2; continue ;; #==2 Additional atom type definitions (force field file)
-    -itp     ) MoleculeTypes+=($2)                  ; shift 2; continue ;; #==2 Additional molecule type definitions 
+    -itp     ) MoleculeTypes+=($2)                  ; shift 2; continue ;; #==2 Additional molecule type definitions
     -l       ) LIGANDS+=($2)                        ; shift 2; continue ;; #==2 Ligands to include (topology or structure,topology)
     -mdp     ) MDP=$2                               ; shift 2; continue ;; #==2 MDP (simulation parameter) file
     -scratch ) SCRATCH=$2                           ; shift 2; continue ;; #==2 Scratch directory to perform simulation
-    -fetch   ) FETCH=$2                             ; shift 2; continue ;; #==1 Database to fetch input structure from 
+    -fetch   ) FETCH=$2                             ; shift 2; continue ;; #==1 Database to fetch input structure from
     -rmhet   ) HETATM=false                         ; shift  ; continue ;; #==2 Whether or not to remove HETATM records
 
     #=1
@@ -349,7 +349,7 @@ while [ -n "$1" ]; do
     -salt    ) Salt=$2                              ; shift 2; continue ;; #==2 Salt to use (NA,CL)
     -conc    ) Salinity=$2                          ; shift 2; continue ;; #==2 Salt concentration
     -sq      ) SaltCharge=$2                        ; shift 2; continue ;; #==2 Charge of ions from salt (1,-1)
-    -charge  ) CHARGE=$2                            ; shift 2; continue ;; #==2 
+    -charge  ) CHARGE=$2                            ; shift 2; continue ;; #==2
     -t       ) Temperature=$2                       ; shift 2; continue ;; #==1 Temperature
     -ttau    ) Tau_T=$2                             ; shift 2; continue ;; #==2 Temperature coupling constant
     -p       ) Pressure=$2                          ; shift 2; continue ;; #==1 Pressure
@@ -372,21 +372,21 @@ while [ -n "$1" ]; do
     #=1 Analysis options
     #=1 ----------------
     #=1
-    -lie     ) LIE=true                             ; shift  ; continue ;; #==2 Whether or not to use LIE setup and analysis 
+    -lie     ) LIE=true                             ; shift  ; continue ;; #==2 Whether or not to use LIE setup and analysis
     -analysis) ANALYSIS+=($2)                       ; shift 2; continue ;; #==2 Analysis protocols to run
 
     #=2
     #=2 Perform analysis specified (provided it is implemented) *STR:   None
     #=2 Analysis routines can be added to the end of the script
-    #=2 They should be tagged to allow being called through the 
-    #=2 command line. 
-    #=2 
+    #=2 They should be tagged to allow being called through the
+    #=2 command line.
+    #=2
     #=2 Currently available routines:
     #=2
     #=2     * LIE
     #=2       ---
     #=2       Extract ligand - environment interaction energies
-    #=2       for post-hoc LIE calculations. This analysis 
+    #=2       for post-hoc LIE calculations. This analysis
     #=2       requires running with the option -lie and is then
     #=2       selected automatically.
 
@@ -402,12 +402,12 @@ while [ -n "$1" ]; do
         shift
       done
       shift 2
-      echo MONITOR COMMAND: $CONTROL 
-      continue;; 
+      echo MONITOR COMMAND: $CONTROL
+      continue;;
     -ctime   ) CHECKTIME=$2                         ; shift 2; continue ;; #==2 Time for running monitor
 
     #=2
-    #=2 A control process is either a program, script or command 
+    #=2 A control process is either a program, script or command
     #=2 that monitors the production run and terminates it
     #=2 upon a certain condition, indicated by its exit code.
 
@@ -415,20 +415,20 @@ while [ -n "$1" ]; do
     #=1 Advanced control options
     #=1 ------------------------
     #=1
-    #=2 This program allows specifying options for advanced control of 
-    #=2 program invocation and simulation parameters. These options are 
+    #=2 This program allows specifying options for advanced control of
+    #=2 program invocation and simulation parameters. These options are
     #=2 described below.
     #=2
 
     # The first one is the template/dummy for the help system
     --mdp-option=value) olevel=2; hlevel=2; USAGE 1; continue;; #==2 Command-line specified simulation parameters
-    --mdp-*  ) MDPOPTS+=(${1#--mdp-})               ; shift  ; continue ;; 
+    --mdp-*  ) MDPOPTS+=(${1#--mdp-})               ; shift  ; continue ;;
     #=2
-    #=2 This will add 'option = value' to the MDP file for all simulations 
+    #=2 This will add 'option = value' to the MDP file for all simulations
     #=2 following energy minimization. MDP options specified on the command line
     #=2 take precedence over those specified in an input file (-mdp), which take
-    #=2 precedence over parameters defined in this script. 
-    #=2 If the option takes multiple arguments, then 'value' should be a 
+    #=2 precedence over parameters defined in this script.
+    #=2 If the option takes multiple arguments, then 'value' should be a
     #=2 comma separated list.
     #=2 The STEP/STOP controls can be used to set parameters for (pre)production
     #=2 simulations selectively.
@@ -438,13 +438,13 @@ while [ -n "$1" ]; do
     --*      ) PROGOPTS+=($1)                       ; shift  ; continue ;;
     #=2
     #=2 This will add "-option value" to the command line of the call to 'program'.
-    #=2 Note that this does not allow overriding options specified internally. 
-    #=2 Trying to do so will result in an error due to double specification of the 
-    #=2 option. If the option takes multiple arguments, then 'value' should be a 
+    #=2 Note that this does not allow overriding options specified internally.
+    #=2 Trying to do so will result in an error due to double specification of the
+    #=2 option. If the option takes multiple arguments, then 'value' should be a
     #=2 comma separated list.
 
-    #=0 
-    #=0 
+    #=0
+    #=0
 
     # All options should be covered above. Anything else raises an error here.
     *)         BAD_OPTION "$1";;
@@ -485,17 +485,17 @@ START=$(date +%s)
 #    scratch directory, user name, random number
 if [[ -n $SCRATCH ]]
 then
-    # The scratch directory can be specified as 
+    # The scratch directory can be specified as
     # (escaped) variable, like \$TMPDIR. This
     # variable will be expanded at runtime.
-    # That may be handy on clusters, where the 
+    # That may be handy on clusters, where the
     # $TMPDIR is set for every node.
     if [[ ${SCRATCH:0:1} == '$' ]]
     then
 	tmp=${SCRATCH:1}
 	SCRATCH=${!tmp}
     fi
-    
+
     # To ensure that there is no further rubbish
     # the scratch directory is extended with the
     # username, the data and the process ID. There
@@ -516,7 +516,7 @@ fi
 #--------------------------------------------------------------------
 
 # Awk expression for extracting moleculetype
-#    - at the line matching 'moleculetype' 
+#    - at the line matching 'moleculetype'
 #      read in the next line
 #      continue reading next lines until one is not beginning with ;
 #      print the first field
@@ -538,7 +538,7 @@ NDEP=${#DEPENDENCIES[@]}
 find_program_function()
 {
   for ((i=0; i<$NDEP; i++)); do
-    if [[ ${DEPENDENCIES[$i]} == "$1" ]] 
+    if [[ ${DEPENDENCIES[$i]} == "$1" ]]
     then
       progr=${PROGEXEC[$i]}
       envvar=${PROGEVAR[$i]}
@@ -574,9 +574,9 @@ then
   fi
   if ! $SQUEEZE -h >/dev/null 2>&1
   then
-    echo 
+    echo
     echo "Squeeze was probably compiled for a different version of Gromacs."
-    FATAL "NDLP SETUP REQUESTED, BUT SQUEEZE EXECUTABLE FAILED" 
+    FATAL "NDLP SETUP REQUESTED, BUT SQUEEZE EXECUTABLE FAILED"
   fi
 fi
 
@@ -629,7 +629,7 @@ LASTRUN=0
 # This concerns options for equilibration, such as temperature,
 # pressure and position restraint force constants. These will
 # be used to set up cycles of equilibration. Position restraints Fc
-# and temperature are cycled together in STEP 6 (NVT), followed by 
+# and temperature are cycled together in STEP 6 (NVT), followed by
 # pressure equilibration in STEP 7 (NPT).
 
 # Store the Internal Field Separator (IFS)
@@ -639,7 +639,7 @@ Temperature=($Temperature)
 Tau_T=($Tau_T)
 Pressure=($Pressure)
 Tau_P=($Tau_P)
-PosreFC=($PosreFC) 
+PosreFC=($PosreFC)
 Salt=($Salt)
 SaltCharge=($SaltCharge)
 # Restore the field separator
@@ -670,11 +670,11 @@ topdir=$(cd ${TOP%${TOP##*/}}./; pwd)            # Full path to directory of top
 [[ -n $TOP ]]  && TOP=$topdir/${TOP##*/}         # Topology file with full path
 
 
-# Set the name. If one is given, that one is used. Otherwise, 
-# if an input structure is given, the name is derived from it. 
+# Set the name. If one is given, that one is used. Otherwise,
+# if an input structure is given, the name is derived from it.
 # If there is no input structure, but there is a ligand, then
 # "ligand" is used. If nothing is set, then just use
-# "wallace" 
+# "wallace"
 base=${pdb%.*}                                   # Set basename
 [[ -n $NAME ]] && base=$NAME                     # Override base name if name is given
 [[ -z $base && -n $LIGANDS ]] && base=ligand     # Still unset.., set to "ligand" if we have a ligand
@@ -733,10 +733,10 @@ esac
 #---SET THE SOLVENT MODEL
 #--------------------------------------------------------------------
 
-# If it is not specified, the solvent is the water model 
+# If it is not specified, the solvent is the water model
 # most appropriate for the force field. This can be overriden
 # by explicitly stating an alternative water model or by
-# providing a solvent model topology. 
+# providing a solvent model topology.
 
 # The solvent model needs to be accompanied by a solvent
 # structure file, which is to be used for the solvation.
@@ -816,7 +816,7 @@ echo "# Stopping at step $STOP:    ${STEPS[$STOP]}"
 
 
 #--------------------------------------------------------------------
-#---INFORMATIVE OUTPUT--          
+#---INFORMATIVE OUTPUT--
 #--------------------------------------------------------------------
 
 
@@ -833,15 +833,15 @@ then
   $VirtualSites \
     && echo "# Using virtual sites" \
     || echo "# Not using virtual sites"
-    
+
   $NDLP \
     && echo "# Simulations will be performed using a near-densest lattice packing unit cell" \
-    || echo "# Simulations will be performed in a rhombic dodecahedron unit cell" 
+    || echo "# Simulations will be performed in a rhombic dodecahedron unit cell"
 fi
 
 
 #--------------------------------------------------------------------
-#---SIMULATION PARAMETERS--          
+#---SIMULATION PARAMETERS--
 #--------------------------------------------------------------------
 
 ## OT N ## For every parameter not defined the default is used
@@ -872,12 +872,12 @@ function pdb2gmx_error()
 function getCharge ()
 {
   # Routine for extracting the charge from a TPR file
-  # a. Extract and set the active molecule name 
+  # a. Extract and set the active molecule name
   AWK_TPR_MOLNAME='/^ *name=/{sub(".*=","",$0); T=$0}'
   # b. Extract the moleculetype name
   AWK_TPR_MOLTYPE='/^ *moltype *=/{M=$4}'
   # c. Extract the number of instances of the current moleculetype
-  #    and initialize charge for moleculetype  
+  #    and initialize charge for moleculetype
   AWK_TPR_MOLNUM='/#molecules *=/{N[M]=$3; C[M]=0}'
   # d. Extract and accumulate charge
   AWK_TPR_CHARGE='/^ *atom.*q=/{sub(".*q=","",$0); sub(",.*","",$0); C[T]+=$0}'
@@ -895,7 +895,7 @@ function getCharge ()
 function INDEX()
 {
   [[ -n $2 ]] && fn=$2 || fn=basic.ndx
- 
+
   exec 6>&1 && exec >$fn
 
   fmt="%5d %5d %5d %5d %5d %5d %5d %5d %5d %5d"
@@ -946,7 +946,7 @@ NOW=0
 #     1. The RUN directory $DIR
 #     2. The SCRATCH directory $SCRATCH
 # If we are working in the scratch directory, we
-# copy back files after every step to keep the 
+# copy back files after every step to keep the
 # run directory in sync.
 # What we copy back depends on the value of $KEEP.
 # If that is 'true' everything is copied.
@@ -970,7 +970,7 @@ then
 fi
 
 
-# If we are still at this step, do some checking of input and 
+# If we are still at this step, do some checking of input and
 # maybe fetch a file from the PDB.
 if [[ $STEP == $NOW ]]
 then
@@ -1027,7 +1027,7 @@ fi
 # b. Side chains
 # c. PTMs
 
-## II. Ligands and cofactors 
+## II. Ligands and cofactors
 
 # a. Ions
 # b. Ligands/Factors
@@ -1079,13 +1079,13 @@ OUTPUT=($base.top $base.gro)
 PDB2GMX="${GMX}pdb2gmx -v -f $dirn/$pdb -o $base.gro -p $base.top -ignh -ff $ForceField -water $WaterModel"
 
 # 2. Position restraints
-#    * The position restraint fc (-posrefc) is bogus and 
+#    * The position restraint fc (-posrefc) is bogus and
 #      intended to allow easy replacement with sed.
 #      These will be placed under control of a #define
 PDB2GMX="$PDB2GMX -i $base-posre.itp -posrefc 999"
 
 # 3. Virtual sites
-$VirtualSites && PDB2GMX="$PDB2GMX -vsite hydrogens" 
+$VirtualSites && PDB2GMX="$PDB2GMX -vsite hydrogens"
 
 # 4. Add program options specified on command line (--pdb2gmx-option=value)
 PDB2GMX="$PDB2GMX $(program_options pdb2gmx)"
@@ -1101,7 +1101,7 @@ then
 	ACID='/\(ASP\|GLU\)/{s/.*[Hh0]\s*$/1/;s/.*\-\s*/0/}'
         # Basic residue LYS: deprotonated=0 protonated=1
 	LYS='/LYS/{s/.*0\s*$/0/;s/.*[Hh+]\s*$/1/}'
-        # Histidine: 
+        # Histidine:
 	HIS='/HIS/{s/.*[DdAa]\s*$/0/;s/.*[EeBb]\s*$/1/;s/.*[Hh\+]\s*$/2/}'
         # N-terminal
 	NTER='/NTER/{s/.*\+\s*$/0/;s/.*0\s*$/1/;s/.*N\s*/2/}'
@@ -1112,7 +1112,7 @@ then
 	trash pdb2gmx.query
     fi
 
-    #     5. Check for gmxquery and, if found, set interactive mode 
+    #     5. Check for gmxquery and, if found, set interactive mode
     if [ -e "$dirn/pdb2gmx.query" ]; then
 	GMXQUERY=$(cat $dirn/pdb2gmx.query)
 	PDB2GMX="$PDB2GMX -ter -lys -asp -glu -his"
@@ -1128,7 +1128,7 @@ fi
 # Skipping because of existing output (and not forcing)
 if [[ $STEP == $NOW ]] && ! $FORCE && $(all_exist ${OUTPUT[@]})
 then
-    echo "# Output found, skipping topology generation" 
+    echo "# Output found, skipping topology generation"
     : $((STEP++))
 fi
 
@@ -1136,7 +1136,7 @@ fi
 # Skipping verbosely; showing what would have been run
 if [[ $STEP == $NOW && -n $EXEC ]]
 then
-    echo -e "# Skipping:\n@ $PDB2GMX" 
+    echo -e "# Skipping:\n@ $PDB2GMX"
     : $((STEP++))
 fi
 
@@ -1146,7 +1146,7 @@ if [[ $STEP == $NOW ]]
 then
     LOG=01-PDB2GMX.log
 
-    # The following lines echo the command to the log 
+    # The following lines echo the command to the log
     # and capture the results as a here-document
     echo "echo $GMXQUERY | $PDB2GMX" | tee -a $LOG
     echo ": << __PDB2GMX__" >>$LOG
@@ -1163,7 +1163,7 @@ then
 	# Use sed to insert an #ifndef .. #endif block
 	# and to subsitute 999 for POSREFC
 	# We introduce newlines with sed by processing the raw string
-	# with \n using the bash $ operator, which substitutes 
+	# with \n using the bash $ operator, which substitutes
 	# backslash escape characters with control characters.
 	# This is necessary for introducing newlines with BSD sed (OS X).
         $SED -i.bck -e $'1s/^/#ifndef POSREFC\\\n  #define POSREFC 200\\\n#endif\\\n/' \
@@ -1317,7 +1317,7 @@ then
     #        Here we use a trick to write the title of the new .gro file.
     #        If we already have $GRO the first line is copied,
     #        otherwise a new line is written. To make sure that whichever
-    #        goes to standard out and into the new file, the commands are 
+    #        goes to standard out and into the new file, the commands are
     #        grouped together, using curly braces. Mind the semicolon.
     #        The redirect captures the stdout of the compound command.
     #        An empty line is added to be replaced by the number of atoms.
@@ -1329,7 +1329,7 @@ then
     [[ -f $GRO ]] && natoms=$(awk '{getline; print; exit}' $GRO) || natoms=0
 
     #     c. Store the line number of the box definition
-    box=$((natoms+3)) 
+    box=$((natoms+3))
 
     #     d. Write the coordinates to the new file, if there are any
     [[ $natoms -gt 0 ]] && $SED -ne "3,$((natoms+2))p" $GRO >> $base-lig.gro
@@ -1339,7 +1339,7 @@ then
 
     #     a. Moleculetype names listing
     mols=()
-    
+
     #     b. Moleculetype definitions
     itps=()
 
@@ -1350,15 +1350,15 @@ then
     #            -l structure[,topology[,name]]
     #
     #        The structure file should contain the coordinates
-    #        for a single ligand. The topology file should 
+    #        for a single ligand. The topology file should
     #        contain a [ moleculetype ] definition of the ligand,
     #        but may be omitted if the definition is already available,
     #        e.g. from the default libraries or from a definition in the
-    #        master topology file. 
-    #        If no file is specified containing the moleculetype 
+    #        master topology file.
+    #        If no file is specified containing the moleculetype
     #        definition, then the moleculetype name can be specified.
-    #        Otherwise, the name is set to the residuename of the first 
-    #        atom. 
+    #        Otherwise, the name is set to the residuename of the first
+    #        atom.
     #
     for lig in ${LIGANDS[@]}
     do
@@ -1374,10 +1374,10 @@ then
 	[[ ${struc:0:1} == "/" ]] || struc=$BDIR/$struc
 
 	# Check the file format and convert to GRO if necessary.
-	# If stripping of ".gro" gives the same variable, it will 
+	# If stripping of ".gro" gives the same variable, it will
 	# be a PDB file.
 	if [[ ${struc%.gro} == $struc ]]
-	then	    
+	then	
 	    s=${struc##*/}.gro
 	    [[ ! -e $s ]] && ${GMX}editconf -f $struc -o $s
 	    struc=$s
@@ -1410,7 +1410,7 @@ then
 	    rest=${rest%$lname}
 	    # If there is a rest still, then it should be a file
 	    # with a moleculetype definition (mtd)
-	    # Otherwise lname contains a filename or the molecule name	    
+	    # Otherwise lname contains a filename or the molecule name	
 	    if [[ -n $rest ]]
 	    then
 		mtd=${rest%,}
@@ -1437,18 +1437,18 @@ then
 
 	    # If the file is not here, it needs to be copied
 	    [[ -e ${mtd##*/} ]] || cp $mtd ./
-	    
+	
 	    # If the file is not there, it needs to be copied
 	    [[ -e $DIR/${mtd##*/} ]] || cp $mtd $DIR
 	fi
     done
 
-    
+
     ## 4. Finalize GRO file
 
     #     a. Add the original box definition
     { [[ -f $GRO ]] && $SED -ne "${box}p" $GRO || echo 0 0 0; } >> $base-lig.gro
-    
+
     #     b. Update the atom count on the second line
     $SED -i.bck "2s/^.*/$(printf %5d $natoms)/" $base-lig.gro
 
@@ -1472,9 +1472,9 @@ then
     fi
 
     #     b. Add include statements for ligands. Only add each file once
-    #        Use sed to replace spaces by newlines, and feed the results 
-    #        to 'sort -u' to uniqify. Loop over the resulting entries, 
-    #        #including each in the topology 
+    #        Use sed to replace spaces by newlines, and feed the results
+    #        to 'sort -u' to uniqify. Loop over the resulting entries,
+    #        #including each in the topology
     for mtd in $($SED $'s/ /\\\n/g' <<< ${itps[@]} | sort -u); do echo "#include \"$mtd\""; done >> $base-lig.top
 
     #     c. Add the original system definition (after adding a newline)
@@ -1482,11 +1482,11 @@ then
     if [[ -n $TOP ]]
     then
         # i.  Print from the [ system ] directive up to and including the [ molecules ] directive
-	EXPR1='/^\[ *system *\]/,/^\[ *molecules *\]/;' 
+	EXPR1='/^\[ *system *\]/,/^\[ *molecules *\]/;'
         # ii. At the [ molecules ] directive, start a loop, printing non-blank lines
 	#     NOTE: MOLECULES ARE ONLY ADDED IF WE ALREADY HAD AN INPUT STRUCTURE
 	[[ -f $GRO ]] && EXPR2='/^\[ *molecules *\]/{while (getline) {if ($0 !~ /^ *$/) print}}' || EXPR2=""
-	awk "$EXPR1 $EXPR2" $TOP >> $base-lig.top 
+	awk "$EXPR1 $EXPR2" $TOP >> $base-lig.top
     else
 	echo -e '[ system ]\nLigand in solvent\n\n[ molecules ]' >> $base-lig.top
     fi
@@ -1505,11 +1505,11 @@ fi
 
 ## BOOKKEEPING ##
 
-# Bookkeeping is always done, also if the step is not executed 
+# Bookkeeping is always done, also if the step is not executed
 # In this case only if we actually had ligands
 
-if [[ ${#LIGANDS[@]} -gt 0  ]] 
-then    
+if [[ ${#LIGANDS[@]} -gt 0  ]]
+then
 
     [[ -n $GRO && ! -f $GRO ]] && GRO=$DIR/$GRO
 
@@ -1523,7 +1523,7 @@ then
     # The number of atoms including ligands
     LATOMS=$(awk '{getline; print; exit}' $LGRO)
 
-    # The groups 
+    # The groups
     Solute=(1 $LATOMS)
     Ligand=($NATOMS $LATOMS)
 
@@ -1563,9 +1563,9 @@ fi
 
 # Well... This should be setting up a membrane.
 # However, that is far from trivial, and the suggested route
-# is using a combined workflow 
+# is using a combined workflow
 #
-#    1. gromit    (AA structure+topology of protein) 
+#    1. gromit    (AA structure+topology of protein)
 #    2. martinate (CG equilibrated structure)
 #    3. backward  (Reverse transformation)
 #    4. gromit    (AA simulation)
@@ -1590,12 +1590,12 @@ LOG=02-PBC.log
 [[ $STEP == $NOW ]] && $FORCE && rm ${OUTPUT[@]}
 
 
-# If there is no structure file at this point, build a 
+# If there is no structure file at this point, build a
 # rhombic dodecahedron with diameter $PBCDIST
 if [[ $STEP == $NOW && ! -f $GRO ]]
 then
     echo "# Building rhombic dodecahedron solvent box with diameter $PBCDIST"
-    echo -e "Solvent box\n    0" > $base-pbc.gro    
+    echo -e "Solvent box\n    0" > $base-pbc.gro
     python -c "print \"\".join([\"%10.5f\"%($PBCDIST*i) for i in [1,1,.7071068,0,0,0,0,.5,.5]])" >> $base-pbc.gro
 
     [[ -n $SCRATCH ]] && cp $base-pbc.gro $DIR
@@ -1629,7 +1629,7 @@ PBC="$PBC $(program_options $tag)"
 if [[ $STEP == $NOW && -n $EXEC ]]
 then
     # Not running, but showing what would have been run
-    echo -e "# Skipping: \n$PBC"   
+    echo -e "# Skipping: \n$PBC"
 elif [[ $STEP == $NOW ]] && ! $FORCE && $(all_exist ${OUTPUT[@]})
 then
     echo "# Output found. Skipping setting up PBC."
@@ -1645,10 +1645,10 @@ then
 
     # Check the box. The minimum vector length should be 3
     # We only check the first value, which is the length of
-    # the first vector. For a rhombic dodecahedron it is the 
+    # the first vector. For a rhombic dodecahedron it is the
     # length of all vectors. For an NDLP unit cell it gives
     # the length of the longest vector. If that is less than
-    # 3, the cell is obviously too small. In both cases, the 
+    # 3, the cell is obviously too small. In both cases, the
     # cell is replaced by a rhombic dodecahedron with length 3.
     box=($(tail -1 $base-pbc.gro))
     if [[ ${box%%.*} -lt 3 ]]
@@ -1657,7 +1657,7 @@ then
 
 WARNING:
 
-The box set up according to the method ($tag) 
+The box set up according to the method ($tag)
 and the distance criterion ($PBCDIST) is too small:
 
 u: ${box[0]} ${box[3]} ${box[4]}
@@ -1682,7 +1682,7 @@ fi
 ## BOOKKEEPING ##
 
 
-# bookkeeping is always done, also if the step is not executed 
+# bookkeeping is always done, also if the step is not executed
 
 GRO=$DIR/$base-pbc.gro
 
@@ -1800,7 +1800,7 @@ then
 
     # c. Make noise
     echo $SOLVATE | tee $LOG
-    
+
     # d. Execute
     $EXEC $SOLVATE >>$LOG 2>&1
 
@@ -1817,14 +1817,14 @@ then
 
     # g. Add solvent model include file if it is not present yet
     #    First check if there is a moleculetype named 'SOL'
-    #    This is a bit awkward and may give wrong results if we use 
-    #    solvent other than water, but it is necessary to prevent 
+    #    This is a bit awkward and may give wrong results if we use
+    #    solvent other than water, but it is necessary to prevent
     #    redefining the SOL moleculetype in certain (eTox) cases.
     MOLTYPES="$(awk "$AWK_MOLTYPE" $TOP)"
-    if [[ ! $MOLTYPES =~ $SolName ]] 
+    if [[ ! $MOLTYPES =~ $SolName ]]
     then
 	# check if a file is #included with the solvent model
-	if ! grep -q '#include.*'$SolventTopology $TOP 
+	if ! grep -q '#include.*'$SolventTopology $TOP
 	then
 	    # Check if the topology for the solvent is here or there
 	    #[[ -f $SolventTopology ]] || SolventTopology=$ForceField.ff/$SolventTopology
@@ -1840,21 +1840,21 @@ then
 
     #
     # NOTES
-    # 
+    #
     # One could argue that the following is taking bash over the top. And that is true.
     # It would be easier and neater just using python. In addition, it could even be left
-    # to 'genion', which has options for neutralization and specification of the 
-    # concentration. 
-    # Yet there are several reasons for doing this here. First of all, the reason for 
+    # to 'genion', which has options for neutralization and specification of the
+    # concentration.
+    # Yet there are several reasons for doing this here. First of all, the reason for
     # doing it ourselves is that genion uses the box volume to calculate the number of
-    # ions to add, given the volume. This assumes that the solvent in the box has 
+    # ions to add, given the volume. This assumes that the solvent in the box has
     # equilibrium density already, and that the space occupied by solute counts as space
-    # to consider for ions. The latter neglects the difference between macroscopic and 
-    # microscopic solutions of macromolecules and the fact that such macromolecules are 
+    # to consider for ions. The latter neglects the difference between macroscopic and
+    # microscopic solutions of macromolecules and the fact that such macromolecules are
     # solvated in an isotonic solution, rather than brought to isotonicity afterwards,
-    # based on the volume of the macromolecule solution. 
+    # based on the volume of the macromolecule solution.
     # Another reason for doing it here is ... because we can :) Yes, it is showing off
-    # to some extent, but it also demonstrates some features of bash, in particular 
+    # to some extent, but it also demonstrates some features of bash, in particular
     # related to integer math, which may come in handy.
     # Admittedly, this is not the most efficient way to handle this. But compared to the
     # simulation bits, the overhead is limited.
@@ -1919,7 +1919,7 @@ then
 
     #    ii.   Set names for ions - Strip the number in front (if any)
     PNAM=${Salt[0]#$a}
-    NNAM=${Salt[1]#$b}    
+    NNAM=${Salt[1]#$b}
 	
     #    iii.  Now if Q is the number of ions to be added, and S is the number of solvent molecules, then
     #              Q = PS / 55.4(1+P)
@@ -1945,7 +1945,7 @@ then
     #          even, then it will never converge...
     prev=(999 999)
     i=0
-    while [[ $((-U*m-V*n)) != $NCHARGE ]] 
+    while [[ $((-U*m-V*n)) != $NCHARGE ]]
     do
 	# If the charge is too low, increase the number of positives
 	[[ $((-U*m-V*n)) -lt $NCHARGE ]] && : $((U--))
@@ -1980,7 +1980,7 @@ then
     N2=$(awk '{getline; print; exit}' $base-sol-b4ions.gro)
     echo "[ $SolName ]" > sol.ndx
     printf "%5d %5d %5d %5d %5d\n" $(SEQ $N1 $N2) | $SED 's/ 0//g' >> sol.ndx
-    
+
     # Only call genionif ions should be added
     if [[ $((U + V)) -gt 0 ]]
     then
@@ -1993,7 +1993,7 @@ then
         echo $GENION | tee -a $LOG
 
         $GENION >>$LOG 2>&1
-    
+
         # - And finally, update the topology
 	#   Do check if 'ions.itp' is included or whether the ions are listed in the moleculetypes
 	#   Either have all ions defined, or have none, and use ions.itp
@@ -2004,10 +2004,10 @@ then
 	    echo "Moleculetype definitions for $PNAM and $NNAM found in topology file"
 	elif [[ $MOLTYPES =~ $PNAM ]]
 	then
-	    exit_error "Moleculetype definition found in $TOP for ion $PNAM, but none found for $NNAM" 
+	    exit_error "Moleculetype definition found in $TOP for ion $PNAM, but none found for $NNAM"
 	elif [[ $MOLTYPES =~ $NNAM ]]
 	then
-	    exit_error "Moleculetype definition found in $TOP for ion $NNAM, but none found for $PNAM" 
+	    exit_error "Moleculetype definition found in $TOP for ion $NNAM, but none found for $PNAM"
 	else
 	    N='\'$'\n'
 	    grep -q '#include.*ions.itp' $base-sol-b4ions.top || IONSITP=$'/^\[ *system *\]/s,^,#include "'$ForceField.ff/'ions.itp"'$N$N','
@@ -2030,7 +2030,7 @@ fi
 
 ## BOOKKEEPING ##
 
-# bookkeeping is always done, also if the step is not executed 
+# bookkeeping is always done, also if the step is not executed
 
 # If we need the ligand interaction energy, set the energy groups to
 # ligand and environment, otherwise set to solute and solvent
@@ -2053,14 +2053,14 @@ then
     if [[ ! -e $DIR/$base-sol.ndx ]]
     then
         ## WRITE MASTER INDEX FILE ##
-    
+
         # Here the whole system has been built. Time to make an index file with all the definitions needed
 
         # First a basic one
 	echo q | ${GMX}make_ndx -f $DIR/$base-sol.gro -o $base-sol.ndx >/dev/null 2>&1
 
         # Add the Solute and Solvent (and Membrane?) groups
-	fmt="%5d %5d %5d %5d %5d %5d %5d %5d %5d %5d"    
+	fmt="%5d %5d %5d %5d %5d %5d %5d %5d %5d %5d"
 	echo "[ Solute ]" >> $base-sol.ndx
 	for ((i=0; i<${#Solute[@]}; ))
 	do
@@ -2217,7 +2217,7 @@ do
 
     # Execute
     [[ $STEP ==   $NOW     ]] && mdp_options ${OPT[@]} > $MDP
-    [[ $STEP ==   $NOW     ]] && $EXEC $MD 
+    [[ $STEP ==   $NOW     ]] && $EXEC $MD
 
     # Mark the time
     LASTRUN=$(( $(date +%s) - STRT ))
@@ -2235,12 +2235,12 @@ do
 
     # Increment the counters if there are more entries for it
     # A note for whoever is reading this: ':' is a bash command
-    # which is just 'true', and can be used conveniently for 
+    # which is just 'true', and can be used conveniently for
     # doing in-place math operations using $(( )).
     [[ $i -lt $I ]] && : $(( i++ ))
     [[ $j -lt $J ]] && : $(( j++ ))
     [[ $k -lt $K ]] && : $(( k++ ))
-  
+
 done
 
 
@@ -2272,7 +2272,7 @@ then
 fi
 
 TOP=$DIR/$base-sol.top
-GRO=$DIR/$OUT 
+GRO=$DIR/$OUT
 
 # Counters
 i=0
@@ -2312,7 +2312,7 @@ do
 
     # Execute
     [[ $STEP ==   $NOW     ]] && mdp_options ${OPT[@]} > $MDP
-    [[ $STEP ==   $NOW     ]] && $EXEC $MD 
+    [[ $STEP ==   $NOW     ]] && $EXEC $MD
 
     # Mark the time
     LASTRUN=$(( $(date +%s) - STRT ))
@@ -2330,11 +2330,11 @@ do
 
     # Increment the counters if there are more entries for it
     # A note for whoever is reading this: ':' is a bash command
-    # which is just 'true', and can be used conveniently for 
+    # which is just 'true', and can be used conveniently for
     # doing in-place math operations using $(( )).
     [[ $i -lt $I ]] && : $(( i++ ))
     [[ $j -lt $J ]] && : $(( j++ ))
-  
+
 done
 
 
@@ -2379,7 +2379,7 @@ GRO=$DIR/$OUT
 OUT=$base-MD.gro
 LOG=09-MD.log
 
-# If the run length is set to zero, write an mdp file 
+# If the run length is set to zero, write an mdp file
 # with nsteps=-1, generate the .tpr, and make a clean exit
 if [[ $TIME == 0 ]]
 then
@@ -2392,7 +2392,7 @@ fi
 [[ $STEP ==   $NOW     ]] && : $((STEP++))
 [[ $STOP == $((NOW++)) ]] && OUT=$base-MD.tpr && : $((STOP++))
 
-# If we have a TPR file for this step 
+# If we have a TPR file for this step
 [[ $STEP == $NOW && -n $TPR ]] && GRO=$TPR && OUT=${TPR%.tpr}.gro && TPR=
 
 MD="MDRUNNER -f $MDP -c $GRO -p $TOP -o $OUT -n $NDX -np $NP -l $LOG -force $FORCE -split -monitor"
@@ -2404,7 +2404,7 @@ MD="MDRUNNER -f $MDP -c $GRO -p $TOP -o $OUT -n $NDX -np $NP -l $LOG -force $FOR
 # If the first part is true (STEP==NOW) the expression in curly braces is
 # executed, running the simulation and setting DONE to the exit code of
 # MDRUNNER (0 if complete, 1 if not). The assignment is always true, so the
-# step is increased and the stuff is archived, regardless of the result of 
+# step is increased and the stuff is archived, regardless of the result of
 # the run.
 [[ $STEP == $NOW ]] && { $EXEC $MD; DONE=$?; } && archive
 
@@ -2436,10 +2436,10 @@ SHOUT "---STEP 10: ANALYSIS"
 
 : << __NOTES__
 
-This section contains some analyses to run on the data obtained. 
-In general this should be restricted to relatively lightweight 
-analysis and preferrably be controlled by the command line. 
-Initially 
+This section contains some analyses to run on the data obtained.
+In general this should be restricted to relatively lightweight
+analysis and preferrably be controlled by the command line.
+Initially
 
 __NOTES__
 
@@ -2450,7 +2450,7 @@ ANALYSIS=$($SED 's/ /./g' <<< .${ANALYSIS[@]}.)
 
 if [[ $ANALYSIS =~ .LIE. ]]
 then
-    # Process the energy file(s) to extract the temperature and 
+    # Process the energy file(s) to extract the temperature and
     # interaction energy between the ligand and the environment.
 
     # These are the energy terms to extract from the energy file
@@ -2468,7 +2468,7 @@ then
     # The production MD is run in parts; Process each part
     ls $base-MD.*edr >/dev/null 2>&1 || exit_error "LIE ANALYSIS ERROR: No energy \(.edr\) files found."
 
-    for edr in *-MD.part*.edr 
+    for edr in *-MD.part*.edr
     do
         [[ $GMXVERSION -gt 4 ]] && ENE="$GMXBIN/gmx energy" || ENE=$GMXBIN/g_energy
 	echo $terms | $ENE -f $edr -o ${edr%.edr}.xvg 2>/dev/null | $SED '/^Energy/,/^ *$/{/^ *$/q}' > ${edr%.edr}.lie

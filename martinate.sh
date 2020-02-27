@@ -17,18 +17,18 @@ The Netherlands"
 IF YOU CHANGE THE PARAMETERS AND/OR WORKFLOW, PLEASE RENAME THE PROGRAM AND
 STATE THE NATURE AND PURPOSE OF THE CHANGES MADE.
 
-This has grown to be a rather complicated bash script. It is intended to 
+This has grown to be a rather complicated bash script. It is intended to
 work through the MD process as a person would, issuing shell commands and reading
-and editing files. Bash feels more natural for this than a Python/C wrapper. 
-It is advised to (get to) know about bash loops and variable substitution, as 
-these are used plenty. In addition, since there are many occassions where files 
-need to be read and edited, there are a lot of calls to sed, with quite a 
-few less ordinary commands. 
+and editing files. Bash feels more natural for this than a Python/C wrapper.
+It is advised to (get to) know about bash loops and variable substitution, as
+these are used plenty. In addition, since there are many occassions where files
+need to be read and edited, there are a lot of calls to sed, with quite a
+few less ordinary commands.
 
 To keep the code manageable, it is structured in sections and every section is
-ordered, preferrably by numbered chunks. In addition, there is extensive 
-documentation. Every statement should be clear, either by itself or by a 
-preceding explanation. In case advanced bash/sed/... features are used, they 
+ordered, preferrably by numbered chunks. In addition, there is extensive
+documentation. Every statement should be clear, either by itself or by a
+preceding explanation. In case advanced bash/sed/... features are used, they
 ought to be explained. That will keep the program manageable and make it a nice
 place for learning tricks :)
 
@@ -42,21 +42,21 @@ __NOTES_FOR_USE_AND_EDITING__
 
 DESCRIPTION=$(cat << __DESCRIPTION__
 
-$PROGRAM $VERSION is a versatile wrapper built around 
+$PROGRAM $VERSION is a versatile wrapper built around
 GROMACS, insane, and martinize, for setting up and running
-MARTINI COARSE GRAIN molecular dynamics simulations of solvents, 
+MARTINI COARSE GRAIN molecular dynamics simulations of solvents,
 membranes, proteins and/or nucleic acids in any combination.
 
-It is built to allow automated processing of membrane proteins, 
-with full control of membrane composition. If no input file is provided, 
-only a membrane and/or solvent is built. 
+It is built to allow automated processing of membrane proteins,
+with full control of membrane composition. If no input file is provided,
+only a membrane and/or solvent is built.
 Options given that do not match an option in this script are passed to
 martinize.py.
 
-The script contains a complete and flexible workflow, consisting of the 
+The script contains a complete and flexible workflow, consisting of the
 following steps:
 
-    1.   Generate topology from input structure 
+    1.   Generate topology from input structure
          A. Generate atomistic topology             (AA)
          B. Generate MARTINI CG/multiscale topology (CG)
     2.   Solvation and adding ions                  (SOLVENT)
@@ -64,23 +64,23 @@ following steps:
     6.   Position restrained NVT equilibration      (NVT-PR)
     7.   Unrestrained NpT equilibration             (NPT)
     8.   Equilibration under run conditions         (PREPRODUCTION)
-    9.   Production simulation                    
+    9.   Production simulation
          A. Run input file                          (TPR)
          B. Simulation (possibly in parts)          (PRODUCTION)
 
 The program allows running only part of the workflow by specifying the
-start and end step (-step/-stop), using an argument uniquely matching 
+start and end step (-step/-stop), using an argument uniquely matching
 one of the tags given between parentheses.
 
-This program requires a working installation of Gromacs. To link 
-the program to the correct version of Gromacs, it should be placed in the 
-Gromacs binaries directory or the Gromacs GMXRC file should be passed as 
+This program requires a working installation of Gromacs. To link
+the program to the correct version of Gromacs, it should be placed in the
+Gromacs binaries directory or the Gromacs GMXRC file should be passed as
 argument to the option -gmxrc
 
 The workflow contained within this program corresponds to a standard protocol
-that should suffice for routine CG molecular dynamics simulations of proteins 
-and/or nucleic acids in aqueous solution with or without a membrane. 
-It follows the steps that are commonly taken in MD tutorials 
+that should suffice for routine CG molecular dynamics simulations of proteins
+and/or nucleic acids in aqueous solution with or without a membrane.
+It follows the steps that are commonly taken in MD tutorials
 (e.g. those at http://cgmartini.nl).
 
 This program is designed to enable high-throughput processing of CG molecular
@@ -91,13 +91,13 @@ as many others.
 
 ## -- IMPORTANT -- ##
 
-Molecular dynamics simulations are complex, with many contributing factors. 
+Molecular dynamics simulations are complex, with many contributing factors.
 The workflow in this program has been tested extensively and used many times.
-Nonetheless, it should not be considered failsafe. No MD protocol ever is. 
+Nonetheless, it should not be considered failsafe. No MD protocol ever is.
 Despite careful set up, simulations may crash, and the possibility that a crash
 is encountered is larger when many simulations are run. If the run crashes,
 the intermediate results will be kept and can be investigated to identify the
-source of the problem. 
+source of the problem.
 
 If the run finishes to completion, this does not automatically imply that the
 results are good. The results from the simulations should always be subjected
@@ -141,7 +141,7 @@ trap "archive" 2 9 15 # function archive in _functions.sh
 # If not set, the default name will be searched for in
 #    1. the environment (if PROGEVAR is given)
 #    2. the directory where this calling script (martinate) is located
-#    3. the PATH 
+#    3. the PATH
 DEPENDENCIES=( dssp  gmxrc  martinize     insane     liptop           squeeze)
 PROGEXEC=(     dssp  GMXRC  martinize.py  insane     $FFDIR/liptop.py squeeze)
 PROGEVAR=(     DSSP  GMXRC)
@@ -214,7 +214,7 @@ LJSW=-1
 RC=1.4
 
 # - run control and files
-DIR="."       # Directory to run and write           
+DIR="."       # Directory to run and write
 TPR=          # Run input file... skip to production or to STEP
 NAME=         # Run name
 FETCH=        # Try to fetch PDB file from web
@@ -270,7 +270,7 @@ hlevel=0
 olevel=0
 
 # Collect errors, warnings and notes to (re)present to user at the end
-# Spaces are replaced by the unlikely combination QQQ to keep the 
+# Spaces are replaced by the unlikely combination QQQ to keep the
 # messages together.
 errors_array=()
 store_error_fun() { a="$@"; errors_array+=(${x// /QQQ}); FATAL "$@"; }
@@ -325,11 +325,11 @@ while [ -n "$1" ]; do
     -g       ) MSGFILE=$2                           ; shift 2; continue ;; #==9 Standard output log file (default: /dev/stdout)
     -e       ) ERRFILE=$2                           ; shift 2; continue ;; #==9 Standard error log file (default: /dev/stderr)
     -name    ) NAME=$2                              ; shift 2; continue ;; #==9 Name of project
-    -top     ) TOP=$2                               ; shift 2; continue ;; #==1 Input topology file 
+    -top     ) TOP=$2                               ; shift 2; continue ;; #==1 Input topology file
     -ndx     ) NDX=$2                               ; shift 2; continue ;; #==1 Input index file
     -mdp     ) MDP=$2                               ; shift 2; continue ;; #==9 MDP (simulation parameter) file
     -scratch ) SCRATCH=$2                           ; shift 2; continue ;; #==9 Scratch directory to perform simulation
-    -fetch   ) FETCH=$2                             ; shift 2; continue ;; #==9 Database to fetch input structure from 
+    -fetch   ) FETCH=$2                             ; shift 2; continue ;; #==9 Database to fetch input structure from
     -hetatm  ) NOHETATM=false                       ; shift 1; continue ;; #==1 Keep HETATM records
 
     #=1
@@ -350,7 +350,7 @@ while [ -n "$1" ]; do
     #=1 --------------------------
     #=1
     -cg      ) MARTINI=$2                           ; shift 2; continue ;; #==1 Coarse grain force field
-    -sol     ) SOL=$2                               ; shift 2; continue ;; #==1 Solvent type to use 
+    -sol     ) SOL=$2                               ; shift 2; continue ;; #==1 Solvent type to use
     -ffitp   ) FFITP=$2                             ; shift 2; continue ;; #==2 Coarse-grain force field definition
     -fftag   ) FFTAG=$2                             ; shift 2; continue ;;
     -itp     ) USRITP+=($2)                         ; shift 2; continue ;; #==2 User-provided ITP file
@@ -367,7 +367,7 @@ while [ -n "$1" ]; do
     -time    ) TIME=$2                              ; shift 2; continue ;; #==1 Production simulation time
     -at      ) AT=$2                                ; shift 2; continue ;; #==1 Output sampling frequency
     -em      ) EMSTEPS=$2                           ; shift 2; continue ;; #==2 Number of steps for EM
-#   -gmxrc   ) GMXRC=$2                             ; shift 2; continue ;; 
+#   -gmxrc   ) GMXRC=$2                             ; shift 2; continue ;;
 #   -dssp    ) DSSP=$2                              ; shift 2; continue ;;
     -rtc     ) RotationalConstraints=rtc            ; shift  ; continue ;; #==2 Whether or not to use rotational constraints
 
@@ -398,39 +398,39 @@ while [ -n "$1" ]; do
         shift
       done
       shift 2
-      echo MONITOR COMMAND: $CONTROL 
-      continue;; 
+      echo MONITOR COMMAND: $CONTROL
+      continue;;
     -ctime   ) CHECKTIME=$2                         ; shift 2; continue ;; #==2 Time for running monitor
 
     #=2
-    #=2 A control process is either a program, script or command 
+    #=2 A control process is either a program, script or command
     #=2 that monitors the production run and terminates it
     #=2 upon a certain condition, indicated by its exit code.
 
-    #=2 
+    #=2
     #=2 Protocol options
     #=2 ----------------
-    #=2 
+    #=2
     -daft    ) DAFT=$2; NDX=$2                      ; shift 2; continue ;; #==2 Run martinate in DAFT pipeline
 
     #=1
     #=1 Advanced control options
     #=1 ------------------------
     #=1
-    #=2 This program allows specifying options for advanced control of 
-    #=2 program invocation and simulation parameters. These options are 
+    #=2 This program allows specifying options for advanced control of
+    #=2 program invocation and simulation parameters. These options are
     #=2 described below.
     #=2
 
     # The first one is the template/dummy for the help system
     --mdp-option=value) olevel=2; hlevel=2; USAGE 1; continue;; #==2 Command-line specified simulation parameters
-    --mdp-*  ) MDPOPTS+=(${1#--mdp-})               ; shift  ; continue ;; 
+    --mdp-*  ) MDPOPTS+=(${1#--mdp-})               ; shift  ; continue ;;
     #=2
-    #=2 This will add 'option = value' to the MDP file for all simulations 
+    #=2 This will add 'option = value' to the MDP file for all simulations
     #=2 following energy minimization. MDP options specified on the command line
     #=2 take precedence over those specified in an input file (-mdp), which take
-    #=2 precedence over parameters defined in this script. 
-    #=2 If the option takes multiple arguments, then 'value' should be a 
+    #=2 precedence over parameters defined in this script.
+    #=2 If the option takes multiple arguments, then 'value' should be a
     #=2 comma separated list.
     #=2 The STEP/STOP controls can be used to set parameters for (pre)production
     #=2 simulations selectively.
@@ -454,8 +454,8 @@ while [ -n "$1" ]; do
     # Other program-specific options
     --*)   PROGOPTS[${#PROGOPTS[@]}]=$1              ; shift 1; continue ;;
 
-    #=0 
-    #=0 
+    #=0
+    #=0
 
     # All options should be covered above. Anything else raises an error here.
     *)         BAD_OPTION "$1";;
@@ -501,17 +501,17 @@ for ((i=0; i<${#STEPS[@]}; i++)); do [[ ${STEPS[$i]} == ${STOP}* ]] && STOP=$i &
 #    scratch directory, user name, random number
 if [[ -n $SCRATCH ]]
 then
-    # The scratch directory can be specified as 
+    # The scratch directory can be specified as
     # (escaped) variable, like \$TMPDIR. This
     # variable will be expanded at runtime.
-    # That may be handy on clusters, where the 
+    # That may be handy on clusters, where the
     # $TMPDIR is set for every node.
     if [[ ${SCRATCH:0:1} == '$' ]]
     then
 	tmp=${SCRATCH:1}
 	SCRATCH=${!tmp}
     fi
-    
+
     # To ensure that there is no further rubbish
     # the scratch directory is extended with the
     # username, the data and the process ID. There
@@ -532,7 +532,7 @@ fi
 #--------------------------------------------------------------------
 
 # Awk expression for extracting moleculetype
-#    - at the line matching 'moleculetype' 
+#    - at the line matching 'moleculetype'
 #      read in the next line
 #      continue reading next lines until one is not beginning with ;
 #      print the first field
@@ -554,7 +554,7 @@ NDEP=${#DEPENDENCIES[@]}
 find_program_function()
 {
   for ((i=0; i<$NDEP; i++)); do
-    if [[ ${DEPENDENCIES[$i]} == "$1" ]] 
+    if [[ ${DEPENDENCIES[$i]} == "$1" ]]
     then
       progr=${PROGEXEC[$i]}
       envvar=${PROGEVAR[$i]}
@@ -737,7 +737,7 @@ $M && TABLES=-tables || TABLES=
 
 
 #--------------------------------------------------------------------
-#---SIMULATION PARAMETERS--          
+#---SIMULATION PARAMETERS--
 #--------------------------------------------------------------------
 
 ## OT N ## For every parameter not defined the default is used
@@ -778,7 +778,7 @@ then
     PDB=$PDB.pdb
     if [[ ! -f $PDB ]]
     then
-      # Try fetching it from the PDB    
+      # Try fetching it from the PDB
       pdb=$(tr [A-Z] [a-z] <<< ${PDB%.pdb})
       fetch_structure $pdb $FETCH
       [[ -n $SCRATCH ]] && cp $pdb.pdb $DIR
@@ -796,14 +796,14 @@ then
 
   # Check whether the input file is here or in another directory.
   # In the latter case, copy it here
-  [[ $PDB == ${PDB##*/} || $PDB == ./${PDB##*/} ]] || cp $PDB .   
+  [[ $PDB == ${PDB##*/} || $PDB == ./${PDB##*/} ]] || cp $PDB .
 
 
   pdb=${PDB##*/}          # Filename
   base=${pdb%.*}          # Basename
   ext=${pdb##*.}          # Extension
   dirn=${PDB%$pdb}        # Directory
-  [[ $dirn ]] || dirn="." 
+  [[ $dirn ]] || dirn="."
   dirn=`cd $dirn && pwd`  # Full path to input file directory
 
 
@@ -835,26 +835,26 @@ then
     # HETATM selection (non-martinizable residues)
     HETATM='/^\(ATOM  \|HETATM\)/{/.\{17\} *'$SED_AA' */!p;}'
 
-    # Split the pdb file in stuff that can be processed with pdb2gmx 
+    # Split the pdb file in stuff that can be processed with pdb2gmx
     # and stuff that cannot be processed with it
-    #  Extract the names of building blocks defined in the rtp file 
+    #  Extract the names of building blocks defined in the rtp file
     # of the force field used. These blocks are defined as '[ ALA ]',
     # so we match a name in square brackets at the start of a line.
     # The name is appended to the hold space.
     RTPENTRIES='/^\[ *\(...\).*\].*/{s//\1/;H;}'
     # At the end of the list, the building block names are reformatted
     # to make a regular expression string matching each word. First,
-    # the hold space is swapped with the pattern space, the first bit is 
+    # the hold space is swapped with the pattern space, the first bit is
     # removed and then all embedded newlines are replaced by '\|'
     FORMAT='${x;s/\n...\n//;s/\n/\\\|/g;p;}'
     # Finally sed is called processing all rtp files of the force field
     DEF=$($SED -n -e "$RTPENTRIES" -e "$FORMAT" $GMXLIB/$ForceField.ff/*.rtp)
- 
+
     # Now we can split the input PDB file into a processable and a non-processable part
     echo "# Defined building blocks in $ForceField RTP files:"
     echo "# $DEF"
     #sed -e '/^\(TER\|MODEL\|ENDMDL\)/p' -e '/^\(ATOM  \|HETATM\)/{/.\{17\} *\('$DEF'\) */p;}' $dirn/$base.pdb  > $base-def.pdb
-    #sed -e '/^\(TER\|MODEL\|ENDMDL\)/p' -e '/^\(ATOM  \|HETATM\)/{/.\{17\} *\('$DEF'\) */!p;}' $dirn/$base.pdb > $base-ndef.pdb  
+    #sed -e '/^\(TER\|MODEL\|ENDMDL\)/p' -e '/^\(ATOM  \|HETATM\)/{/.\{17\} *\('$DEF'\) */!p;}' $dirn/$base.pdb > $base-ndef.pdb
   fi
 else
   base=
@@ -875,7 +875,7 @@ echo "# Done gymnastics"
 
 NOW=0
 
-                
+
 if [[ -n $DAFT ]] && ($ALL || [[ -n $MULTI ]])
 then
     echo "Currently, DAFTly splitting molecules in energy groups and running multiscaled is not possible."
@@ -962,37 +962,37 @@ then
 	echo Ambiguous selection for atomistic force field... Bailing out.
 	exit 1
     fi
-  
-    
+
+
     # III. Interaction tables
     TABLE="${SRCDIR}"/_table.py
 
     #      epsilon_r epsilon_rf cutoff LJ_dispersion LJ_repulsion LJ_cutoff LJ_switch
     $TABLE  $EPSR_CG   $EPSRF     $RC      $LJDP         $LJRP         1.2       0.9   > table.xvg
-    $TABLE  1          $EPSRF     $RC      6             12            $RC      -1     > table_AA_AA.xvg 
-    $TABLE  1          $EPSRF     $RC      6             12            $RC      -1     > tablep.xvg 
+    $TABLE  1          $EPSRF     $RC      6             12            $RC      -1     > table_AA_AA.xvg
+    $TABLE  1          $EPSRF     $RC      6             12            $RC      -1     > tablep.xvg
     if $POLARIZABLE
     then
-	$TABLE $EPSR_AA $EPSRF    $RC      6             12            $RC      -1     > table_AA_CG.xvg 
+	$TABLE $EPSR_AA $EPSRF    $RC      6             12            $RC      -1     > table_AA_CG.xvg
     fi
 fi
 
 
 
-    
+
 ## I. pdb2gmx
 
 # 1. Basic stuff
 PDB2GMX="${GMX}pdb2gmx -v -f $dirn/$base.pdb -o $OUT -p $TOP"
 
 # 2. Position restraints
-#    * The position restraint fc (-posrefc) is bogus and 
+#    * The position restraint fc (-posrefc) is bogus and
 #      intended to allow easy replacement with sed.
 #      These will be placed under control of a #define
 PDB2GMX="$PDB2GMX -i $base-posre.itp -posrefc 200 -ignh -ff $ForceFieldAA -water none"
 
 # 3. Virtual sites
-$VirtualSites && PDB2GMX="$PDB2GMX -vsite hydrogens" 
+$VirtualSites && PDB2GMX="$PDB2GMX -vsite hydrogens"
 
 # 4. Add program options specified on command line (--pdb2gmx-option=value)
 PDB2GMX="$PDB2GMX $(program_options pdb2gmx)"
@@ -1008,7 +1008,7 @@ then
 	ACID='/\(ASP\|GLU\)/{s/.*[Hh0]\s*$/1/;s/.*\-\s*/0/}'
         # Basic residue LYS: deprotonated=0 protonated=1
 	LYS='/LYS/{s/.*0\s*$/0/;s/.*[Hh+]\s*$/1/}'
-        # Histidine: 
+        # Histidine:
 	HIS='/HIS/{s/.*[DdAa]\s*$/0/;s/.*[EeBb]\s*$/1/;s/.*[Hh\+]\s*$/2/}'
         # N-terminal
 	NTER='/NTER/{s/.*\+\s*$/0/;s/.*0\s*$/1/;s/.*N\s*/2/}'
@@ -1019,7 +1019,7 @@ then
 	trash pdb2gmx.query
     fi
 
-    #     5. Check for gmxquery and, if found, set interactive mode 
+    #     5. Check for gmxquery and, if found, set interactive mode
     if [ -e "$dirn/pdb2gmx.query" ]; then
 	GMXQUERY=$(cat $dirn/pdb2gmx.query)
 	PDB2GMX="$PDB2GMX -ter -lys -asp -glu -his"
@@ -1031,7 +1031,7 @@ then
     if [[ -n $EXEC ]] || $(all_exist ${OUTPUT[@]})
     then
         # Skipping verbosely; showing what would have been run
-	echo -e "Skipping: \n$PDB2GMX"   
+	echo -e "Skipping: \n$PDB2GMX"
 	echo "Also skipping atomistic topology acrobatics"
     else
 
@@ -1069,45 +1069,45 @@ then
                     break
 		fi
             done
-	done        
+	done
 
 
         # d. Extract the chain identifiers from the pdb2gmx log, listed as:
-        # 
+        #
         #   chain  #res #atoms
-        #  1 'B'     7     53  
-        #  2 'A'     7     53  
-        #  3 'C'     8     67  
+        #  1 'B'     7     53
+        #  2 'A'     7     53
+        #  3 'C'     8     67
         #
         # In case there is one chain without identifier, set the identifier
 	CHAINS=($($SED -n '/chain  #res #atoms/,/^\s*$/s/^\s\+[0-9]\+..\(.\).*$/\1/p' 01-TOPOLOGY-AA.log))
 	[[ -n $CHAINS ]] || CHAINS=(A)
 	MS=()
 	N=0;
-	for i in ${CHAINS[@]} 
-	do 
-	    MS[$N]=$ALL 
-	    for j in ${MULTI[@]} 
-	    do 
+	for i in ${CHAINS[@]}
+	do
+	    MS[$N]=$ALL
+	    for j in ${MULTI[@]}
+	    do
 		[[ $i == $j ]] && MS[$N]=true
 	    done
-	    : $((N++)) 
-	done 
+	    : $((N++))
+	done
 
         # e. If there is only one chain, gromacs writes a single topology file,
         #    which will make the protocol choke. That is fixed here.
         #    The moleculetype definition is taken from the topology file and
         #    put in a separate include topology.
-        #    In addition, the numbers of residues and atoms are not listed 
-        #    in the output from pdb2gmx for single chains as they are for 
+        #    In addition, the numbers of residues and atoms are not listed
+        #    in the output from pdb2gmx for single chains as they are for
         #    multiple chains. So for single chains we just take the atom
-        #    count from the coordinate file. 
+        #    count from the coordinate file.
 	if [[ ${#CHAINS[@]} -eq 1 ]]
 	then
 	    ITP=${base}-aa_molecule_chain_${CHAINS[0]}.itp
 	    if [[ ! -f $ITP ]] # || [[ $ITP -ot $base-aa.top]]
 	    then
-                # Ahh, sed magic. Removing lines from one file, 
+                # Ahh, sed magic. Removing lines from one file,
 	        # while writing them to another.
 		#@@@
 		LSED -i.bck \
@@ -1124,21 +1124,21 @@ then
 	echo MOLECULES: ${MOLECULES[@]}	
 
         # i. Match the molecules with the itp files
-        #    For each molecule in the list, check which moleculetype it is and 
+        #    For each molecule in the list, check which moleculetype it is and
         #    and fetch the corresponding itp file
         #    Mind that the molecule list also has a count per molecule
         #    following each name
 	MOLITP=()
 	echo "Molecules and corresponding topology files:"
-	for ((i=0; i<${#MOLECULES[@]}; i+=2)) 
-	do 
+	for ((i=0; i<${#MOLECULES[@]}; i+=2))
+	do
 	    for ((j=0; j<${#MOLTYPES[@]}; j++))
-	    do 
+	    do
 		[[ ${MOLECULES[$i]} == ${MOLTYPES[$j]} ]] && MOLITP[$((i/2))]=${ITPFILES[$j]}
 	    done
 	    printf "    %20s : %20s\n" ${MOLECULES[$i]}: ${MOLITP[$((i/2))]}
 	done	
-    fi 
+    fi
 
     #     7. Set multiscale arguments for Martinize
     $ALL && M_MULTI="-multi all" || M_MULTI=$($SED 's/\(^\| \)/ -multi /g' <<< ${MULTI[@]})	
@@ -1208,11 +1208,11 @@ then
 	echo $MARTINIZE
     fi
 
-    # Only if we have a pdb file and we actually run (EXEC is not set) 
+    # Only if we have a pdb file and we actually run (EXEC is not set)
     # then this block is executed
     if [[ -n $pdb && -z $EXEC ]]
     then
-        # Executing the command. 
+        # Executing the command.
         # We need to know the moleculetype names (and itp files) after martinizing
         # 1. The command is executed
         # 2. stdout and stderr are swapped
@@ -1276,12 +1276,12 @@ NPROT=$(LSED -n '2{p;q;}' "$GRO")
 SHOUT "---STEP 1C: SOLVATE"
 #---------------------------------------------------------------------
 
-# At this point, we need to know how many atoms there are 
+# At this point, we need to know how many atoms there are
 # ...
 
 
-# If this step is skipped, the structure provided has 
-# membrane and/or solvent. Then an index file must be 
+# If this step is skipped, the structure provided has
+# membrane and/or solvent. Then an index file must be
 # provided, which we parse for the groups.
 
 
@@ -1314,7 +1314,7 @@ fi
 
 
 if [[ $STEP == $NOW ]]
-then 
+then
 
     if [[ -z $INSA ]]
     then
@@ -1335,12 +1335,12 @@ then
     fi
 
     [[ -n $pdb ]] && INSANE="$INSANE -o $OUT -f $base-mart-EM.gro" || INSANE="$INSANE -o $OUT -p $TOP"
-    
+
     echo "$INSANE"
 
     if [[ -n $PDB ]]
     then
-	# Add a comment at the end of the TOP file to avoid adding stuff to existing lines 
+	# Add a comment at the end of the TOP file to avoid adding stuff to existing lines
 	echo ';' >> $TOP
 	$EXEC $INSANE 2>&1 | tee -a $TOP
     else
@@ -1356,7 +1356,7 @@ then
     USRDEF=()
     USRLIP=()
     for ((i=1; i<${#INS[@]}; i++))
-    do 
+    do
 	case ${INS[$i]} in
 	    -alhead) USRDEF+=(-he ${INS[$((++i))]}); continue;;
 	    -allink) USRDEF+=(-li ${INS[$((++i))]}); continue;;
@@ -1371,7 +1371,7 @@ then
 	echo $LIPTOP ${LIPDEF[@]}
 	$LIPTOP ${LIPDEF[@]}
     done
-    echo "# There are ${#USRLIP[@]} user defined lipids: ${USRLIP[@]}" 
+    echo "# There are ${#USRLIP[@]} user defined lipids: ${USRLIP[@]}"
 
     N='\'$'\n'
 
@@ -1425,9 +1425,9 @@ then
     fi
 
     grep -q ions.itp $TOP && IONFIX='/ions.itp/s/^; //' || IONFIX='/\[ *system *\]/{s,^,#include "'$IONSITP'"'"$N$N"',;}'
-    LSED -i -e "$IONFIX" "$TOP" 
+    LSED -i -e "$IONFIX" "$TOP"
 
-    # Include user defined topologies 
+    # Include user defined topologies
     USRFIX=
     for itp in ${USRITP[@]}
     do
@@ -1489,12 +1489,12 @@ then
 
     # The membrane tag is always added to the index file; it may be an empty group
     echo '[ Membrane ]' >> $base-cg.ndx
-    if [[ $NMEM -gt 0 ]] 
+    if [[ $NMEM -gt 0 ]]
     then
 	echo -e "$(printf "$fmt\n" `SEQ $((NPROT+1)) $((NPROT+NMEM))` | $SED 's/ 0//g')" >> $base-cg.ndx
     fi
 
-    # Solvent 
+    # Solvent
     echo -e "[ Solvent ]\n$(printf "$fmt\n" `SEQ $((NPROT+NMEM+1)) $((NPROT+NMEM+NSOL+NION))` | $SED 's/ 0//g')" >> $base-cg.ndx
 
     if $HybridIons && [[ $NION -gt 0 ]]
@@ -1517,7 +1517,7 @@ fi
 
 if ( $ALL || [[ -n $MULTI ]] ) && grep -q '\[ Ions \]' $base-cg.ndx
 then
-    # We need to change the moleculetype names for 
+    # We need to change the moleculetype names for
     # the ions. CG names are NA+, CL-, etc, whereas AA names
     # are NA, CL, etc
     $SED -i '/\[ *molecules *\]/,$s/\(NA\|K\|CA\|ZN\|CU\|CL\)2*[+-]/\1 /' $base-cg.top
@@ -1534,7 +1534,7 @@ then
 fi
 
 
-trash *.ssd 
+trash *.ssd
 
 
 # END OF COARSE GRAINED/MULTISCALE TOPOLOGY
@@ -1579,7 +1579,7 @@ echo $MD
 [[ $STOP == $((NOW++)) ]] && exit_clean
 
 # Here we check whether energy minimization was successful. If not, the potential energy or
-# force will probably have gone infinite. In that case the run is terminated to avoid 
+# force will probably have gone infinite. In that case the run is terminated to avoid
 # hanging of the following run.
 grep "^\(Pot\|Max\|Norm\).*inf" $LOG && echo Energy minimization failed && exit_error ${STEP}5
 
@@ -1598,7 +1598,7 @@ TTMP=
 for i in Solute Membrane Solvent
 do
     grep -q "\[ *$i *\]" $NDX && GRPS="$GRPS,$i" && TTAU="$TTAU,1.0" && TTMP="$TTMP,$Temperature"
-done 
+done
 __mdp_cg__tc_grps=$GRPS
 __mdp_cg__tau_t=$TTAU
 __mdp_cg__ref_t=$TTMP
@@ -1618,12 +1618,12 @@ then
     MDP=pr-nvt.mdp
     mdp_options ${OPT[@]} > $MDP
     MD="MDRUNNER -f $MDP -c $GRO -p $TOP -o $OUT -n $NDX -np $PRNP -l $LOG -force $FORCE $TABLES $MONALL"
-    $EXEC $MD 
+    $EXEC $MD
     GRO=$OUT
-    trash $base-PR-NVT.{cpt,tpr} 
+    trash $base-PR-NVT.{cpt,tpr}
 fi
 
-[[ $STEP ==   $NOW     ]] && : $((STEP++)) && archive 
+[[ $STEP ==   $NOW     ]] && : $((STEP++)) && archive
 [[ $STOP == $((NOW++)) ]] && exit_clean
 
 
@@ -1641,7 +1641,7 @@ then
     # Multiscaled - Using virtual sites or not
     $VirtualSites && DT=(0.0005 0.001 0.002 0.003 0.004) || DT=(0.0005 0.001 0.002)
 else
-    # Coarsegrained 
+    # Coarsegrained
     # "With DAFT runs, we just skip this step (PR-NpT)"
     [[ -n $DAFT ]] && DT=() || DT=(0.005 0.010 0.020)
 fi
@@ -1662,10 +1662,10 @@ do
     MDP=pr-npt-$__mdp_equil__dt-$run.mdp
     mdp_options ${OPT[@]} > $MDP
     MD="MDRUNNER -f $MDP -c $GRO -p $TOP -o $OUT -n $NDX -np $NP -l $LOG -force $FORCE $TABLES $MONALL"
-    $EXEC $MD 
+    $EXEC $MD
     GRO=$OUT
     : $((run++))
-    trash $base-PR-NPT-$__mdp_equil__dt.{cpt,tpr} 
+    trash $base-PR-NPT-$__mdp_equil__dt.{cpt,tpr}
 done
 
 [[ $STEP ==   $NOW     ]] && : $((STEP++)) && archive
@@ -1707,12 +1707,12 @@ do
     before=$(date +%s)
     echo ==--- $GRO $OUT
     MD="MDRUNNER -f $MDP -c $GRO -p $TOP -o $OUT -n $NDX -np $NP -l $LOG -force $FORCE $TABLES $MONALL"
-    $EXEC $MD 
+    $EXEC $MD
     timing=$(( $(date +%s) - before ))
     echo "Ran $nsteps steps in $timing seconds"
     GRO=$OUT
     : $((run++))
-    trash $base-NPT-$__mdp_equil__dt-$run.{cpt,tpr} 
+    trash $base-NPT-$__mdp_equil__dt-$run.{cpt,tpr}
 done
 
 
@@ -1732,7 +1732,7 @@ OUT=$base-MD.gro
 LOG=06-MD.log
 MDP=md.mdp
 
-# If the run length is set to zero, write an mdp file 
+# If the run length is set to zero, write an mdp file
 # with nsteps=-1, generate the .tpr, and make a clean exit
 if [[ $TIME == 0 ]]
 then
@@ -1765,7 +1765,7 @@ estfin=$(( $(date +%s) + estimate ))
 echo "Expected runtime for $mdsteps step: $(( estimate/3600 ))H:$(( (estimate%3600)/60 ))M:$(( estimate%60 ))S (until $(date -r $estfin))"
 
 MD="MDRUNNER -f $MDP -c $GRO -p $TOP -o $OUT -n $NDX -np $NP -l $LOG -split -force $FORCE $TABLES -monitor"
-$EXEC $MD 
+$EXEC $MD
 
 # : $((STEP++))
 
