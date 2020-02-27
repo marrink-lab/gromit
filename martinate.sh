@@ -143,7 +143,7 @@ trap "archive" 2 9 15 # function archive in _functions.sh
 #    2. the directory where this calling script (martinate) is located
 #    3. the PATH 
 DEPENDENCIES=( dssp  gmxrc  martinize     insane     liptop           squeeze)
-PROGEXEC=(     dssp  GMXRC  martinize.py  insane.py  $FFDIR/liptop.py squeeze)
+PROGEXEC=(     dssp  GMXRC  martinize.py  insane     $FFDIR/liptop.py squeeze)
 PROGEVAR=(     DSSP  GMXRC)
 
 
