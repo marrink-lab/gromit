@@ -694,40 +694,68 @@ SID=; for ((i=0; i<${#SOLVENTS[@]}; i++)); do [[ ${SOLVENTS[$i]} == ${SOL}* ]] &
 $M && ffnb=$GMXLIB/$ForceField.ff/ffnonbonded.itp || ffnb=
 $M && ffbn=$GMXLIB/$ForceField.ff/ffbonded.itp    || ffbn=
 
-#     b. COARSE GRAINED: MARTINI/ELNEDYN
-#        Set a pointer to the correct forcefield generating script
-#        (of the form: martini_2.1.py or martini_2.1_P.py)
-if [[ -z $FFITP ]]
+#     b. COARSE GRAINED (MULTISCALE) ITP
+#        i. If a forcefield ITP is given, use that
+#        ii. If a forcefield ITP generating script is available use that
+#        iii. If $FFDIR contains a suitable forcefield ITP use that (and warn)
+#        iv. Raise an error
+FFMARTINIPY=
+if [[ -n $FFITP ]]
 then
+  # i.
+  cp $FFITP ./martini.itp
+else
   FFMARTINIPY=$FFDIR/${MARTINI}${SOLVFF[$SID]}.py
   if [[ ! -f $FFMARTINIPY ]]
   then
-	if [[ -f $FFDIR/${MARTINI}.py ]]
-	then
+    if [[ -f $FFDIR/${MARTINI}.py ]]
+    then
       # If martini22p was specified in stead of martini22 with PW,
       # then we end up here, setting the script to martini22p.py
       FFMARTINIPY=$FFDIR/${MARTINI}.py
-    else
-      # Unclear dependency, but shipped with the scripts...
-      FATAL Forcefield script $FFMARTINIPY does not exist, nor does $FFDIR/${MARTINI}.py
     fi
   fi
 
-  #     c. GENERATE martini.itp FOR COARSE GRAINED, MULTISCALE or DRY
-  if [[ -n $DRY ]]
+  if [[ -f $FFMARTINIPY ]]
   then
-    $FFMARTINIPY "$DRY" > martini.itp
+    # ii.
+    if [[ -n $DRY ]]
+    then
+      $FFMARTINIPY "$DRY" > martini.itp
+    else
+      $FFMARTINIPY $ffnb $ffbn > martini.itp
+      # UPDATE martini.itp FOR DUMMIES
+      # Replace the #include statement for ff_dum.itp for atomistic force fields by the contents of it
+      $M && $SED -i -e "/#include \"ff_dum.itp\"/r$GMXLIB/$ForceField.ff/ff_dum.itp" -e "/#include \"ff_dum.itp\"/d" martini.itp
+    fi
   else
-    $FFMARTINIPY $ffnb $ffbn > martini.itp
+    # iii.
+    # Check if an FF include exists in $FFDIR
+    FFITP=$(
+      for itp in $FFDIR/*itp
+      do
+        tags=$(grep '\[' $itp)
+        [[ "$tags" =~ defaults && "$tags" =~ atomtypes && "$tags" =~ nonbond_params ]] && echo $itp
+      done
+    )
+    if [[ -n $FFITP ]]
+    then
+      NOTE Found force field include file $FFITP
+      cp $FFITP martini.itp
+    fi
   fi
-
-  #     d. UPDATE martini.itp FOR DUMMIES
-  #        Replace the #include statement for ff_dum.itp for atomistic force fields by the contents of it
-  $M && $SED -i -e "/#include \"ff_dum.itp\"/r$GMXLIB/$ForceField.ff/ff_dum.itp" -e "/#include \"ff_dum.itp\"/d" martini.itp
-else
-  cp $FFITP martini.itp
 fi
 
+if [[ ! -f martini.itp ]]
+then
+  FATAL Could not find forcefield itp file or generating script.
+fi
+
+# TODO - get something smarter for the FFTAG
+if [[ "$MARTINI" =~ "martini3" ]]
+then
+    FFTAG=v3.0
+fi
 
 ## 6. ELECTROSTATICS AND TABLES ##
 
