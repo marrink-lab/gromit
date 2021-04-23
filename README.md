@@ -14,6 +14,26 @@ protocols for atomistic (gromit) and coarse-grain (martinate) simulations, using
 
 ## Installation
 
+Martinate requires GROMACS, insane.py script provided on martini website and the python package vermouth. Additionally, Martini3 forcefield needs to be downloaded to create systems in this.
+
+You can install gromit, martinize2, insane.py and martinize2 (vermouth) by running:
+```bash
+git clone https://github.com/marrink-lab/gromit.git
+
+# Put insane in gromit path
+wget http://www.cgmartini.nl/images/tools/insane/insane.py \
+    -O gromit/insane
+chmod +x gromit/insane
+
+# Install martinize2
+pip install vermouth
+
+# Download forcefield and mappings as given there:
+# http://cgmartini.nl/index.php/force-field-parameters/particle-definitions
+wget http://www.cgmartini.nl/images/martini_v300.zip
+unzip -d martini_v300 martini_v300.zip
+rm martini_v300.zip
+```
 ## Test
 
 ## Contributors
