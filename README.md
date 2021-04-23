@@ -20,11 +20,6 @@ You can install gromit, martinize2, insane.py and martinize2 (vermouth) by runni
 ```bash
 git clone https://github.com/marrink-lab/gromit.git
 
-# Put insane in gromit path
-wget http://www.cgmartini.nl/images/tools/insane/insane.py \
-    -O gromit/insane
-chmod +x gromit/insane
-
 # Install martinize2
 pip install vermouth
 
