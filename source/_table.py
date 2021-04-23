@@ -21,13 +21,13 @@ VD,FD = vf_fun(LD,LC,LS)
 VR,FR = vf_fun(LR,LC,LS)
 
 r  = [ i/1e3 or 0 for i in range(2,3001,2)]
-print("""#
+print(("""#
 # Coulomb cut-off/reaction-field: epsRF = %f, epsR = %f, RC = %f
 # Lennard-Jones dispersion: power=%f, cutoff=%f, %sshifted %s
 # Lennard-Jones repulsion:  power=%f, cutoff=%f, %sshifted %s""" % (
     epsRF, epsR, RC,
     LD, LC, LS<0 and "not " or "", LS>=0 and "(rshift=%f)"% LS or "",
-    LR, LC, LS<0 and "not " or "", LS>=0 and "(rshift=%f)"% LS or ""))
+    LR, LC, LS<0 and "not " or "", LS>=0 and "(rshift=%f)"% LS or "")))
 
 f0 = [ (1/i+Krf*i*i-Crf)/epsR for i in r ]
 f1 = [ (1/(i*i)-2*Krf*i)/epsR for i in r ]
@@ -40,6 +40,6 @@ h1 = [ i<LC and  FR(i) for i in r ]
 
 table = [(0,0,0,0,0,0,0)] + list(zip(r,f0,f1,g0,g1,h0,h1))
 
-print("\n".join([(7*"%.10e ")%i for i in table]))
+print(("\n".join([(7*"%.10e ")%i for i in table])))
 
 

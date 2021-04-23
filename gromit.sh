@@ -1596,7 +1596,7 @@ if [[ $STEP == $NOW && ! -f $GRO ]]
 then
     echo "# Building rhombic dodecahedron solvent box with diameter $PBCDIST"
     echo -e "Solvent box\n    0" > $base-pbc.gro
-    python -c "print \"\".join([\"%10.5f\"%($PBCDIST*i) for i in [1,1,.7071068,0,0,0,0,.5,.5]])" >> $base-pbc.gro
+    python -c "print(\"\".join([\"%10.5f\"%($PBCDIST*i) for i in [1,1,.7071068,0,0,0,0,.5,.5]]))" >> $base-pbc.gro
 
     [[ -n $SCRATCH ]] && cp $base-pbc.gro $DIR
 
@@ -1617,7 +1617,7 @@ then
     PBC="$SQUEEZE -f $GRO -s $GRO -o $base-pbc.gro -d $PBCDIST -c"
     tag=squeeze
 else
-    PBCDIST=$(python -c "print 0.5*$PBCDIST")
+    PBCDIST=$(python -c "print(0.5*$PBCDIST)")
     PBC="${GMX}editconf -f $GRO -o $base-pbc.gro -bt $BOXTYPE -d $PBCDIST -c"
     tag=editconf
 fi
@@ -1927,7 +1927,7 @@ then
     #          ions per liter, with C being the concentration of the salt.
     #          We cheat by calling python for floating point arithmetics.
     #          Yes, we could have used bc...
-    Q=$(python -c "print int(0.5+$Salinity*($a+$b)*$NSOL/(55.4+$Salinity*($a+$b)))")
+    Q=$(python -c "print(int(0.5+$Salinity*($a+$b)*$NSOL/(55.4+$Salinity*($a+$b))))")
 
     #    iv.   Let U and V denote the number of positive and negative ions, respectively, then for
     #          a system with a net charge equal to Z we have
@@ -1937,8 +1937,8 @@ then
     #             V = (Z - Qn)/(m - n)
     m=${SaltCharge[0]}
     n=${SaltCharge[1]}
-    U=$(python -c "print int(0.5+( $Q*$n+$NCHARGE)/($n-$m))")
-    V=$(python -c "print int(0.5+(-$Q*$m-$NCHARGE)/($n-$m))")
+    U=$(python -c "print(int(0.5+( $Q*$n+$NCHARGE)/($n-$m)))")
+    V=$(python -c "print(int(0.5+(-$Q*$m-$NCHARGE)/($n-$m)))")
 
     #    v.    Now U and V may still be slightly off, so we correct iteratively
     #          If the net charge is odd and the difference between charges is

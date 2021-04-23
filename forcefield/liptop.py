@@ -13,7 +13,7 @@ class Option:
         self.num         = num
         self.value       = default
         self.description = description
-    def __nonzero__(self): 
+    def __bool__(self): 
         if self.func == bool:
             return self.value != False
         return bool(self.value)
@@ -192,11 +192,11 @@ args = sys.argv[1:]
 
 # Print help 
 if '-h' in args or '--help' in args:
-    print "\n",__file__
-    print desc
+    print("\n",__file__)
+    print(desc)
     for thing in options:
-        print type(thing) != str and "%10s  %s"%(thing[0],thing[1].description) or thing
-    print
+        print(type(thing) != str and "%10s  %s"%(thing[0],thing[1].description) or thing)
+    print()
     sys.exit()
 
 # Convert the option list to a dictionary, discarding all comments
@@ -215,12 +215,12 @@ lipidHead  = options["-he"].value
 lipidLinker  = options["-li"].value
 lipidTail  = options["-ta"].value
 if lipidLinker==None or lipidLinker==None or lipidTail==None:
-    print >>sys.stderr, "You have to provide a header, linker and tail lipid description, if one should be missing provide an empty string"
+    print("You have to provide a header, linker and tail lipid description, if one should be missing provide an empty string", file=sys.stderr)
     sys.exit()
 lipidName = options["-name"].value
 
 progString = "Martini lipid itp generator version " + version + "  Args are: -o %s, -name %s, -he %s, -li %s, -ta %s" % (itpFileName, lipidName, lipidHead, lipidLinker, lipidTail)
-print progString
+print(progString)
 
 # Open the output file
 itpFile = open(itpFileName,"w")
@@ -229,26 +229,26 @@ linkersArray = lipidLinker.replace("."," ").split()
 linkersIndex = []
 tailsArray = lipidTail.replace("."," ").split()
 if len(linkersArray)!=len(tailsArray):
-    print >>sys.stderr, "A tail definition has to be provided for each linker"
+    print("A tail definition has to be provided for each linker", file=sys.stderr)
     sys.exit()
 
 # Make .itp headder
-print >>itpFile, ';;;;;; Martini lipid topology auto generated using:'
-print >>itpFile, '; ' + progString + '\n;\n'
-print >>itpFile, '[moleculetype]'
-print >>itpFile, '; molname      nrexcl'
-print >>itpFile, '   ' + lipidName + '          1'
+print(';;;;;; Martini lipid topology auto generated using:', file=itpFile)
+print('; ' + progString + '\n;\n', file=itpFile)
+print('[moleculetype]', file=itpFile)
+print('; molname      nrexcl', file=itpFile)
+print('   ' + lipidName + '          1', file=itpFile)
 
 # Make lipd def
-print >>itpFile, '\n[atoms]'
-print >>itpFile, '; id 	type 	resnr 	residu 	atom 	cgnr 	charge'
+print('\n[atoms]', file=itpFile)
+print('; id 	type 	resnr 	residu 	atom 	cgnr 	charge', file=itpFile)
 
 bondsArray = []
 anglesArray = []
 
 index = 1
 for cHead in headsArray:
-    print >>itpFile, '%i \t%s \t%i \t%s \t%s \t%i \t%s' % (index, headMapp[cHead][0], 1, lipidName, headMapp[cHead][1], index, headMapp[cHead][2])
+    print('%i \t%s \t%i \t%s \t%s \t%i \t%s' % (index, headMapp[cHead][0], 1, lipidName, headMapp[cHead][1], index, headMapp[cHead][2]), file=itpFile)
     if index > 1: # link head beads
         bondsArray.append([index - 1, index, defBlength, defBforce])
     index += 1
@@ -257,10 +257,10 @@ for cHead in headsArray:
 for linkerBeadIndex in range(0, len(linkersArray)):
     cLinker = linkersArray[linkerBeadIndex]
     if cLinker != "G": # GLY
-        print >>sys.stderr, "This script currently only supports GLY linkers"
+        print("This script currently only supports GLY linkers", file=sys.stderr)
         sys.exit()
     
-    print >>itpFile, '%i \t%s \t%i \t%s \t%s \t%i \t%i' % (index, 'Na', 1, lipidName, "GL"+str(linkerBeadIndex+1), index, 0)
+    print('%i \t%s \t%i \t%s \t%s \t%i \t%i' % (index, 'Na', 1, lipidName, "GL"+str(linkerBeadIndex+1), index, 0), file=itpFile)
     
     linkersIndex.append(index)
     if index > 1: # There have been beads before (don't do anything if this was the first linker bead and not head)
@@ -299,11 +299,11 @@ for cTail in tailsArray:
             else:
                 bType = 'C3'
         else:
-            print >>sys.stderr, "Tail definition \"%s\" not recognized" % (cTailBead)
+            print("Tail definition \"%s\" not recognized" % (cTailBead), file=sys.stderr)
             sys.exit()
         
         atomName = cTailBead + str(cTailBeadIndex+1) + indexToLetter[tailIndex]       
-        print >>itpFile, '%i \t%s \t%i \t%s \t%s \t%i \t%i' % (index, bType, 1, lipidName, atomName, index, 0)
+        print('%i \t%s \t%i \t%s \t%s \t%i \t%i' % (index, bType, 1, lipidName, atomName, index, 0), file=itpFile)
 
         # Add bond between tail beads
         if cTailBeadIndex > 0:
@@ -336,16 +336,16 @@ for cTail in tailsArray:
 # End tailsArray loop    
 
 # Write lipid bonds
-print >>itpFile, '\n[bonds]'
-print >>itpFile, '; i j 	funct 	length 	force.c.'
+print('\n[bonds]', file=itpFile)
+print('; i j 	funct 	length 	force.c.', file=itpFile)
 for cBond in bondsArray:
-    print >>itpFile, '  %i %i\t1 \t%s \t%s' % (cBond[0], cBond[1], cBond[2], cBond[3])
+    print('  %i %i\t1 \t%s \t%s' % (cBond[0], cBond[1], cBond[2], cBond[3]), file=itpFile)
 
 # Write lipid angles
-print >>itpFile, '\n[angles]'
-print >>itpFile, '; i j k 	funct 	angle 	force.c.'
+print('\n[angles]', file=itpFile)
+print('; i j k 	funct 	angle 	force.c.', file=itpFile)
 for cAngle in anglesArray:
-    print >>itpFile, '  %i %i %i \t2 \t%s \t%s' % (cAngle[0], cAngle[1], cAngle[2], cAngle[3], cAngle[4])
+    print('  %i %i %i \t2 \t%s \t%s' % (cAngle[0], cAngle[1], cAngle[2], cAngle[3], cAngle[4]), file=itpFile)
 
 itpFile.close()
 # End lipid-martini-itp

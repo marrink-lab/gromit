@@ -174,10 +174,10 @@ classes = ("plain","small","vsite","svste","other")
 dummy = ["D"]
 
 # Gather all atom types
-all,mass = zip(*[i for j in classes for i in eval(j).items()])
-virtual  = vsite.keys() + svste.keys()
+all,mass = list(zip(*[i for j in classes for i in list(eval(j).items())]))
+virtual  = list(vsite.keys()) + list(svste.keys())
 
-rla   = range(len(all))
+rla   = list(range(len(all)))
 cmb   = [ (all[i],all[j]) for i in rla for j in rla[i:] ]
 
 # Epsilon: 5.60(A), 5.00(B), 4.50(C), 4.00(D), 3.50(E), 3.10(F), 2.70(G), 2.30(H), 2.00(I)
@@ -456,7 +456,7 @@ def sigeps2c(eps=None,scl="a",sig="2"):
     """
     if eps == None: 
         return None,None
-    if scl in sigma.keys(): 
+    if scl in list(sigma.keys()): 
         sig, scl = scl, "2"
     return 4*epsilon[eps]*scale[scl]*sigma[sig]**6, 4*epsilon[eps]*scale[scl]*sigma[sig]**12
     
@@ -492,7 +492,7 @@ if len(sys.argv) > 1:
     nonbond_params.append("; Atomistic definitions\n")
     pairtypes.append("; Atomistic definitions\n")
 
-    hk = hybrid.keys()
+    hk = list(hybrid.keys())
     for line in aa:
         s = line.strip()
         if s and s[0] == "[":
@@ -522,9 +522,9 @@ atomtypes.extend([typestr%(tp,ms,tp in virtual and 'V' or 'A') for tp,ms in zip(
 
 
 # Reverse the hybrid stuff declared above
-hv = hybrid.values()
+hv = list(hybrid.values())
 mixed = {}
-for k,v in hybrid.iteritems():
+for k,v in hybrid.items():
     mixed.setdefault(v,[]).append(k)
 
 for i,j in cmb:
@@ -555,33 +555,33 @@ for i in dummy:
 
 ## Print stuff:
 
-print "; This file was created automagically by", sys.argv[0] 
-print "; (c)2012 Tsjerk A Wassenaar, University of Groningen"
-print ";"
+print("; This file was created automagically by", sys.argv[0]) 
+print("; (c)2012 Tsjerk A Wassenaar, University of Groningen")
+print(";")
 
 
 if len(sys.argv) > 1:
-    print "; This file contains a merged forcefield, combining %s with MARTINI" % sys.argv[1]
-    print ";"
-    print "#define DUMMY_REPEL 1e-7"
-    print ";"
+    print("; This file contains a merged forcefield, combining %s with MARTINI" % sys.argv[1])
+    print(";")
+    print("#define DUMMY_REPEL 1e-7")
+    print(";")
 
 
-print martini_v2_P
+print(martini_v2_P)
 
 
-print "".join(atomtypes),      "\n"
-print "[ nonbond_params ]\n", "".join(nonbond_params), "\n"
+print("".join(atomtypes),      "\n")
+print("[ nonbond_params ]\n", "".join(nonbond_params), "\n")
 if pairtypes:
-    print "[ pairtypes ]\n",      "".join(pairtypes),      "\n"
-print
+    print("[ pairtypes ]\n",      "".join(pairtypes),      "\n")
+print()
 
 
-for i in sys.argv[2:]: print open(i).read()
+for i in sys.argv[2:]: print(open(i).read())
 
     
 # Also print water models:
-print """
+print("""
 
 ;;;;;; MARTINI WATER
 
@@ -637,6 +637,6 @@ PW              1
 [exclusions]
    1     2  3
    2     3
-"""
+""")
 
     
